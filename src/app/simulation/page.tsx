@@ -4,12 +4,29 @@ import { useState } from "react"
 import { ArrowLeft, RotateCcw, Play, Pause, Zap } from "lucide-react"
 import Link from "next/link"
 
-export default function SimulationPage() {
-  const [selectedComponent, setSelectedComponent] = useState(null)
-  const [isSimulationRunning, setIsSimulationRunning] = useState(false)
-  const [placedComponents, setPlacedComponents] = useState([])
+type ComponentType = {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+};
 
-  const components = [
+type PlacedComponent = {
+  id: number;
+  type: string;
+  row: number;
+  col: number;
+  name: string;
+  emoji: string;
+  color: string;
+};
+
+export default function SimulationPage() {
+  const [selectedComponent, setSelectedComponent] = useState<ComponentType | null>(null);
+  const [isSimulationRunning, setIsSimulationRunning] = useState<boolean>(false);
+  const [placedComponents, setPlacedComponents] = useState<PlacedComponent[]>([]);
+
+  const components: ComponentType[] = [
     { id: "led", name: "LED", emoji: "💡", color: "bg-yellow-400" },
     { id: "resistor", name: "Resistor", emoji: "🔧", color: "bg-orange-400" },
     { id: "battery", name: "Battery", emoji: "🔋", color: "bg-green-400" },
@@ -17,27 +34,29 @@ export default function SimulationPage() {
     { id: "wire", name: "Wire", emoji: "➖", color: "bg-gray-400" },
   ]
 
-  const handleGridClick = (row, col) => {
+  const handleGridClick = (row: number, col: number) => {
     if (selectedComponent) {
-      const newComponent = {
+      const newComponent: PlacedComponent = {
         id: Date.now(),
         type: selectedComponent.id,
         row,
         col,
-        ...selectedComponent,
-      }
-      setPlacedComponents([...placedComponents, newComponent])
-      setSelectedComponent(null)
+        name: selectedComponent.name,
+        emoji: selectedComponent.emoji,
+        color: selectedComponent.color,
+      };
+      setPlacedComponents([...placedComponents, newComponent]);
+      setSelectedComponent(null);
     }
   }
 
   const clearGrid = () => {
-    setPlacedComponents([])
-    setIsSimulationRunning(false)
+    setPlacedComponents([]);
+    setIsSimulationRunning(false);
   }
 
   const toggleSimulation = () => {
-    setIsSimulationRunning(!isSimulationRunning)
+    setIsSimulationRunning(!isSimulationRunning);
   }
 
   return (
@@ -130,7 +149,7 @@ export default function SimulationPage() {
               <div className="grid grid-cols-20 gap-1 max-w-full">
                 {Array.from({ length: 15 }, (_, row) =>
                   Array.from({ length: 20 }, (_, col) => {
-                    const placedComponent = placedComponents.find((comp) => comp.row === row && comp.col === col)
+                    const placedComponent = placedComponents.find((comp) => comp.row === row && comp.col === col);
 
                     return (
                       <div
@@ -153,8 +172,8 @@ export default function SimulationPage() {
                           </div>
                         )}
                       </div>
-                    )
-                  }),
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -171,5 +190,5 @@ export default function SimulationPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
