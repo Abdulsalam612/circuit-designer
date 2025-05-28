@@ -127,7 +127,7 @@ export default function HomePage() {
 
       {/* Levels Preview Section */}
       <section id="levels" className="py-16">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4">    
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-800">Learning Levels</h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -209,7 +209,7 @@ export default function HomePage() {
           </p>
           <button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg px-12 py-4 rounded-lg font-medium transition-all flex items-center mx-auto">
             <Zap className="mr-2 h-5 w-5" />
-            Start Building Now - It's Free!
+            Start Building Now - Its Free!
           </button>
         </div>
       </section>
