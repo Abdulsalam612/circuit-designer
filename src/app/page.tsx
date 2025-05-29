@@ -1,3 +1,5 @@
+"use client"
+
 import { Zap, Play, CircuitBoard, Lightbulb, Star, Users, BookOpen, Target, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
@@ -57,20 +59,35 @@ export default function HomePage() {
                   students, educators, and electronics enthusiasts.
                 </p>
 
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/simulation">
-                    <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center transition-all transform hover:scale-105 shadow-lg">
-                      <CircuitBoard className="mr-3 h-5 w-5" />
-                      Start Building Circuits
+                {/* Main CTA - Getting Started (Big) */}
+                <div className="flex flex-col items-center space-y-6">
+                  <Link href="/dashboard">
+                    <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-5 rounded-xl font-bold text-xl flex items-center justify-center transition-all transform hover:scale-105 shadow-2xl">
+                      <BookOpen className="mr-4 h-6 w-6" />
+                      Getting Started
                     </button>
                   </Link>
 
-                  <Link href="/play">
-                    <button className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center transition-all">
-                      <Play className="mr-3 h-5 w-5" />
-                      CirKit Kids
-                    </button>
-                  </Link>
+                  {/* Secondary CTAs (Smaller) */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Link href="/simulation">
+                      <button className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 px-6 py-3 rounded-lg font-semibold flex items-center justify-center transition-all transform hover:scale-105 shadow-lg">
+                        <CircuitBoard className="mr-2 h-5 w-5" />
+                        Start Building Circuits
+                      </button>
+                    </Link>
+
+                    <Link href="/play">
+                      <button className="bg-white border-2 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 px-6 py-3 rounded-lg font-semibold flex items-center justify-center transition-all transform hover:scale-105 shadow-lg">
+                        <Play className="mr-2 h-5 w-5" />
+                        CirKit Kids Mode
+                      </button>
+                    </Link>
+                  </div>
+
+                  <p className="text-sm text-gray-500 text-center max-w-md">
+                    New to electronics? Start with our guided lessons. Ready to build? Jump straight into the simulator.
+                  </p>
                 </div>
               </div>
 
@@ -270,20 +287,29 @@ export default function HomePage() {
             Join thousands of learners already exploring the world of electronics with CirKit
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/simulation">
-              <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg">
-                <CircuitBoard className="inline mr-3 h-5 w-5" />
-                Start Building Now
+          <div className="flex flex-col items-center space-y-6">
+            <Link href="/dashboard">
+              <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-12 py-5 rounded-xl font-bold text-xl transition-all transform hover:scale-105 shadow-2xl">
+                <BookOpen className="inline mr-4 h-6 w-6" />
+                Start Learning Now
               </button>
             </Link>
 
-            <Link href="/play">
-              <button className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-10 py-4 rounded-lg font-semibold text-lg transition-all">
-                <Play className="inline mr-3 h-5 w-5" />
-                Try Kids Mode
-              </button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link href="/simulation">
+                <button className="bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 hover:border-blue-700 px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg">
+                  <CircuitBoard className="inline mr-3 h-5 w-5" />
+                  Try Simulator
+                </button>
+              </Link>
+
+              <Link href="/play">
+                <button className="bg-white border-2 border-green-500 text-green-600 hover:bg-green-50 hover:border-green-600 px-8 py-3 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg">
+                  <Play className="inline mr-3 h-5 w-5" />
+                  Try Kids Mode
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
@@ -305,6 +331,11 @@ export default function HomePage() {
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-gray-400">
+                <li>
+                  <Link href="/dashboard" className="hover:text-white transition-colors">
+                    Learning Dashboard
+                  </Link>
+                </li>
                 <li>
                   <Link href="/simulation" className="hover:text-white transition-colors">
                     Circuit Builder
