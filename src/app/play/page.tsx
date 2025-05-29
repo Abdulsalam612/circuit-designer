@@ -1,30 +1,28 @@
-"use client"
-
-import { Zap, Play, CircuitBoard, Lightbulb, Star } from "lucide-react"
+import { Zap, Play, CircuitBoard, Lightbulb, Star, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-export default function HomePage() {
+export default function PlayPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-blue-100 to-green-100">
       {/* Simple Header */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-r from-blue-500 to-green-500 p-3 rounded-xl">
-              <CircuitBoard className="h-8 w-8 text-white" />
-            </div>
-            <span className="text-3xl font-black text-gray-800">CircuitKids</span>
-          </div>
           <div className="flex items-center space-x-4">
-            <Link href="/" className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-2xl text-lg font-bold shadow-md transition-all flex items-center">
-              ← Back to Home
+            <Link href="/" className="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg transition-all">
+              <ArrowLeft className="h-5 w-5 text-gray-600" />
             </Link>
-            <Link href="/simulation">
-              <button className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-2xl text-lg font-bold shadow-lg transform hover:scale-105 transition-all">
-                🎮 Play Now!
-              </button>
-            </Link>
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-green-500 to-blue-500 p-3 rounded-xl">
+                <CircuitBoard className="h-8 w-8 text-white" />
+              </div>
+              <span className="text-3xl font-black text-gray-800">CirKit Kids</span>
+            </div>
           </div>
+          <Link href="/kidscircuit">
+            <button className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-2xl text-xl font-bold shadow-lg transform hover:scale-105 transition-all">
+              🎮 Build Circuits!
+            </button>
+          </Link>
         </div>
       </header>
 
@@ -54,10 +52,10 @@ export default function HomePage() {
             <p className="text-2xl font-bold text-blue-600 mt-8">Drag & Drop to Build!</p>
           </div>
 
-          {/* Two Big Action Cards - Like LEGO Interface */}
+          {/* Two Big Action Cards */}
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Start Learning Card */}
-            <Link href="/simulation">
+            <Link href="/kidscircuit">
               <div className="bg-white rounded-3xl p-8 shadow-2xl border-4 border-green-300 hover:border-green-400 transform hover:scale-105 transition-all cursor-pointer">
                 <div className="bg-green-100 rounded-2xl p-8 mb-6">
                   <div className="text-6xl mb-4">🎓</div>
@@ -76,7 +74,7 @@ export default function HomePage() {
             </Link>
 
             {/* Free Play Card */}
-            <Link href="/simulation">
+            <Link href="/kidscircuit">
               <div className="bg-white rounded-3xl p-8 shadow-2xl border-4 border-blue-300 hover:border-blue-400 transform hover:scale-105 transition-all cursor-pointer">
                 <div className="bg-blue-100 rounded-2xl p-8 mb-6">
                   <div className="text-6xl mb-4">🔧</div>
@@ -105,28 +103,28 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <Link href="/simulation">
+            <Link href="/kidscircuit">
               <div className="bg-gradient-to-br from-green-400 to-green-500 rounded-3xl p-6 text-center text-white shadow-xl transform hover:scale-105 transition-all cursor-pointer">
                 <div className="text-4xl font-black mb-2">1</div>
                 <div className="text-xl font-bold">💡 LED</div>
               </div>
             </Link>
 
-            <Link href="/simulation">
+            <Link href="/kidscircuit">
               <div className="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-3xl p-6 text-center text-white shadow-xl transform hover:scale-105 transition-all cursor-pointer">
                 <div className="text-4xl font-black mb-2">2</div>
                 <div className="text-xl font-bold">🔗 Series</div>
               </div>
             </Link>
 
-            <Link href="/simulation">
+            <Link href="/kidscircuit">
               <div className="bg-gradient-to-br from-orange-400 to-orange-500 rounded-3xl p-6 text-center text-white shadow-xl transform hover:scale-105 transition-all cursor-pointer">
                 <div className="text-4xl font-black mb-2">3</div>
                 <div className="text-xl font-bold">⚡ Parallel</div>
               </div>
             </Link>
 
-            <Link href="/simulation">
+            <Link href="/kidscircuit">
               <div className="bg-gradient-to-br from-red-400 to-red-500 rounded-3xl p-6 text-center text-white shadow-xl transform hover:scale-105 transition-all cursor-pointer">
                 <div className="text-4xl font-black mb-2">4</div>
                 <div className="text-xl font-bold">🎛️ Switch</div>
@@ -135,7 +133,7 @@ export default function HomePage() {
           </div>
 
           <div className="text-center mt-12">
-            <Link href="/simulation">
+            <Link href="/kidscircuit">
               <button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-2xl px-12 py-6 rounded-3xl font-black shadow-xl transform hover:scale-105 transition-all">
                 <Star className="inline mr-3 h-8 w-8" />
                 See All Levels!
@@ -172,7 +170,7 @@ export default function HomePage() {
       <section className="py-20 bg-yellow-100">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-4xl md:text-6xl font-black mb-8 text-gray-800">Ready to Build? 🚀</h2>
-          <Link href="/simulation">
+          <Link href="/kidscircuit">
             <button className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white text-3xl px-16 py-8 rounded-3xl font-black shadow-2xl transform hover:scale-105 transition-all">
               <Play className="inline mr-4 h-10 w-10" />
               START NOW!
@@ -185,10 +183,10 @@ export default function HomePage() {
       <footer className="bg-gray-800 text-white py-8">
         <div className="container mx-auto px-6 text-center">
           <div className="flex items-center justify-center space-x-3 mb-4">
-            <div className="bg-gradient-to-r from-blue-500 to-green-500 p-3 rounded-xl">
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 p-3 rounded-xl">
               <CircuitBoard className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-black">CircuitKids</span>
+            <span className="text-2xl font-black">CirKit Kids</span>
           </div>
           <div className="text-gray-400 text-lg">Making electronics super fun! 🎉</div>
         </div>
