@@ -4,11 +4,43 @@ import { useState } from "react"
 import { ArrowLeft, Play, CheckCircle, Lock, Star, BookOpen, Zap, Target, Clock, Award } from "lucide-react"
 import Link from "next/link"
 
+// Add type definitions after the imports
+type Difficulty = "Beginner" | "Intermediate" | "Advanced";
+type GuideType = "Safety" | "Reference" | "Troubleshooting" | "Advanced";
+
+interface Lesson {
+  id: number;
+  title: string;
+  description: string;
+  duration: string;
+  difficulty: Difficulty;
+  completed: boolean;
+  locked: boolean;
+  points: number;
+}
+
+interface Guide {
+  id: number;
+  title: string;
+  description: string;
+  type: GuideType;
+  readTime: string;
+  completed: boolean;
+}
+
+interface UserProgress {
+  completedLessons: number;
+  totalLessons: number;
+  currentStreak: number;
+  totalPoints: number;
+  level: number;
+}
+
 export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("lessons")
+  const [activeTab, setActiveTab] = useState<"lessons" | "guides">("lessons");
 
   // Mock progress data
-  const userProgress = {
+  const userProgress: UserProgress = {
     completedLessons: 3,
     totalLessons: 12,
     currentStreak: 5,
@@ -16,7 +48,7 @@ export default function DashboardPage() {
     level: 2,
   }
 
-  const lessons = [
+  const lessons: Lesson[] = [
     {
       id: 1,
       title: "Introduction to Electricity",
@@ -99,7 +131,7 @@ export default function DashboardPage() {
     },
   ]
 
-  const guides = [
+  const guides: Guide[] = [
     {
       id: 1,
       title: "Circuit Safety Guide",
@@ -134,7 +166,7 @@ export default function DashboardPage() {
     },
   ]
 
-  const getDifficultyColor = (difficulty) => {
+  const getDifficultyColor = (difficulty: Difficulty): string => {
     switch (difficulty) {
       case "Beginner":
         return "bg-green-100 text-green-700"
@@ -147,7 +179,7 @@ export default function DashboardPage() {
     }
   }
 
-  const getTypeColor = (type) => {
+  const getTypeColor = (type: GuideType): string => {
     switch (type) {
       case "Safety":
         return "bg-red-100 text-red-700"
@@ -432,7 +464,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <h3 className="font-medium text-gray-900">Daily Challenge</h3>
-                  <p className="text-sm text-gray-500">Complete today's task</p>
+                  <p className="text-sm text-gray-500">Complete todays task</p>
                 </div>
               </div>
             </div>
