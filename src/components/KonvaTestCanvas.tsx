@@ -1,7 +1,9 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { Stage, Layer, Rect, Circle, Line, Transformer } from "react-konva"
+import { Stage, Layer, Rect, Circle, Line } from "react-konva"
+import { KonvaEventObject } from "konva/lib/Node"
+import Konva from "konva"
 
 const KonvaTestCanvas = () => {
   // Set initial dimensions to avoid hydration errors
@@ -14,8 +16,8 @@ const KonvaTestCanvas = () => {
   const [isPanning, setIsPanning] = useState(false)
   const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 })
   
-  // Reference to the stage
-  const stageRef = useRef(null)
+  // Reference to the stage with proper typing
+  const stageRef = useRef<Konva.Stage>(null)
   
   // Use useEffect to safely access window and update state
   useEffect(() => {
@@ -37,8 +39,10 @@ const KonvaTestCanvas = () => {
     window.addEventListener("resize", updateDimensions)
     
     // Add wheel event listener for zooming
-    const handleWheel = (e) => {
-      e.preventDefault()
+    const handleWheel = (e: Event) => {
+      // Cast to WheelEvent to access deltaY
+      const wheelEvent = e as WheelEvent
+      wheelEvent.preventDefault()
       
       if (stageRef.current) {
         const stage = stageRef.current
@@ -47,9 +51,12 @@ const KonvaTestCanvas = () => {
         // Get pointer position relative to stage
         const pointer = stage.getPointerPosition()
         
+        // Check if pointer is null before using it
+        if (!pointer) return
+        
         // Calculate new scale with zoom speed factor
         const zoomSpeed = 1.1
-        const newScale = e.deltaY < 0 ? oldScale * zoomSpeed : oldScale / zoomSpeed
+        const newScale = wheelEvent.deltaY < 0 ? oldScale * zoomSpeed : oldScale / zoomSpeed
         
         // Limit zoom range
         const limitedScale = Math.max(0.1, Math.min(newScale, 5))
@@ -87,7 +94,7 @@ const KonvaTestCanvas = () => {
   }, [scale, stagePos])
 
   // Handle mouse events for right-click panning
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e: KonvaEventObject<MouseEvent>) => {
     // Check if it's a right-click (button 2)
     if (e.evt.button === 2) {
       e.evt.preventDefault() // Prevent context menu
@@ -95,7 +102,10 @@ const KonvaTestCanvas = () => {
       const stage = stageRef.current
       if (stage) {
         setIsPanning(true)
-        setLastPointerPosition(stage.getPointerPosition())
+        const pos = stage.getPointerPosition()
+        if (pos) {
+          setLastPointerPosition(pos)
+        }
         
         // Change cursor style
         document.body.style.cursor = 'grabbing'
@@ -103,18 +113,22 @@ const KonvaTestCanvas = () => {
     }
   }
   
-  const handleMouseUp = (e) => {
+  const handleMouseUp = () => {
     // End panning on any mouse button release
     setIsPanning(false)
     document.body.style.cursor = 'default'
   }
   
-  const handleMouseMove = (e) => {
+  const handleMouseMove = () => {
     if (!isPanning) return
     
     const stage = stageRef.current
     if (stage) {
       const pointer = stage.getPointerPosition()
+      
+      // Check if pointer is null before using it
+      if (!pointer) return
+      
       const dx = pointer.x - lastPointerPosition.x
       const dy = pointer.y - lastPointerPosition.y
       
@@ -128,7 +142,7 @@ const KonvaTestCanvas = () => {
   }
   
   // Prevent context menu from appearing on right-click
-  const handleContextMenu = (e) => {
+  const handleContextMenu = (e: KonvaEventObject<PointerEvent>) => {
     e.evt.preventDefault()
   }
   
