@@ -35,10 +35,13 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.componentItem img {
+.imageWrapper {
   width: 24px;
   height: 24px;
-  object-fit: contain;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .componentItem span {

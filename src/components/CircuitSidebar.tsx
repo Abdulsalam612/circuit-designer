@@ -1,6 +1,7 @@
 "use client"
 
 import React from 'react';
+import Image from 'next/image';
 import styles from './CircuitSidebar.module.css';
 
 type ComponentType = 'resistor' | 'capacitor' | 'inductor' | 'battery' | 'switch';
@@ -32,7 +33,15 @@ const CircuitSidebar = () => {
           >
             {/* Fallback to text if icon not available */}
             {component.icon ? (
-              <img src={component.icon} alt={component.label} />
+              <div className={styles.imageWrapper}>
+                <Image 
+                  src={component.icon} 
+                  alt={component.label} 
+                  width={24} 
+                  height={24}
+                  style={{ objectFit: 'contain' }}
+                />
+              </div>
             ) : (
               <div className={styles.iconPlaceholder}>{component.label[0]}</div>
             )}

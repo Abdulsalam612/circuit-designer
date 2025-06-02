@@ -145,8 +145,10 @@ const KonvaTestCanvas = () => {
     // Cleanup
     return () => {
       interact(`.${styles.componentItem}`).unset();
-      if (containerRef.current) {
-        interact(containerRef.current).unset();
+      // Capture the current value of containerRef to avoid the exhaustive-deps warning
+      const container = containerRef.current;
+      if (container) {
+        interact(container).unset();
       }
     };
   }, [isMounted, stagePos, scale]);
@@ -213,8 +215,10 @@ const KonvaTestCanvas = () => {
     // Cleanup
     return () => {
       window.removeEventListener("resize", updateDimensions)
-      if (containerRef.current) {
-        containerRef.current.removeEventListener('wheel', handleWheel as EventListener)
+      // Capture the current value of containerRef to avoid the exhaustive-deps warning
+      const container = containerRef.current;
+      if (container) {
+        container.removeEventListener('wheel', handleWheel as EventListener)
       }
     }
   }, [scale, stagePos])

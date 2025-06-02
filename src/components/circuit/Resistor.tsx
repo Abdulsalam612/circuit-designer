@@ -1,6 +1,7 @@
 "use client"
 
 import { Rect, Text, Group } from 'react-konva';
+import { KonvaEventObject } from 'konva/lib/Node';
 
 interface ResistorProps {
   id: string;
@@ -8,8 +9,8 @@ interface ResistorProps {
   y: number;
   rotation: number;
   draggable?: boolean;
-  onDragEnd?: (e: any) => void;
-  onClick?: (e: any) => void;
+  onDragEnd?: (e: KonvaEventObject<DragEvent>) => void;
+  onClick?: (e: KonvaEventObject<MouseEvent>) => void;
   isSelected?: boolean;
 }
 
@@ -31,6 +32,7 @@ const Resistor = ({
       draggable={draggable} 
       onDragEnd={onDragEnd}
       onClick={onClick}
+      id={id}
     >
       <Rect 
         width={60} 
