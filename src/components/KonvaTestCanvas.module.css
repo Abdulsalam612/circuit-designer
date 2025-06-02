@@ -1,0 +1,48 @@
+.konvaContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.dropActive {
+  border-color: #3498db !important;
+  background-color: rgba(52, 152, 219, 0.05) !important;
+}
+
+/* Zoom controls */
+.zoomControls {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  background-color: white;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.zoomButton {
+  padding: 0.25rem 0.5rem;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.zoomButton:hover {
+  background-color: #e9ecef;
+}
+
+/* Instructions overlay */
+.instructions {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  background-color: white;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  font-size: 0.875rem;
+}

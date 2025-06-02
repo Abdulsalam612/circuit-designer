@@ -123,8 +123,8 @@ const KonvaTestCanvas = () => {
               const stageX = (pointerPos.x - stagePos.x) / scale;
               const stageY = (pointerPos.y - stagePos.y) / scale;
               
-              // Add new component
-              const newComponent: CircuitComponent = {
+              // Create new component
+              const newComponent = {
                 id: `${componentType}-${Date.now()}`,
                 type: componentType,
                 x: stageX,
@@ -132,10 +132,12 @@ const KonvaTestCanvas = () => {
                 rotation: 0
               };
               
+              // Add to components list
               setComponents(prev => [...prev, newComponent]);
             }
           }
           
+          // Remove active class from dropzone
           const dropzone = event.target;
           dropzone.classList.remove(styles.dropActive);
         }
@@ -209,7 +211,7 @@ const KonvaTestCanvas = () => {
     if (containerRef.current) {
       containerRef.current.addEventListener('wheel', handleWheel as EventListener)
     }
-
+    
     // Cleanup
     return () => {
       window.removeEventListener("resize", updateDimensions)
@@ -218,7 +220,7 @@ const KonvaTestCanvas = () => {
       }
     }
   }, [scale, stagePos])
-
+  
   // Handle mouse events for right-click panning
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     // Check if it's a right-click (button 2)
@@ -296,7 +298,7 @@ const KonvaTestCanvas = () => {
     setScale(0.8)
     setStagePos({ x: dimensions.width / 10, y: dimensions.height / 10 })
   }
-
+  
   // Render components based on their type
   const renderComponents = () => {
     return components.map((component) => {
@@ -369,7 +371,7 @@ const KonvaTestCanvas = () => {
       }
     });
   };
-
+  
   // Handle stage click to deselect components
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     // Only deselect if clicking on the stage itself, not a component
@@ -377,12 +379,12 @@ const KonvaTestCanvas = () => {
       setSelectedComponent(null);
     }
   };
-
+  
   // Don't render anything until component is mounted on client
   if (!isMounted) {
-    return <div className="w-full h-full bg-gray-100 flex items-center justify-center text-black font-medium">Loading canvas...</div>
+    return <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading canvas...</div>
   }
-
+  
   return (
     <div ref={containerRef} className={styles.konvaContainer}>
       <Stage
@@ -434,29 +436,29 @@ const KonvaTestCanvas = () => {
       {/* Zoom controls portal */}
       {isMounted && createPortal(
         <div className="flex items-center space-x-4">
-          <div className="text-sm font-medium text-black">Zoom: {Math.round(scale * 100)}%</div>
+          <div className="text-sm text-gray-500">Zoom: {Math.round(scale * 100)}%</div>
           <div className="flex items-center space-x-1">
             <button 
               onClick={handleFitToScreen} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
             >
               Fit
             </button>
             <button 
               onClick={handleResetZoom} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
             >
               Reset
             </button>
             <button 
               onClick={() => setScale(s => Math.min(s * 1.2, 5))} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
             >
               +
             </button>
             <button 
               onClick={() => setScale(s => Math.max(s / 1.2, 0.1))} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
+              className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
             >
               -
             </button>
@@ -466,7 +468,7 @@ const KonvaTestCanvas = () => {
       )}
       
       {/* Instructions overlay */}
-      <div className="absolute top-4 left-4 bg-white p-2 rounded shadow text-sm font-medium text-black">
+      <div className="absolute top-4 left-4 bg-white p-2 rounded shadow text-sm">
         <p>Right-click + drag to pan</p>
         <p>Mouse wheel to zoom</p>
         <p>Drag components from sidebar</p>

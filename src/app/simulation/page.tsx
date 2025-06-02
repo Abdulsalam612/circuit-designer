@@ -11,6 +11,11 @@ const KonvaTestCanvas = dynamic(() => import("../../components/KonvaTestCanvas")
   loading: () => <div className="flex items-center justify-center h-full w-full">Loading canvas...</div>
 })
 
+const CircuitSidebar = dynamic(() => import("../../components/CircuitSidebar"), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-full w-full">Loading sidebar...</div>
+})
+
 export default function SimulationPage() {
   const [isSimulationRunning, setIsSimulationRunning] = useState(false)
 
@@ -89,47 +94,7 @@ export default function SimulationPage() {
       {/* Main Layout */}
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Sidebar - Component Library */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Components</h2>
-            <p className="text-sm text-gray-500 mt-1">Drag components to the canvas</p>
-          </div>
-
-          <div className="flex-1 p-4 overflow-y-auto">
-            {/* Component categories will go here */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Basic Components</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Placeholder component slots */}
-                  {Array.from({ length: 6 }, (_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-gray-400 transition-colors cursor-pointer"
-                    >
-                      <span className="text-xs text-gray-400">Component {i + 1}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-3">Advanced Components</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {Array.from({ length: 4 }, (_, i) => (
-                    <div
-                      key={i}
-                      className="aspect-square bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-gray-400 transition-colors cursor-pointer"
-                    >
-                      <span className="text-xs text-gray-400">Advanced {i + 1}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+        <CircuitSidebar />
         {/* Main Canvas Area */}
         <div className="flex-1 flex flex-col">
           {/* Canvas Toolbar */}
@@ -144,16 +109,8 @@ export default function SimulationPage() {
                 </div>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500">Zoom: 100%</div>
-                <div className="flex items-center space-x-1">
-                  <button className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors">
-                    Fit
-                  </button>
-                  <button className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors">
-                    Reset
-                  </button>
-                </div>
+              <div id="zoom-controls-container" className="flex items-center space-x-4">
+                {/* Zoom controls will be injected here from KonvaTestCanvas */}
               </div>
             </div>
           </div>
@@ -172,15 +129,12 @@ export default function SimulationPage() {
               }}
             ></div>
 
-            {/* Canvas Content Area - This is where your circuit library will go */}
+            {/* Canvas Content Area */}
             <div className="absolute inset-0 p-6">
-              {/* Konva Canvas Test */}
               <KonvaTestCanvas />
             </div>
           </div>
         </div>
-
-        {/* Right Sidebar - Properties Panel */}
         <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
           <div className="p-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">Properties</h2>
