@@ -40,20 +40,44 @@ const KonvaTestCanvas = () => {
   const stageRef = useRef<Konva.Stage>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   
-  // Setup interact.js
+  // Setup interact.js for drag and drop functionality
   useEffect(() => {
     if (!isMounted) return;
     
+    // Function to handle component drop
+    const handleComponentDrop = (componentType: ComponentType, clientX: number, clientY: number) => {
+      const stage = stageRef.current;
+      if (!stage || !componentType) return;
+      
+      // Convert client coordinates to stage coordinates
+      const stageBox = stage.container().getBoundingClientRect();
+      const pointerX = clientX - stageBox.left;
+      const pointerY = clientY - stageBox.top;
+      
+      // Convert to stage coordinates accounting for stage transform
+      const stageX = (pointerX - stage.x()) / stage.scaleX();
+      const stageY = (pointerY - stage.y()) / stage.scaleY();
+      
+      // Create new component
+      const newComponent: CircuitComponent = {
+        id: `${componentType}-${Date.now()}`,
+        type: componentType,
+        x: stageX,
+        y: stageY,
+        rotation: 0
+      };
+      
+      // Add component to state
+      setComponents(prev => [...prev, newComponent]);
+      setSelectedComponent(newComponent.id);
+      
+      // Force stage update
+      stage.batchDraw();
+    };
+    
     // Make sidebar components draggable
-    interact(`.${styles.componentItem}`).draggable({
+    interact('.componentItem').draggable({
       inertia: true,
-      modifiers: [
-        // Remove parent restriction to allow dragging outside the sidebar
-        interact.modifiers.restrictRect({
-          restriction: 'body',
-          endOnly: true
-        })
-      ],
       autoScroll: true,
       
       // Start dragging
@@ -62,6 +86,8 @@ const KonvaTestCanvas = () => {
         element.style.opacity = '0.8';
         element.style.transform = 'scale(1.05)';
         element.style.zIndex = '1000';
+        element.style.position = 'fixed';
+        element.style.pointerEvents = 'none';
       },
       
       // While dragging
@@ -70,10 +96,7 @@ const KonvaTestCanvas = () => {
         const x = (parseFloat(element.getAttribute('data-x') || '0')) + event.dx;
         const y = (parseFloat(element.getAttribute('data-y') || '0')) + event.dy;
         
-        // Update element position
         element.style.transform = `translate(${x}px, ${y}px) scale(1.05)`;
-        
-        // Store position
         element.setAttribute('data-x', x.toString());
         element.setAttribute('data-y', y.toString());
       },
@@ -81,77 +104,38 @@ const KonvaTestCanvas = () => {
       // End dragging
       onend: (event) => {
         const element = event.target;
+        const componentType = element.getAttribute('data-component-type') as ComponentType;
+        const rect = containerRef.current?.getBoundingClientRect();
+        
+        // Reset element style
         element.style.opacity = '1';
         element.style.transform = '';
         element.style.zIndex = '';
-        
-        // Reset stored position
+        element.style.position = '';
+        element.style.pointerEvents = '';
         element.removeAttribute('data-x');
         element.removeAttribute('data-y');
+        
+        // Check if drop is within canvas area
+        if (rect && 
+            event.clientX >= rect.left && 
+            event.clientX <= rect.right && 
+            event.clientY >= rect.top && 
+            event.clientY <= rect.bottom) {
+          // Handle component drop
+          handleComponentDrop(componentType, event.clientX, event.clientY);
+        }
       }
     });
     
-    // Set up drop zone (the canvas)
-    if (containerRef.current) {
-      interact(containerRef.current).dropzone({
-        accept: `.${styles.componentItem}`,
-        overlap: 0.3, // Reduced overlap requirement to make dropping easier
-        
-        // Component enters drop zone
-        ondragenter: (event) => {
-          const dropzone = event.target;
-          dropzone.classList.add(styles.dropActive);
-        },
-        
-        // Component leaves drop zone
-        ondragleave: (event) => {
-          const dropzone = event.target;
-          dropzone.classList.remove(styles.dropActive);
-        },
-        
-        // Component is dropped in drop zone
-        ondrop: (event) => {
-          const componentType = event.relatedTarget.getAttribute('data-component-type') as ComponentType;
-          const stage = stageRef.current;
-          
-          if (stage && componentType) {
-            // Get stage pointer position (relative to stage)
-            const pointerPos = stage.getPointerPosition();
-            
-            if (pointerPos) {
-              // Convert screen position to stage coordinates
-              const stageX = (pointerPos.x - stagePos.x) / scale;
-              const stageY = (pointerPos.y - stagePos.y) / scale;
-              
-              // Add new component
-              const newComponent: CircuitComponent = {
-                id: `${componentType}-${Date.now()}`,
-                type: componentType,
-                x: stageX,
-                y: stageY,
-                rotation: 0
-              };
-              
-              setComponents(prev => [...prev, newComponent]);
-            }
-          }
-          
-          const dropzone = event.target;
-          dropzone.classList.remove(styles.dropActive);
-        }
-      });
-    }
-    
-    // Cleanup
+    // Clean up interact.js instances on unmount
     return () => {
-      interact(`.${styles.componentItem}`).unset();
-      // Capture the current value of containerRef to avoid the exhaustive-deps warning
-      const container = containerRef.current;
-      if (container) {
-        interact(container).unset();
+      interact('.componentItem').unset();
+      if (containerRef.current) {
+        interact(containerRef.current).unset();
       }
     };
-  }, [isMounted, stagePos, scale]);
+  }, [isMounted]);
   
   // Use useEffect to safely access window and update state
   useEffect(() => {
@@ -250,38 +234,38 @@ const KonvaTestCanvas = () => {
   }
   
   const handleMouseMove = () => {
-    if (!isPanning) return
+    if (!isPanning) return;
     
-    const stage = stageRef.current
+    const stage = stageRef.current;
     if (stage) {
-      const pointer = stage.getPointerPosition()
+      const pointer = stage.getPointerPosition();
       
       // Check if pointer is null before using it
-      if (!pointer) return
+      if (!pointer) return;
       
-      const dx = pointer.x - lastPointerPosition.x
-      const dy = pointer.y - lastPointerPosition.y
+      const dx = pointer.x - lastPointerPosition.x;
+      const dy = pointer.y - lastPointerPosition.y;
       
       // Calculate new position
-      const newX = stagePos.x + dx
-      const newY = stagePos.y + dy
+      const newX = stagePos.x + dx;
+      const newY = stagePos.y + dy;
       
       // Apply panning limits to keep grid visible
       // These values can be adjusted based on your grid size
-      const maxPanX = dimensions.width * 0.5
-      const maxPanY = dimensions.height * 0.5
+      const maxPanX = dimensions.width * 0.5;
+      const maxPanY = dimensions.height * 0.5;
       
-      const limitedX = Math.max(-maxPanX, Math.min(newX, maxPanX))
-      const limitedY = Math.max(-maxPanY, Math.min(newY, maxPanY))
+      const limitedX = Math.max(-maxPanX, Math.min(newX, maxPanX));
+      const limitedY = Math.max(-maxPanY, Math.min(newY, maxPanY));
       
       setStagePos({
         x: limitedX,
         y: limitedY
-      })
+      });
       
-      setLastPointerPosition(pointer)
+      setLastPointerPosition(pointer);
     }
-  }
+  };
   
   // Prevent context menu from appearing on right-click
   const handleContextMenu = (e: Konva.KonvaEventObject<PointerEvent>) => {
@@ -303,24 +287,25 @@ const KonvaTestCanvas = () => {
 
   // Render components based on their type
   const renderComponents = () => {
-    return components.map((component) => {
+    const handleComponentClick = (id: string) => {
+      setSelectedComponent(id);
+    };
+
+    const handleComponentDragEnd = (id: string, e: Konva.KonvaEventObject<Event>) => {
+      setComponents(prevComponents => 
+        prevComponents.map(component => 
+          component.id === id 
+            ? { ...component, x: e.target.x(), y: e.target.y() } 
+            : component
+        )
+      );
+    };
+
+    return components.map(component => {
       const isSelected = selectedComponent === component.id;
-      const handleComponentClick = () => {
-        setSelectedComponent(component.id);
-      };
       
-      const handleComponentDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
-        // Update component position in state
-        setComponents(prev => 
-          prev.map(c => 
-            c.id === component.id 
-              ? { ...c, x: e.target.x(), y: e.target.y() } 
-              : c
-          )
-        );
-      };
-      
-      switch(component.type) {
+      // Render component based on type
+      switch (component.type) {
         case 'resistor':
           return (
             <Resistor
@@ -329,10 +314,10 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
-              draggable
               isSelected={isSelected}
-              onClick={handleComponentClick}
-              onDragEnd={handleComponentDragEnd}
+              onClick={() => handleComponentClick(component.id)}
+              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
+              draggable={true}
             />
           );
         case 'capacitor':
@@ -343,18 +328,17 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
-              draggable
               isSelected={isSelected}
-              onClick={handleComponentClick}
-              onDragEnd={handleComponentDragEnd}
+              onClick={() => handleComponentClick(component.id)}
+              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
+              draggable={true}
             />
           );
-        // Other component types will use the default fallback
         case 'inductor':
         case 'battery':
         case 'switch':
         default:
-          // Fallback for unimplemented components
+          // Placeholder for other component types
           return (
             <Rect
               key={component.id}
@@ -365,15 +349,16 @@ const KonvaTestCanvas = () => {
               fill="#f0f0f0"
               stroke={isSelected ? "#3498db" : "black"}
               strokeWidth={isSelected ? 2 : 1}
-              draggable
-              onClick={handleComponentClick}
-              onDragEnd={handleComponentDragEnd}
+              draggable={true}
+              onClick={() => handleComponentClick(component.id)}
+              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
             />
           );
       }
     });
   };
 
+// ...
   // Handle stage click to deselect components
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     // Only deselect if clicking on the stage itself, not a component
