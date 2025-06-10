@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "firebase": "^11.8.1",
+    "firebase": "^11.9.0",
     "interactjs": "^1.10.27",
     "konva": "^9.3.20",
     "lucide-react": "^0.511.0",

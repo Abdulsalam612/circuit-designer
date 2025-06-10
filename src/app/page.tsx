@@ -1,5 +1,9 @@
 "use client"
 
+import { auth, firestore } from "@/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+
 import { useState } from "react"
 import {
   Zap,
