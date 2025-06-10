@@ -30,7 +30,7 @@ export default function HomePage() {
   const [signupEmail, setSignupEmail] = useState("")
   const [signupPassword, setSignupPassword] = useState("")
 
-  const handleLogin = (e) => {
+  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     // Handle login logic here
     console.log("Login with:", { email: loginEmail, password: loginPassword })
@@ -38,7 +38,7 @@ export default function HomePage() {
     setShowLoginModal(false)
   }
 
-  const handleSignup = (e) => {
+  const handleSignup = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     // Handle signup logic here
     console.log("Signup with:", { name: signupName, email: signupEmail, password: signupPassword })
@@ -211,7 +211,7 @@ export default function HomePage() {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <button onClick={openSignupModal} className="font-medium text-blue-600 hover:text-blue-500">
                   Sign up
                 </button>
