@@ -42,7 +42,8 @@ const KonvaTestCanvas = () => {
   
   // Setup interact.js for drag and drop functionality
   useEffect(() => {
-    if (!isMounted) return;
+    const container = containerRef.current;
+    setIsMounted(true)
     
     // Function to handle component drop
     const handleComponentDrop = (componentType: ComponentType, clientX: number, clientY: number) => {
@@ -105,7 +106,7 @@ const KonvaTestCanvas = () => {
       onend: (event) => {
         const element = event.target;
         const componentType = element.getAttribute('data-component-type') as ComponentType;
-        const rect = containerRef.current?.getBoundingClientRect();
+        const rect = container?.getBoundingClientRect();
         
         // Reset element style
         element.style.opacity = '1';
@@ -128,17 +129,45 @@ const KonvaTestCanvas = () => {
       }
     });
     
+    if (container) {
+      interact(container).dropzone({
+        accept: '.componentItem',
+        overlap: 0.5,
+        ondropactivate: (event) => {
+          event.target.classList.add('drop-active');
+        },
+        ondragenter: (event) => {
+          const draggableElement = event.relatedTarget;
+          const dropzoneElement = event.target;
+          dropzoneElement.classList.add('drop-target');
+          draggableElement.classList.add('can-drop');
+        },
+        ondragleave: (event) => {
+          event.target.classList.remove('drop-target');
+          event.relatedTarget.classList.remove('can-drop');
+        },
+        ondrop: (event) => {
+          event.target.classList.remove('drop-target');
+          event.relatedTarget.classList.remove('can-drop');
+        },
+        ondropdeactivate: (event) => {
+          event.target.classList.remove('drop-active');
+        },
+      });
+    }
+    
     // Clean up interact.js instances on unmount
     return () => {
       interact('.componentItem').unset();
-      if (containerRef.current) {
-        interact(containerRef.current).unset();
-      }
+      if (container) {
+      interact(container).unset();
+    }
     };
   }, [isMounted]);
   
   // Use useEffect to safely access window and update state
   useEffect(() => {
+    const wheelContainer = containerRef.current;
     setIsMounted(true)
     
     // Update dimensions based on window size
@@ -192,17 +221,15 @@ const KonvaTestCanvas = () => {
     }
     
     // Add wheel event listener to container
-    if (containerRef.current) {
-      containerRef.current.addEventListener('wheel', handleWheel as EventListener)
+    if (wheelContainer) {
+      wheelContainer.addEventListener('wheel', handleWheel as EventListener)
     }
 
     // Cleanup
     return () => {
       window.removeEventListener("resize", updateDimensions)
-      // Capture the current value of containerRef to avoid the exhaustive-deps warning
-      const container = containerRef.current;
-      if (container) {
-        container.removeEventListener('wheel', handleWheel as EventListener)
+      if (wheelContainer) {
+        wheelContainer.removeEventListener('wheel', handleWheel as EventListener)
       }
     }
   }, [scale, stagePos])

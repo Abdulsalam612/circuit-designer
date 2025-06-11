@@ -34,20 +34,52 @@ export default function HomePage() {
   const [signupEmail, setSignupEmail] = useState("")
   const [signupPassword, setSignupPassword] = useState("")
 
-  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    // Handle login logic here
-    console.log("Login with:", { email: loginEmail, password: loginPassword })
-    // Close modal after login attempt
-    setShowLoginModal(false)
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [signupLoading, setSignupLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      setShowLoginModal(false);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("Login failed. Unknown error.");
+      }
+    }
   }
 
-  const handleSignup = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    // Handle signup logic here
-    console.log("Signup with:", { name: signupName, email: signupEmail, password: signupPassword })
-    // Close modal after signup attempt
-    setShowSignupModal(false)
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSignupLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
+      await updateProfile(userCredential.user, { displayName: signupName });
+      await setDoc(doc(firestore, "users", userCredential.user.uid), {
+        name: signupName,
+        email: signupEmail,
+        createdAt: new Date()
+      });
+      setSignupLoading(false); // stop loading immediately after success
+      setSignupSuccess(true);
+      setSignupName("");
+      setSignupEmail("");
+      setSignupPassword("");
+      // Show success message, then close modal and reset
+      setTimeout(() => {
+        setShowSignupModal(false);
+        setSignupSuccess(false);
+      }, 1200);
+    } catch (error: unknown) {
+      setSignupLoading(false);
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("Signup failed. Unknown error.");
+      }
+    }
   }
 
   const openLoginModal = () => {
@@ -147,7 +179,7 @@ export default function HomePage() {
                     type="email"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="you@example.com"
                     required
                   />
@@ -167,7 +199,7 @@ export default function HomePage() {
                     type={showPassword ? "text" : "password"}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="••••••••"
                     required
                   />
@@ -244,7 +276,11 @@ export default function HomePage() {
               <p className="text-gray-600 mt-1">Start your electronics learning journey today</p>
             </div>
 
-            <form onSubmit={handleSignup} className="space-y-4">
+            {signupSuccess && (
+              <div className="mb-4 text-green-600 font-semibold text-center">Signup successful! Redirecting...</div>
+            )}
+
+            <form onSubmit={handleSignup} className="space-y-4" style={signupSuccess || signupLoading ? { pointerEvents: 'none', opacity: 0.6 } : {}}>
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name
@@ -258,7 +294,7 @@ export default function HomePage() {
                     type="text"
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="John Doe"
                     required
                   />
@@ -278,7 +314,7 @@ export default function HomePage() {
                     type="email"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="you@example.com"
                     required
                   />
@@ -298,7 +334,7 @@ export default function HomePage() {
                     type={showPassword ? "text" : "password"}
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="••••••••"
                     required
                   />
@@ -339,9 +375,20 @@ export default function HomePage() {
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
+                disabled={signupLoading}
               >
-                Create account
+                {signupLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                    Signing up...
+                  </>
+                ) : (
+                  'Create account'
+                )}
               </button>
             </form>
 
