@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { ArrowLeft, Play, CheckCircle, Lock, Star, BookOpen, Zap, Target, Clock, Award } from "lucide-react"
 import Link from "next/link"
 
@@ -29,53 +28,146 @@ interface Guide {
 }
 
 interface UserProgress {
-  completedLessons: number;
+  completedLessons: number[];
+  completedGuides: number[];
   totalLessons: number;
   currentStreak: number;
   totalPoints: number;
   level: number;
 }
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { firestore } from "@/firebase";
+
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"lessons" | "guides">("lessons");
+  const { user, loading: authLoading } = useAuth();
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+  const [progressLoading, setProgressLoading] = useState(true);
 
-  // Mock progress data
-  const userProgress: UserProgress = {
-    completedLessons: 3,
-    totalLessons: 12,
-    currentStreak: 5,
-    totalPoints: 450,
-    level: 2,
+  useEffect(() => {
+    const fetchProgress = async () => {
+      if (!user) return;
+      setProgressLoading(true);
+      const docRef = doc(firestore, "users", user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserProgress({
+          completedLessons: data.completedLessons ?? [],
+          completedGuides: data.completedGuides ?? [],
+          totalLessons: data.totalLessons ?? 0,
+          currentStreak: data.currentStreak ?? 0,
+          totalPoints: data.totalPoints ?? 0,
+          level: data.level ?? 1,
+        });
+      }
+      setProgressLoading(false);
+    };
+    if (user) fetchProgress();
+  }, [user]);
+
+  if (authLoading || progressLoading) {
+    return <div className="p-8 text-center">Loading your progress...</div>;
+  }
+  if (!userProgress) {
+    return <div className="p-8 text-center text-red-500">Could not load user progress.</div>;
   }
 
+  // Example lessons array (replace with your actual lessons)
   const lessons: Lesson[] = [
-    {
-      id: 1,
-      title: "Introduction to Electricity",
-      description: "Learn the basics of electrical current, voltage, and resistance",
-      duration: "15 min",
-      difficulty: "Beginner",
-      completed: true,
-      locked: false,
-      points: 50,
-    },
-    {
-      id: 2,
-      title: "Understanding Components",
-      description: "Explore LEDs, resistors, batteries, and switches",
-      duration: "20 min",
-      difficulty: "Beginner",
-      completed: true,
-      locked: false,
-      points: 75,
-    },
-    {
-      id: 3,
-      title: "Your First Circuit",
-      description: "Build a simple LED circuit with a battery and resistor",
-      duration: "25 min",
-      difficulty: "Beginner",
-      completed: true,
+    { id: 1, title: "Introduction to Electricity", description: "Learn the basics of electrical current, voltage, and resistance", duration: "15 min", difficulty: "Beginner", completed: false, locked: false, points: 50 },
+    { id: 2, title: "Ohm's Law", description: "Understand the relationship between voltage, current, and resistance", duration: "20 min", difficulty: "Beginner", completed: false, locked: false, points: 60 },
+    { id: 3, title: "Series Circuits", description: "Explore how components behave in series", duration: "18 min", difficulty: "Intermediate", completed: false, locked: true, points: 70 },
+    { id: 4, title: "Parallel Circuits", description: "Explore how components behave in parallel", duration: "22 min", difficulty: "Intermediate", completed: false, locked: true, points: 80 },
+    { id: 5, title: "Capacitance Basics", description: "Learn about capacitors in circuits", duration: "25 min", difficulty: "Advanced", completed: false, locked: true, points: 100 },
+  ];
+
+  // Example guides array (replace with your actual guides)
+  const guides: Guide[] = [
+    { id: 1, title: "Safety First!", description: "Important safety tips for electronics.", type: "Safety", readTime: "5 min", completed: false },
+    { id: 2, title: "Reference Table", description: "Common resistor color codes and more.", type: "Reference", readTime: "3 min", completed: false },
+    { id: 3, title: "Troubleshooting", description: "How to fix common circuit issues.", type: "Troubleshooting", readTime: "8 min", completed: false },
+    { id: 4, title: "Advanced Tips", description: "Take your circuits to the next level!", type: "Advanced", readTime: "12 min", completed: false },
+  ];
+
+  // Compute lesson lock/completion state based on user progress
+  const computedLessons = lessons.map((lesson, idx) => {
+    const completed = userProgress.completedLessons.includes(lesson.id);
+    // Unlocked if first two, or previous lesson completed
+    const unlocked = idx < 2 || userProgress.completedLessons.includes(lessons[idx - 1]?.id);
+    return { ...lesson, completed, locked: !unlocked };
+  });
+
+  const computedGuides = guides.map((guide) => ({
+    ...guide,
+    completed: userProgress.completedGuides.includes(guide.id),
+  }));
+
+  // Handler to mark lesson as completed
+  const handleCompleteLesson = async (lessonId: number) => {
+    if (!user || userProgress.completedLessons.includes(lessonId)) return;
+    const newCompleted = [...userProgress.completedLessons, lessonId];
+    await updateUserProgress({ completedLessons: newCompleted });
+  };
+
+  // Handler to mark guide as completed
+  const handleCompleteGuide = async (guideId: number) => {
+    if (!user || userProgress.completedGuides.includes(guideId)) return;
+    const newCompleted = [...userProgress.completedGuides, guideId];
+    await updateUserProgress({ completedGuides: newCompleted });
+  };
+
+  // Helper to update user progress in Firestore and local state
+  const updateUserProgress = async (updates: Partial<UserProgress>) => {
+    if (!user) return;
+    const docRef = doc(firestore, "users", user.uid);
+    await updateDoc(docRef, updates);
+    setUserProgress((prev) => prev ? { ...prev, ...updates } : prev);
+  };
+
+  // --- Render lessons and guides below ---
+  // Example rendering for lessons and guides
+  return (
+    <div className="p-8">
+      <h2 className="text-xl font-bold mb-4">Lessons</h2>
+      <ul>
+        {computedLessons.map((lesson) => (
+          <li key={lesson.id} className={lesson.locked ? 'opacity-50' : ''}>
+            <span>{lesson.title}</span>
+            {lesson.completed ? (
+              <span className="ml-2 text-green-600">(Completed)</span>
+            ) : lesson.locked ? (
+              <span className="ml-2 text-gray-500">(Locked)</span>
+            ) : (
+              <button className="ml-2 text-blue-600 underline" onClick={() => handleCompleteLesson(lesson.id)}>
+                Start Lesson
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <h2 className="text-xl font-bold mt-8 mb-4">Guides</h2>
+      <ul>
+        {computedGuides.map((guide) => (
+          <li key={guide.id}>
+            <span>{guide.title}</span>
+            {guide.completed ? (
+              <span className="ml-2 text-green-600">(Read)</span>
+            ) : (
+              <button className="ml-2 text-blue-600 underline" onClick={() => handleCompleteGuide(guide.id)}>
+                Read Guide
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
       locked: false,
       points: 100,
     },

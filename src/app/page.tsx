@@ -85,13 +85,22 @@ export default function HomePage() {
       await setDoc(doc(firestore, "users", userCredential.user.uid), {
         name: signupName,
         email: signupEmail,
-        createdAt: new Date()
+        createdAt: new Date(),
+        level: 1,
+        xp: 1,
+        completedLessons: 0,
+        totalLessons: 12,
+        currentStreak: 0,
+        totalPoints: 0
       });
       console.log("User doc written to Firestore");
       setSignupLoading(false);
-setSignupSuccess(true);
-setSignupName("");
-setSignupEmail("");
+      setSignupSuccess(true);
+      setSignupName("");
+      setSignupEmail("");
+      setSignupPassword("");
+      setShowSignupModal(false);
+      setSignupSuccess(false);
 setSignupPassword("");
 setShowSignupModal(false);
 setSignupSuccess(false);
