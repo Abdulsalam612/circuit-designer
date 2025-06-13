@@ -23,6 +23,8 @@ import {
   EyeOff,
 } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/context/AuthContext";
+import { signOut } from "firebase/auth";
 
 export default function HomePage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -36,6 +38,18 @@ export default function HomePage() {
 
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [signupLoading, setSignupLoading] = useState(false);
+
+  // AuthContext for user state
+  const { user, loading } = useAuth();
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch {
+      alert("Logout failed.");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -53,27 +67,37 @@ export default function HomePage() {
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log("Signup handler called");
+    console.log("auth:", auth, "firestore:", firestore);
+    console.log("signupEmail:", signupEmail, "signupPassword:", signupPassword, "signupName:", signupName);
     setSignupLoading(true);
     try {
+      if (!auth || !firestore) {
+        throw new Error("Firebase not initialized properly.");
+      }
+      if (!signupEmail || !signupPassword || !signupName) {
+        throw new Error("Please fill all fields.");
+      }
       const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword);
+      console.log("User created:", userCredential);
       await updateProfile(userCredential.user, { displayName: signupName });
+      console.log("Profile updated");
       await setDoc(doc(firestore, "users", userCredential.user.uid), {
         name: signupName,
         email: signupEmail,
         createdAt: new Date()
       });
-      setSignupLoading(false); // stop loading immediately after success
-      setSignupSuccess(true);
-      setSignupName("");
-      setSignupEmail("");
-      setSignupPassword("");
-      // Show success message, then close modal and reset
-      setTimeout(() => {
-        setShowSignupModal(false);
-        setSignupSuccess(false);
-      }, 1200);
+      console.log("User doc written to Firestore");
+      setSignupLoading(false);
+setSignupSuccess(true);
+setSignupName("");
+setSignupEmail("");
+setSignupPassword("");
+setShowSignupModal(false);
+setSignupSuccess(false);
     } catch (error: unknown) {
       setSignupLoading(false);
+      console.error("Signup error:", error);
       if (error instanceof Error) {
         alert(error.message);
       } else {
@@ -115,18 +139,35 @@ export default function HomePage() {
               About
             </Link>
             <div className="flex items-center space-x-4">
-              <button
-                onClick={openLoginModal}
-                className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
-              >
-                Log in
-              </button>
-              <button
-                onClick={openSignupModal}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Sign up
-              </button>
+              {!loading && user ? (
+                <>
+                  <span className="text-gray-700 font-medium">
+                    {user.displayName || user.email}
+                  </span>
+                  <button
+                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                    onClick={handleLogout}
+                  >
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    onClick={() => setShowLoginModal(true)}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                    onClick={() => setShowSignupModal(true)}
+                  >
+                    Sign Up
+                  </button>
+                </>
+              )}
+
             </div>
             <Link href="/play">
               <button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-2.5 rounded-lg font-semibold transition-all transform hover:scale-105">
