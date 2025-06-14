@@ -88,7 +88,8 @@ export default function HomePage() {
         createdAt: new Date(),
         level: 1,
         xp: 1,
-        completedLessons: 0,
+        completedLessons: [],
+        completedGuides: [],
         totalLessons: 12,
         currentStreak: 0,
         totalPoints: 0

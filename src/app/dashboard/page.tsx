@@ -28,16 +28,18 @@ interface Guide {
 }
 
 interface UserProgress {
-  completedLessons: number;
+  completedLessons: number[];
+  completedGuides: number[];
   totalLessons: number;
   currentStreak: number;
   totalPoints: number;
   level: number;
+  xp?: number;
 }
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { firestore } from "@/firebase";
 
 export default function DashboardPage() {
@@ -55,11 +57,13 @@ export default function DashboardPage() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setUserProgress({
-          completedLessons: data.completedLessons ?? 0,
+          completedLessons: Array.isArray(data.completedLessons) ? data.completedLessons : [],
+          completedGuides: Array.isArray(data.completedGuides) ? data.completedGuides : [],
           totalLessons: data.totalLessons ?? 0,
           currentStreak: data.currentStreak ?? 0,
           totalPoints: data.totalPoints ?? 0,
           level: data.level ?? 1,
+          xp: data.xp ?? 0,
         });
       }
       setProgressLoading(false);
@@ -74,26 +78,27 @@ export default function DashboardPage() {
     return <div className="p-8 text-center text-red-500">Could not load user progress.</div>;
   }
 
-  const lessons: Lesson[] = [
+  // Example lessons and guides (add more as needed)
+  const allLessons: Lesson[] = [
     {
       id: 1,
       title: "Introduction to Electricity",
       description: "Learn the basics of electrical current, voltage, and resistance",
       duration: "15 min",
       difficulty: "Beginner",
-      completed: true,
+      completed: false,
       locked: false,
       points: 50,
     },
     {
       id: 2,
-      title: "Understanding Components",
-      description: "Explore LEDs, resistors, batteries, and switches",
+      title: "Ohm's Law",
+      description: "Understand the relationship between voltage, current, and resistance.",
       duration: "20 min",
       difficulty: "Beginner",
-      completed: true,
+      completed: false,
       locked: false,
-      points: 75,
+      points: 60,
     },
     {
       id: 3,
@@ -101,8 +106,8 @@ export default function DashboardPage() {
       description: "Build a simple LED circuit with a battery and resistor",
       duration: "25 min",
       difficulty: "Beginner",
-      completed: true,
-      locked: false,
+      completed: false,
+      locked: true,
       points: 100,
     },
     {
@@ -112,7 +117,7 @@ export default function DashboardPage() {
       duration: "30 min",
       difficulty: "Intermediate",
       completed: false,
-      locked: false,
+      locked: true,
       points: 125,
     },
     {
@@ -122,12 +127,12 @@ export default function DashboardPage() {
       duration: "30 min",
       difficulty: "Intermediate",
       completed: false,
-      locked: false,
+      locked: true,
       points: 125,
     },
     {
       id: 6,
-      title: "Ohm's Law",
+      title: "Ohm's Law Advanced",
       description: "Master the fundamental relationship between V, I, and R",
       duration: "35 min",
       difficulty: "Intermediate",
@@ -155,16 +160,33 @@ export default function DashboardPage() {
       locked: true,
       points: 200,
     },
-  ]
+  ];
 
-  const guides: Guide[] = [
+  // Determine completed/locked status from Firestore data
+  const completedLessons: number[] = userProgress?.completedLessons || [];
+  const completedGuides: number[] = userProgress?.completedGuides || [];
+
+  // Calculate lesson lock/completion state
+  const lessons: Lesson[] = allLessons.map((lesson, idx) => {
+    const completed = completedLessons.includes(lesson.id);
+    // Unlocked if first two, or previous lesson completed
+    const unlocked = idx < 2 || completedLessons.includes(allLessons[idx - 1]?.id);
+    return {
+      ...lesson,
+      completed,
+      locked: !unlocked && !completed,
+    };
+  });
+
+  // Guides: all unlocked, completed if in completedGuides
+  const allGuides: Guide[] = [
     {
       id: 1,
       title: "Circuit Safety Guide",
       description: "Essential safety practices when working with electronics",
       type: "Safety",
       readTime: "10 min",
-      completed: true,
+      completed: false,
     },
     {
       id: 2,
@@ -190,7 +212,13 @@ export default function DashboardPage() {
       readTime: "25 min",
       completed: false,
     },
-  ]
+  ];
+  const guides: Guide[] = allGuides.map((guide) => ({
+    ...guide,
+    completed: completedGuides.includes(guide.id),
+  }));
+
+
 
   const getDifficultyColor = (difficulty: Difficulty): string => {
     switch (difficulty) {
@@ -219,6 +247,36 @@ export default function DashboardPage() {
         return "bg-gray-100 text-gray-700"
     }
   }
+
+  // Handler to mark lesson as completed and unlock next
+  const handleCompleteLesson = async (lessonId: number) => {
+    if (!user || !userProgress) return;
+    if (userProgress.completedLessons.includes(lessonId)) return; // Already completed
+    const newCompleted = [...userProgress.completedLessons, lessonId];
+    const newXP = (userProgress.xp ?? 0) + 10;
+    const newPoints = (userProgress.totalPoints ?? 0) + 10;
+    await updateDoc(doc(firestore, "users", user.uid), {
+      completedLessons: newCompleted,
+      xp: newXP,
+      totalPoints: newPoints,
+    });
+    setUserProgress((prev) => prev ? { ...prev, completedLessons: newCompleted, xp: newXP, totalPoints: newPoints } : prev);
+  };
+
+  // Handler to mark guide as completed
+  const handleCompleteGuide = async (guideId: number) => {
+    if (!user || !userProgress) return;
+    if (userProgress.completedGuides.includes(guideId)) return; // Already completed
+    const newCompleted = [...userProgress.completedGuides, guideId];
+    const newXP = (userProgress.xp ?? 0) + 5;
+    const newPoints = (userProgress.totalPoints ?? 0) + 5;
+    await updateDoc(doc(firestore, "users", user.uid), {
+      completedGuides: newCompleted,
+      xp: newXP,
+      totalPoints: newPoints,
+    });
+    setUserProgress((prev) => prev ? { ...prev, completedGuides: newCompleted, xp: newXP, totalPoints: newPoints } : prev);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -258,12 +316,12 @@ export default function DashboardPage() {
               <Target className="h-5 w-5 text-blue-500" />
             </div>
             <div className="text-2xl font-bold text-gray-900 mb-1">
-              {userProgress.completedLessons}/{userProgress.totalLessons}
+              {userProgress.completedLessons.length}/{userProgress.totalLessons}
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
                 className="bg-blue-500 h-2 rounded-full"
-                style={{ width: `${(userProgress.completedLessons / userProgress.totalLessons) * 100}%` }}
+                style={{ width: `${(userProgress.completedLessons.length / userProgress.totalLessons) * 100}%` }}
               ></div>
             </div>
           </div>
@@ -336,75 +394,39 @@ export default function DashboardPage() {
                   <h2 className="text-lg font-semibold text-gray-900">Interactive Lessons</h2>
                   <p className="text-sm text-gray-500">Complete lessons to unlock new content</p>
                 </div>
-
-                <div className="grid gap-4">
-                  {lessons.map((lesson) => (
+                <div className="grid md:grid-cols-2 gap-6">
+                  {lessons.map((lesson: Lesson) => (
                     <div
                       key={lesson.id}
-                      className={`border rounded-lg p-6 transition-all ${
-                        lesson.locked
-                          ? "bg-gray-50 border-gray-200"
-                          : lesson.completed
-                            ? "bg-green-50 border-green-200 hover:shadow-md"
-                            : "bg-white border-gray-200 hover:shadow-md hover:border-blue-300"
-                      }`}
+                      className={`bg-white rounded-lg p-6 border border-gray-200 shadow-sm flex flex-col justify-between ${lesson.locked ? 'opacity-50 pointer-events-none' : ''}`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <div className="flex items-center space-x-2">
-                              {lesson.completed ? (
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                              ) : lesson.locked ? (
-                                <Lock className="h-5 w-5 text-gray-400" />
-                              ) : (
-                                <Play className="h-5 w-5 text-blue-500" />
-                              )}
-                              <h3 className={`font-semibold ${lesson.locked ? "text-gray-400" : "text-gray-900"}`}>
-                                Lesson {lesson.id}: {lesson.title}
-                              </h3>
-                            </div>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(lesson.difficulty)}`}
-                            >
-                              {lesson.difficulty}
-                            </span>
-                          </div>
-
-                          <p className={`mb-3 ${lesson.locked ? "text-gray-400" : "text-gray-600"}`}>
-                            {lesson.description}
-                          </p>
-
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <div className="flex items-center space-x-1">
-                              <Clock className="h-4 w-4" />
-                              <span>{lesson.duration}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Star className="h-4 w-4" />
-                              <span>{lesson.points} points</span>
-                            </div>
-                          </div>
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                            {lesson.title}
+                            {lesson.completed && (
+                              <CheckCircle className="ml-2 h-5 w-5 text-green-500" />
+                            )}
+                          </h3>
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${getDifficultyColor(lesson.difficulty)}`}>{lesson.difficulty}</span>
                         </div>
-
-                        <div className="ml-6">
-                          {lesson.completed ? (
-                            <button className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-medium">
-                              Review
-                            </button>
-                          ) : lesson.locked ? (
-                            <button className="px-4 py-2 bg-gray-100 text-gray-400 rounded-lg font-medium cursor-not-allowed">
-                              Locked
-                            </button>
-                          ) : (
-                            <Link href="/simulation">
-                              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                                Start Lesson
-                              </button>
-                            </Link>
-                          )}
+                        <p className="text-gray-700 mb-4">{lesson.description}</p>
+                        <div className="flex items-center space-x-4 mb-2">
+                          <span className="flex items-center text-gray-500 text-sm">
+                            <Clock className="h-4 w-4 mr-1" /> {lesson.duration}
+                          </span>
+                          <span className="flex items-center text-gray-500 text-sm">
+                            <Star className="h-4 w-4 mr-1" /> {lesson.points} pts
+                          </span>
                         </div>
                       </div>
+                      <button
+                        className={`mt-4 px-4 py-2 rounded bg-blue-600 text-white font-medium flex items-center space-x-2 hover:bg-blue-700 transition-colors ${lesson.completed ? 'bg-green-500 hover:bg-green-600' : ''}`}
+                        disabled={lesson.locked || lesson.completed}
+                        onClick={() => handleCompleteLesson(lesson.id)}
+                      >
+                        {lesson.completed ? <><CheckCircle className="h-5 w-5" /> Completed</> : <><Play className="h-5 w-5" /> Start Lesson</>}
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -417,9 +439,8 @@ export default function DashboardPage() {
                   <h2 className="text-lg font-semibold text-gray-900">Study Guides</h2>
                   <p className="text-sm text-gray-500">Reference materials and tutorials</p>
                 </div>
-
                 <div className="grid md:grid-cols-2 gap-4">
-                  {guides.map((guide) => (
+                  {guides.map((guide: Guide) => (
                     <div
                       key={guide.id}
                       className={`border rounded-lg p-6 transition-all ${
@@ -453,6 +474,8 @@ export default function DashboardPage() {
                           className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                             guide.completed ? "bg-green-100 text-green-700" : "bg-blue-600 hover:bg-blue-700 text-white"
                           }`}
+                          disabled={guide.completed}
+                          onClick={() => handleCompleteGuide(guide.id)}
                         >
                           {guide.completed ? "Review" : "Read Guide"}
                         </button>
