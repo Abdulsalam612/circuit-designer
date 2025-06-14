@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Play, CheckCircle, Lock, Star, BookOpen, Zap, Target, Clock, Award } from "lucide-react"
+import { ArrowLeft, Play, CheckCircle, Star, BookOpen, Zap, Target, Clock, Award } from "lucide-react"
 import Link from "next/link"
 
 // Add type definitions after the imports
