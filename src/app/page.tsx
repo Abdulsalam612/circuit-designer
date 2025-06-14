@@ -1,7 +1,7 @@
 "use client"
 
 import { auth, firestore } from "@/firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
 import { useState } from "react"
@@ -30,6 +30,11 @@ export default function HomePage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignupModal, setShowSignupModal] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetSuccess, setResetSuccess] = useState(false)
+  const [resetError, setResetError] = useState("")
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [signupName, setSignupName] = useState("")
@@ -63,6 +68,25 @@ export default function HomePage() {
         alert("Login failed. Unknown error.");
       }
     }
+  }
+
+  const handlePasswordReset = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setResetLoading(true);
+    setResetSuccess(false);
+    setResetError("");
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      setResetSuccess(true);
+      setResetEmail("");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setResetError(error.message);
+      } else {
+        setResetError("Failed to send reset email.");
+      }
+    }
+    setResetLoading(false);
   }
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -128,6 +152,61 @@ setSignupSuccess(false);
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Password Reset Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+              onClick={() => {
+                setShowResetModal(false);
+                setResetEmail("");
+                setResetSuccess(false);
+                setResetError("");
+              }}
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Reset Password</h2>
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:border-blue-300 text-black"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+              {resetSuccess && (
+                <p className="text-green-600 text-sm">Password reset email sent! Check your inbox.</p>
+              )}
+              {resetError && (
+                <p className="text-red-600 text-sm">{resetError}</p>
+              )}
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700 transition-colors"
+                disabled={resetLoading}
+              >
+                {resetLoading ? "Sending..." : "Send Reset Email"}
+              </button>
+              <button
+                type="button"
+                className="w-full mt-2 text-blue-600 hover:underline"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setShowLoginModal(true);
+                }}
+              >Back to Login</button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
@@ -282,9 +361,16 @@ setSignupSuccess(false);
                 </div>
 
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                  <button
+                    type="button"
+                    className="font-medium text-blue-600 hover:text-blue-500 bg-transparent border-0 p-0 m-0 cursor-pointer"
+                    onClick={() => {
+                      setShowLoginModal(false);
+                      setShowResetModal(true);
+                    }}
+                  >
                     Forgot password?
-                  </a>
+                  </button>
                 </div>
               </div>
 
