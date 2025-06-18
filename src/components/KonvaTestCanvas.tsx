@@ -315,6 +315,25 @@ const KonvaTestCanvas = () => {
     setStagePos({ x: dimensions.width / 10, y: dimensions.height / 10 })
   }
 
+  // Handle rotation of selected component with 'R' key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'r' || e.key === 'R') {
+        if (selectedComponent) {
+          setComponents(prevComponents =>
+            prevComponents.map(component =>
+              component.id === selectedComponent
+                ? { ...component, rotation: (component.rotation + 90) % 360 }
+                : component
+            )
+          );
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedComponent]);
+
   // Render components based on their type
   const renderComponents = () => {
     const handleComponentClick = (id: string) => {
@@ -344,6 +363,7 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
+              isSelected={isSelected}
               onClick={() => handleComponentClick(component.id)}
               onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
               draggable={true}
@@ -357,6 +377,7 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
+              isSelected={isSelected}
               onClick={() => handleComponentClick(component.id)}
               onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
               draggable={true}
@@ -370,6 +391,7 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
+              isSelected={isSelected}
               onClick={() => handleComponentClick(component.id)}
               onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
               draggable={true}
@@ -383,6 +405,7 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
+              isSelected={isSelected}
               onClick={() => handleComponentClick(component.id)}
               onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
               draggable={true}
@@ -396,6 +419,7 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
+              isSelected={isSelected}
               onClick={() => handleComponentClick(component.id)}
               onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
               draggable={true}

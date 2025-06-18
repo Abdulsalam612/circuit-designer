@@ -1,6 +1,6 @@
 "use client";
 
-import { Group, Image } from 'react-konva';
+import { Group, Image, Rect } from 'react-konva';
 import useImage from 'use-image';
 import { KonvaEventObject } from 'konva/lib/Node';
 
@@ -23,6 +23,7 @@ const Inductor = ({
   draggable,
   onDragEnd,
   onClick,
+  isSelected
 }: InductorProps) => {
   const [image] = useImage('/icons/inductor.svg');
   return (
@@ -35,6 +36,17 @@ const Inductor = ({
       onClick={onClick}
       id={id}
     >
+      {isSelected && (
+        <Rect
+          x={-4}
+          y={-4}
+          width={68}
+          height={28}
+          stroke="#3498db"
+          strokeWidth={2}
+          cornerRadius={6}
+        />
+      )}
       <Image image={image} width={60} height={20} alt="" />
     </Group>
   );

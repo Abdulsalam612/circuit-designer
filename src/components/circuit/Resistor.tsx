@@ -1,6 +1,6 @@
 "use client"
 
-import { Group, Image } from 'react-konva';
+import { Group, Image, Rect } from 'react-konva';
 import useImage from 'use-image';
 import { KonvaEventObject } from 'konva/lib/Node';
 
@@ -12,6 +12,7 @@ interface ResistorProps {
   draggable?: boolean;
   onDragEnd?: (e: KonvaEventObject<DragEvent>) => void;
   onClick?: (e: KonvaEventObject<MouseEvent>) => void;
+  isSelected?: boolean;
 }
 
 const Resistor = ({ 
@@ -21,7 +22,8 @@ const Resistor = ({
   rotation, 
   draggable, 
   onDragEnd, 
-  onClick
+  onClick,
+  isSelected
 }: ResistorProps) => {
   const [image] = useImage('/icons/resistor.svg');
   return (
@@ -34,6 +36,17 @@ const Resistor = ({
       onClick={onClick}
       id={id}
     >
+      {isSelected && (
+        <Rect
+          x={-4}
+          y={-4}
+          width={68}
+          height={28}
+          stroke="#3498db"
+          strokeWidth={2}
+          cornerRadius={6}
+        />
+      )}
       <Image image={image} width={60} height={20} alt="" />
     </Group>
   );
