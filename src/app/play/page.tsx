@@ -5,7 +5,6 @@ import Link from "next/link"
 import { useEffect, useState, useRef } from "react"
 
 export default function PlayPage() {
-  const [isLoaded, setIsLoaded] = useState(false)
   const [animateComponents, setAnimateComponents] = useState({
     heroTitle: false,
     heroSubtitle: false,
@@ -20,8 +19,6 @@ export default function PlayPage() {
   const statsSectionRef = useRef(null)
 
   useEffect(() => {
-    setIsLoaded(true)
-
     // Hero Section Animations
     setTimeout(() => setAnimateComponents((prev) => ({ ...prev, heroTitle: true })), 300) // increased from 200
     setTimeout(() => setAnimateComponents((prev) => ({ ...prev, heroSubtitle: true })), 800) // increased from 500
