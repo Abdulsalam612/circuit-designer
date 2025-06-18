@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
 import { Group, Image } from 'react-konva';
 import useImage from 'use-image';
 import { KonvaEventObject } from 'konva/lib/Node';
 
-interface CapacitorProps {
+interface BatteryProps {
   id: string;
   x: number;
   y: number;
@@ -12,18 +12,19 @@ interface CapacitorProps {
   draggable?: boolean;
   onDragEnd?: (e: KonvaEventObject<DragEvent>) => void;
   onClick?: (e: KonvaEventObject<MouseEvent>) => void;
-
+  isSelected?: boolean;
 }
 
-const Capacitor = ({ 
-  id, 
-  x, 
-  y, 
-  rotation, 
-  draggable, 
-  onDragEnd, 
+const Battery = ({
+  id,
+  x,
+  y,
+  rotation,
+  draggable,
+  onDragEnd,
   onClick,
-}: CapacitorProps) => {
+}: BatteryProps) => {
+  const [image] = useImage('/icons/battery.svg');
   return (
     <Group
       x={x}
@@ -34,9 +35,9 @@ const Capacitor = ({
       onClick={onClick}
       id={id}
     >
-      <Image image={useImage('/icons/capacitor.svg')[0]} width={60} height={20} alt="" />
+      <Image image={image} width={60} height={20} alt="" />
     </Group>
   );
 };
 
-export default Capacitor;
+export default Battery;

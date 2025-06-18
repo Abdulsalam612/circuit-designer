@@ -7,6 +7,9 @@ import styles from "./KonvaTestCanvas.module.css"
 import interact from "interactjs"
 import Resistor from "./circuit/Resistor"
 import Capacitor from "./circuit/Capacitor"
+import Battery from "./circuit/Battery"
+import Inductor from "./circuit/Inductor"
+import Switch from "./circuit/Switch"
 import { createPortal } from "react-dom"
 
 // Define component types
@@ -341,7 +344,6 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
-              isSelected={isSelected}
               onClick={() => handleComponentClick(component.id)}
               onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
               draggable={true}
@@ -355,7 +357,45 @@ const KonvaTestCanvas = () => {
               x={component.x}
               y={component.y}
               rotation={component.rotation}
-              isSelected={isSelected}
+              onClick={() => handleComponentClick(component.id)}
+              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
+              draggable={true}
+            />
+          );
+        case 'battery':
+          return (
+            <Battery
+              key={component.id}
+              id={component.id}
+              x={component.x}
+              y={component.y}
+              rotation={component.rotation}
+              onClick={() => handleComponentClick(component.id)}
+              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
+              draggable={true}
+            />
+          );
+        case 'inductor':
+          return (
+            <Inductor
+              key={component.id}
+              id={component.id}
+              x={component.x}
+              y={component.y}
+              rotation={component.rotation}
+              onClick={() => handleComponentClick(component.id)}
+              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
+              draggable={true}
+            />
+          );
+        case 'switch':
+          return (
+            <Switch
+              key={component.id}
+              id={component.id}
+              x={component.x}
+              y={component.y}
+              rotation={component.rotation}
               onClick={() => handleComponentClick(component.id)}
               onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
               draggable={true}
