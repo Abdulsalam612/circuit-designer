@@ -24,7 +24,11 @@ interface CircuitComponent {
   rotation: number;
 }
 
-const KonvaTestCanvas = () => {
+interface KonvaTestCanvasProps {
+  onSelectedComponentChange?: (component: CircuitComponent | null) => void;
+}
+
+const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentChange }) => {
   // Set initial dimensions to avoid hydration errors
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [isMounted, setIsMounted] = useState(false)
@@ -38,6 +42,14 @@ const KonvaTestCanvas = () => {
   // New state for circuit components
   const [components, setComponents] = useState<CircuitComponent[]>([])
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
+
+  // Notify parent when selected component changes
+  useEffect(() => {
+    if (onSelectedComponentChange) {
+      const selected = components.find(c => c.id === selectedComponent) || null;
+      onSelectedComponentChange(selected);
+    }
+  }, [selectedComponent, components, onSelectedComponentChange]);
   
   // References
   const stageRef = useRef<Konva.Stage>(null)
@@ -337,7 +349,7 @@ const KonvaTestCanvas = () => {
   // Render components based on their type
   const renderComponents = () => {
     const handleComponentClick = (id: string) => {
-      setSelectedComponent(id);
+      setSelectedComponent(prev => prev === id ? null : id);
     };
 
     const handleComponentDragEnd = (id: string, e: Konva.KonvaEventObject<Event>) => {

@@ -1,9 +1,18 @@
 "use client"
 
-import { useState } from "react"
 import { ArrowLeft, RotateCcw, Play, Pause, Settings, Save, Upload } from "lucide-react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
+import { useState } from "react";
+// Define the shape of a circuit component (duplicated from KonvaTestCanvas)
+interface CircuitComponent {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  rotation: number;
+}
+import PropertiesPanel from "../../components/PropertiesPanel";
 
 // Dynamically import Konva components with SSR disabled
 const KonvaTestCanvas = dynamic(() => import("../../components/KonvaTestCanvas"), {
@@ -17,6 +26,7 @@ const CircuitSidebar = dynamic(() => import("../../components/CircuitSidebar"), 
 })
 
 export default function SimulationPage() {
+  const [selectedComponent, setSelectedComponent] = useState<CircuitComponent | null>(null);
   const [isSimulationRunning, setIsSimulationRunning] = useState(false)
 
   const toggleSimulation = () => {
@@ -131,7 +141,7 @@ export default function SimulationPage() {
 
             {/* Canvas Content Area */}
             <div className="absolute inset-0 p-6">
-              <KonvaTestCanvas />
+              <KonvaTestCanvas onSelectedComponentChange={setSelectedComponent} />
             </div>
           </div>
         </div>
@@ -142,12 +152,7 @@ export default function SimulationPage() {
           </div>
 
           <div className="flex-1 p-4 overflow-y-auto">
-            <div className="text-center text-gray-400 mt-8">
-              <div className="text-gray-300 mb-2">
-                <Settings className="w-8 h-8 mx-auto" />
-              </div>
-              <p className="text-sm">Select a component to view properties</p>
-            </div>
+            <PropertiesPanel component={selectedComponent} />
           </div>
         </div>
       </div>
