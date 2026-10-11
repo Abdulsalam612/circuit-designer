@@ -1,13 +1,14 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Stage, Layer, Rect, Circle, Shape, Line } from "react-konva"
+import { Stage, Layer, Rect, Circle, Shape, Line, Label, Tag, Text } from "react-konva"
 import Konva from "konva"
 import styles from "./KonvaTestCanvas.module.css"
 import interact from "interactjs"
 import CircuitPart, { CIRCUIT_PART_NAME, partSize } from "./circuit/CircuitPart"
 import { COMPONENT_DEFS, iconFor } from "@/lib/components"
 import { rotateComponent } from "@/lib/editing"
+import { formatAmps, formatVolts, formatWatts, type SimulationResult } from "@/lib/simulation"
 import { GRID_SIZE, MAJOR_EVERY, snapToGrid, isSpotFree, pointKey, type Point } from "@/lib/grid"
 import {
   makeId,
@@ -54,9 +55,11 @@ interface KonvaTestCanvasProps {
   onLayoutChange: (layout: CircuitLayout) => void;
   // Ids of the selected components and wires
   onSelectionChange?: (ids: string[]) => void;
+  // Results to show while the simulation is running
+  simulation?: SimulationResult | null;
 }
 
-const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChange, onSelectionChange }) => {
+const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation }) => {
   // Set initial dimensions to avoid hydration errors
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [isMounted, setIsMounted] = useState(false)
@@ -85,6 +88,8 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
   // Wire being drawn: from a lead end / wire end to the grid point under the cursor
   const [wireDraft, setWireDraft] = useState<{ start: Point; end: Point } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<string | null>(null)
+  // Part under the mouse, for the readings tooltip while simulating
+  const [hoveredPartId, setHoveredPartId] = useState<string | null>(null)
   // Box selection, in canvas coordinates
   const [marquee, setMarquee] = useState<{ start: Point; end: Point; additive: boolean } | null>(null)
   // Set after a box selection so the click that ends it doesn't clear the selection
@@ -603,6 +608,9 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
     setMovePreview(null);
   };
 
+  // Parts named in a simulation warning get an amber outline
+  const warnedIds = new Set(simulation?.warnings.flatMap(w => w.componentIds) ?? [])
+
   const renderComponents = () => viewComponents.map(component => (
     <CircuitPart
       key={component.id}
@@ -612,9 +620,44 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
       onDragStart={() => handlePartDragStart(component.id)}
       onDragMove={handlePartDragMove}
       onDragEnd={handlePartDragEnd}
+      onMouseEnter={() => setHoveredPartId(component.id)}
+      onMouseLeave={() => setHoveredPartId(prev => (prev === component.id ? null : prev))}
+      brightness={simulation?.readings[component.id]?.brightness ?? 0}
+      hasWarning={warnedIds.has(component.id)}
       draggable={true}
     />
   ));
+
+  // Live readings above the hovered part while simulating. Drawn at a fixed screen
+  // size whatever the zoom.
+  const renderReadingTooltip = () => {
+    if (!simulation || !hoveredPartId || movePreview) return null;
+    const component = viewComponents.find(c => c.id === hoveredPartId);
+    const reading = simulation.readings[hoveredPartId];
+    if (!component || !reading || component.type === 'ground') return null;
+    const vertical = component.rotation % 180 !== 0;
+    const halfHeight = vertical ? partSize(component.type).width / 2 : partSize(component.type).height / 2;
+    const lines = [
+      COMPONENT_DEFS[component.type].label,
+      `Voltage: ${formatVolts(reading.voltage)}`,
+      `Current: ${formatAmps(reading.current)}`,
+      `Power: ${formatWatts(reading.power)}`,
+    ];
+    if (reading.overloaded) lines.push('Overloaded!');
+    return (
+      <Label x={component.x} y={component.y - halfHeight - 6} scaleX={1 / scale} scaleY={1 / scale} listening={false}>
+        <Tag
+          fill="#1f2937"
+          opacity={0.92}
+          cornerRadius={6}
+          pointerDirection="down"
+          pointerWidth={10}
+          pointerHeight={6}
+        />
+        <Text text={lines.join("\n")} fontSize={12} lineHeight={1.4} padding={8} fill="white" fontFamily="ui-monospace, monospace" />
+      </Label>
+    );
+  };
 
   const renderWires = () => viewWires.map(w => (
     <Line
@@ -782,6 +825,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
           {renderConnectionPoints()}
           {renderWireDraft()}
           {renderMarquee()}
+          {renderReadingTooltip()}
         </Layer>
       </Stage>
       

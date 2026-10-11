@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { RotateCw } from "lucide-react";
+import { ArrowLeftRight, RotateCw } from "lucide-react";
 import type { CircuitComponent } from "@/types/circuit";
 import { COMPONENT_DEFS, formatValue, parseValue } from "@/lib/components";
+import { formatAmps, formatVolts, formatWatts, type PartReading } from "@/lib/simulation";
 
 interface PropertiesPanelProps {
   component: CircuitComponent | null;
@@ -11,6 +12,10 @@ interface PropertiesPanelProps {
   selectionCount?: number;
   onChange?: (patch: Partial<Pick<CircuitComponent, "value" | "closed">>) => void;
   onRotate?: () => void;
+  // Reverse a polarized part (battery, LED)
+  onFlip?: () => void;
+  // Live values while the simulation runs
+  reading?: PartReading | null;
 }
 
 // Text box for a value with units. Accepts "4.7k", "4k7", "10u", "100 mΩ"... and saves
@@ -60,7 +65,7 @@ const ValueInput = ({ value, unit, onCommit }: { value: number; unit: string; on
   );
 };
 
-const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionCount = 0, onChange, onRotate }) => {
+const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionCount = 0, onChange, onRotate, onFlip, reading }) => {
   if (!component) {
     return (
       <div className="text-center text-gray-400 mt-8">
@@ -81,6 +86,24 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
         <span className="block text-xs text-gray-500">Type</span>
         <span className="font-medium text-gray-900">{def.label}</span>
       </div>
+
+      {reading && component.type !== "ground" && (
+        <div className="rounded-lg bg-green-50 border border-green-200 p-3">
+          <span className="block text-xs font-semibold text-green-700 mb-2">Live readings</span>
+          <dl className="grid grid-cols-2 gap-y-1 text-sm">
+            <dt className="text-gray-500">Voltage</dt><dd className="font-mono text-gray-900">{formatVolts(reading.voltage)}</dd>
+            <dt className="text-gray-500">Current</dt><dd className="font-mono text-gray-900">{formatAmps(reading.current)}</dd>
+            <dt className="text-gray-500">Power</dt><dd className="font-mono text-gray-900">{formatWatts(reading.power)}</dd>
+            {reading.brightness !== undefined && (
+              <>
+                <dt className="text-gray-500">Brightness</dt>
+                <dd className="font-mono text-gray-900">{Math.round(reading.brightness * 100)}%</dd>
+              </>
+            )}
+          </dl>
+          {reading.overloaded && <p className="mt-2 text-xs font-semibold text-red-600">Too much current – this LED would burn out.</p>}
+        </div>
+      )}
 
       {def.value && component.value !== undefined && (
         <label className="block">
@@ -124,6 +147,23 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
           </button>
         </div>
       </div>
+
+      {def.polarized && (
+        <div>
+          <span className="block text-xs text-gray-500 mb-1">Direction</span>
+          <button
+            onClick={onFlip}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" /> Flip direction
+          </button>
+          <p className="mt-1 text-xs text-gray-400">
+            {component.type === "battery"
+              ? "Swaps the + and − ends. The red + marks the positive end."
+              : "Current only flows from the flat side of the triangle to the bar."}
+          </p>
+        </div>
+      )}
 
       <div>
         <span className="block text-xs text-gray-500">Position</span>

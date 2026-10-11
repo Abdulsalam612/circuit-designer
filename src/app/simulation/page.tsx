@@ -2,17 +2,18 @@
 
 import {
   ArrowLeft, RotateCcw, Play, Pause, Settings, Save, Upload, Download, Undo2, Redo2, FolderOpen,
-  Check, Loader2, AlertCircle, CloudOff,
+  Check, Loader2, AlertCircle, CloudOff, CheckCircle2, AlertTriangle,
 } from "lucide-react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PropertiesPanel from "../../components/PropertiesPanel";
 import { useRequireAuth } from "@/context/AuthContext";
 import { useCircuitHistory, EMPTY_LAYOUT } from "@/hooks/useCircuitHistory";
 import { useCircuitSaving, type SaveStatus } from "@/hooks/useCircuitSaving";
 import { circuitFromJson, circuitToJson, DEFAULT_CIRCUIT_NAME } from "@/lib/circuitStore";
-import { rotateComponent } from "@/lib/editing";
+import { flipComponent, rotateComponent } from "@/lib/editing";
+import { simulate } from "@/lib/simulation";
 import type { CircuitComponent, CircuitLayout } from "@/types/circuit";
 
 // Dynamically import Konva components with SSR disabled
@@ -80,6 +81,12 @@ export default function SimulationPage() {
 
   const selectedComponent =
     selectedIds.length === 1 ? layout.components.find(c => c.id === selectedIds[0]) ?? null : null
+
+  // While running, the circuit is solved again after every change
+  const simulation = useMemo(
+    () => (isSimulationRunning ? simulate(layout) : null),
+    [isSimulationRunning, layout],
+  )
 
   const updateComponent = (id: string, patch: Partial<CircuitComponent>) => {
     apply({ ...layout, components: layout.components.map(c => (c.id === id ? { ...c, ...patch } : c)) })
@@ -300,7 +307,7 @@ export default function SimulationPage() {
 
             {/* Canvas Content Area */}
             <div className="absolute inset-0 p-6">
-              <KonvaTestCanvas layout={layout} onLayoutChange={apply} onSelectionChange={setSelectedIds} />
+              <KonvaTestCanvas layout={layout} onLayoutChange={apply} onSelectionChange={setSelectedIds} simulation={simulation} />
             </div>
           </div>
         </div>
@@ -311,11 +318,33 @@ export default function SimulationPage() {
           </div>
 
           <div className="flex-1 p-4 overflow-y-auto">
+            {simulation && (
+              <div className="mb-5">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Simulation</h3>
+                {simulation.warnings.length === 0 ? (
+                  <p className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    Circuit is working. Hover over a part to see its readings.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {simulation.warnings.map((w, i) => (
+                      <li key={i} className="flex gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>{w.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
             <PropertiesPanel
               component={selectedComponent}
               selectionCount={selectedIds.length}
               onChange={(patch) => selectedComponent && updateComponent(selectedComponent.id, patch)}
               onRotate={rotateSelected}
+              onFlip={() => selectedComponent && apply(flipComponent(layout, selectedComponent.id))}
+              reading={selectedComponent ? simulation?.readings[selectedComponent.id] : null}
             />
           </div>
         </div>

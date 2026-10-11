@@ -11,3 +11,10 @@ export const rotateComponent = (layout: CircuitLayout, id: string): CircuitLayou
   const wires = planMove(layout.components, layout.wires, components);
   return wires ? { components, wires: normalizeWires(wires, components) } : null;
 };
+
+// Reverses a part in place (half turn) while its wires stay put, so each wire ends up
+// on the other end. For batteries and LEDs this swaps + and -.
+export const flipComponent = (layout: CircuitLayout, id: string): CircuitLayout => ({
+  ...layout,
+  components: layout.components.map(c => (c.id === id ? { ...c, rotation: (c.rotation + 180) % 360 } : c)),
+});

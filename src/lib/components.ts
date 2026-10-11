@@ -12,15 +12,18 @@ export interface ComponentDef {
   value?: { label: string; unit: string; default: number };
   // Has an open/closed state (switches)
   toggles?: boolean;
+  // The two ends aren't interchangeable. The first end (left when unrotated) is the
+  // battery's + terminal and the LED's anode (+); the second is - / cathode.
+  polarized?: boolean;
 }
 
 export const COMPONENT_DEFS: Record<ComponentType, ComponentDef> = {
   resistor: { label: 'Resistor', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Resistance', unit: 'Ω', default: 1000 } },
   capacitor: { label: 'Capacitor', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Capacitance', unit: 'F', default: 1e-6 } },
   inductor: { label: 'Inductor', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Inductance', unit: 'H', default: 1e-3 } },
-  battery: { label: 'Battery', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Voltage', unit: 'V', default: 9 } },
+  battery: { label: 'Battery', cells: 4, pins: 2, defaultRotation: 0, polarized: true, value: { label: 'Voltage', unit: 'V', default: 9 } },
   switch: { label: 'Switch', cells: 4, pins: 2, defaultRotation: 0, toggles: true },
-  led: { label: 'LED', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Forward voltage', unit: 'V', default: 2 } },
+  led: { label: 'LED', cells: 4, pins: 2, defaultRotation: 0, polarized: true, value: { label: 'Forward voltage', unit: 'V', default: 2 } },
   lamp: { label: 'Lamp', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Resistance', unit: 'Ω', default: 100 } },
   // Points down by default, with its single lead end at the top
   ground: { label: 'Ground', cells: 2, pins: 1, defaultRotation: 90 },

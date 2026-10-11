@@ -1,4 +1,5 @@
 import { GRID_SIZE, getPartPoints, isSpotFree, pointKey, type Point } from './grid';
+import { COMPONENT_DEFS } from './components';
 import type { CircuitComponent, Wire } from '@/types/circuit';
 
 export type WireSegment = Omit<Wire, 'id'>;
@@ -240,7 +241,8 @@ export const planMove = (
   delta: Point = { x: 0, y: 0 },
 ): Wire[] | null => {
   // swapEnds: when a part is turned, its two lead ends are interchangeable, so the
-  // wires may attach the other way round if that routes better
+  // wires may attach the other way round if that routes better. Never for polarized
+  // parts (battery, LED): that would silently reverse them in the circuit.
   const plan = (swapEnds: boolean) => {
     const moved = new Map<string, Point>();
     const nextById = new Map(nextComponents.map(c => [c.id, c]));
@@ -253,7 +255,7 @@ export const planMove = (
       // wires can stay exactly where they are
       const samePoints = new Set(oldPins.map(pointKey));
       if (newPins.every(p => samePoints.has(pointKey(p)))) continue;
-      if (swapEnds && n.rotation !== c.rotation) newPins = [...newPins].reverse();
+      if (swapEnds && n.rotation !== c.rotation && !COMPONENT_DEFS[n.type].polarized) newPins = [...newPins].reverse();
       oldPins.forEach((p, i) => moved.set(pointKey(p), newPins[i]));
     }
     for (const w of wires) {
