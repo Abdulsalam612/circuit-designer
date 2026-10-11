@@ -45,6 +45,15 @@ const partBox = (c: CircuitComponent): Box => {
     : { x0: c.x - halfLong, y0: c.y - halfShort, x1: c.x + halfLong, y1: c.y + halfShort }
 }
 
+// Current flow animation: dots every FLOW_DOT_SPACING canvas units, moving at a speed
+// that grows with the current (gently, so tiny and huge currents both look sensible)
+const FLOW_NAME = "current-flow"
+const FLOW_ID_PREFIX = "flow-"
+const FLOW_COLOR = "#f59e0b"
+const FLOW_DOT_SPACING = 14
+const FLOW_MIN_AMPS = 1e-6
+const flowSpeed = (amps: number) => Math.min(160, 25 + 30 * Math.log10(1 + amps * 1000))
+
 const WIRE_COLOR = "#1f2937"
 const SELECT_COLOR = "#3498db"
 const INVALID_COLOR = "#ef4444"
@@ -123,6 +132,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
   
   // References
   const stageRef = useRef<Konva.Stage>(null)
+  const circuitLayerRef = useRef<Konva.Layer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   
   // Setup interact.js for drag and drop functionality
@@ -659,6 +669,55 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
     );
   };
 
+  // ---- Current flow animation ----
+  // While simulating, dots travel along every wire that carries current, in the direction
+  // of conventional current (+ to -), faster when more current flows.
+  const showFlow = !!simulation && !movePreview
+  const flowSpeeds = useRef(new Map<string, number>())
+  flowSpeeds.current = new Map(
+    showFlow
+      ? Object.entries(simulation!.wireCurrents)
+          .filter(([, amps]) => Math.abs(amps) > FLOW_MIN_AMPS)
+          .map(([id, amps]) => [id, Math.sign(amps) * flowSpeed(Math.abs(amps))])
+      : []
+  )
+
+  useEffect(() => {
+    const layer = circuitLayerRef.current
+    if (!showFlow || !layer) return
+    const animation = new Konva.Animation((frame) => {
+      if (!frame) return
+      const seconds = frame.timeDiff / 1000
+      for (const line of layer.find(`.${FLOW_NAME}`) as Konva.Line[]) {
+        const speed = flowSpeeds.current.get(line.id().slice(FLOW_ID_PREFIX.length)) ?? 0
+        // A falling dash offset moves the dots from the line's first point to its last
+        line.dashOffset(line.dashOffset() - speed * seconds)
+      }
+    }, layer)
+    animation.start()
+    return () => { animation.stop() }
+  }, [showFlow])
+
+  const renderFlow = () => {
+    if (!showFlow) return null
+    return viewWires
+      .filter(w => flowSpeeds.current.has(w.id))
+      .map(w => (
+        <Line
+          key={`${FLOW_ID_PREFIX}${w.id}`}
+          id={`${FLOW_ID_PREFIX}${w.id}`}
+          name={FLOW_NAME}
+          points={[w.x1, w.y1, w.x2, w.y2]}
+          stroke={FLOW_COLOR}
+          strokeWidth={4}
+          lineCap="round"
+          dash={[0.001, FLOW_DOT_SPACING]}
+          listening={false}
+          perfectDrawEnabled={false}
+        />
+      ))
+  }
+
   const renderWires = () => viewWires.map(w => (
     <Line
       key={w.id}
@@ -819,8 +878,9 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
           <Circle x={0} y={0} radius={4} fill="#cbd5e1" />
         </Layer>
 
-        <Layer>
+        <Layer ref={circuitLayerRef}>
           {renderWires()}
+          {renderFlow()}
           {renderComponents()}
           {renderConnectionPoints()}
           {renderWireDraft()}

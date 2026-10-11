@@ -1,4 +1,4 @@
-import type { CircuitComponent, CircuitLayout } from '@/types/circuit';
+import type { CircuitComponent, CircuitLayout, Wire } from '@/types/circuit';
 import { getPartPoints, pointKey } from './grid';
 import { COMPONENT_DEFS } from './components';
 
@@ -59,6 +59,9 @@ export interface SimulationResult {
   readings: Record<string, PartReading>;
   // Voltage at each connection point (pointKey -> volts), relative to ground
   pointVoltages: Map<string, number>;
+  // Current in each wire (wire id -> amps). Positive means it flows from the wire's
+  // first end (x1, y1) to its second end (x2, y2).
+  wireCurrents: Record<string, number>;
   warnings: SimulationWarning[];
 }
 
@@ -347,7 +350,87 @@ export const simulate = (layout: CircuitLayout): SimulationResult => {
     });
   }
 
-  return { readings, pointVoltages, warnings };
+  return { readings, pointVoltages, warnings, wireCurrents: computeWireCurrents(layout, readings, pinsOf) };
+};
+
+// ---- Current in each wire ----
+//
+// Wires have no resistance, so the solve doesn't say how current splits between them.
+// It follows from the parts instead: every lead end pushes current into (or pulls it out
+// of) the wires it touches. Within each connected group of wires, take a tree of them;
+// the current along each tree wire is everything pushed in on its far side. (Wires that
+// close a loop entirely made of wire carry nothing in this picture, which is fine for
+// showing flow.)
+const computeWireCurrents = (
+  layout: CircuitLayout,
+  readings: Record<string, PartReading>,
+  pinsOf: Map<string, string[]>,
+): Record<string, number> => {
+  // Current flowing from parts into each point
+  const injected = new Map<string, number>();
+  const inject = (k: string, amps: number) => injected.set(k, (injected.get(k) ?? 0) + amps);
+  for (const c of layout.components) {
+    const pins = pinsOf.get(c.id)!;
+    const r = readings[c.id];
+    if (pins.length < 2 || !r || r.current === 0) continue;
+    if (c.type === 'battery') {
+      // A battery pushes current out of its + end and takes it back at its - end
+      inject(pins[0], r.current);
+      inject(pins[1], -r.current);
+    } else {
+      // Other parts carry current from their first end to their second
+      inject(pins[0], -r.current);
+      inject(pins[1], r.current);
+    }
+  }
+
+  // Which wires touch each point
+  const touching = new Map<string, Wire[]>();
+  const end1 = (w: Wire) => pointKey({ x: w.x1, y: w.y1 });
+  const end2 = (w: Wire) => pointKey({ x: w.x2, y: w.y2 });
+  for (const w of layout.wires) {
+    for (const k of [end1(w), end2(w)]) touching.set(k, [...(touching.get(k) ?? []), w]);
+  }
+
+  const currents: Record<string, number> = {};
+  const visited = new Set<string>();
+  for (const start of touching.keys()) {
+    if (visited.has(start)) continue;
+    // Walk the group, remembering how each point was reached
+    const order: string[] = [];
+    const parentWire = new Map<string, Wire>();
+    const parentPoint = new Map<string, string>();
+    const queue = [start];
+    visited.add(start);
+    while (queue.length) {
+      const p = queue.shift()!;
+      order.push(p);
+      for (const w of touching.get(p) ?? []) {
+        const q = end1(w) === p ? end2(w) : end1(w);
+        if (visited.has(q)) continue;
+        visited.add(q);
+        parentWire.set(q, w);
+        parentPoint.set(q, p);
+        queue.push(q);
+      }
+    }
+    // From the far ends inwards: what a point and everything beyond it push in has to
+    // leave along the wire back towards the start
+    const beyond = new Map<string, number>();
+    for (let i = order.length - 1; i >= 0; i--) {
+      const p = order[i];
+      const total = (beyond.get(p) ?? 0) + (injected.get(p) ?? 0);
+      const w = parentWire.get(p);
+      if (!w) continue;
+      const towards = parentPoint.get(p)!;
+      beyond.set(towards, (beyond.get(towards) ?? 0) + total);
+      // total flows from p to its parent; express it along the wire's own direction
+      const amps = end1(w) === p ? total : -total;
+      currents[w.id] = Math.abs(amps) < 1e-9 ? 0 : amps;
+    }
+  }
+  for (const w of layout.wires) currents[w.id] ??= 0;
+  return currents;
 };
 
 // ---- Formatting helpers for the UI ----

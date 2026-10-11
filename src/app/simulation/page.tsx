@@ -273,7 +273,13 @@ export default function SimulationPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${isSimulationRunning ? "bg-green-500" : "bg-gray-400"}`}></div>
+                  {/* Pulses while running */}
+                  <span className="relative flex h-3 w-3">
+                    {isSimulationRunning && (
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75 animate-ping"></span>
+                    )}
+                    <span className={`relative inline-flex h-3 w-3 rounded-full ${isSimulationRunning ? "bg-green-500" : "bg-gray-400"}`}></span>
+                  </span>
                   <span className="text-sm font-medium text-gray-700">
                     {isSimulationRunning ? "Simulation Running" : "Simulation Stopped"}
                   </span>
