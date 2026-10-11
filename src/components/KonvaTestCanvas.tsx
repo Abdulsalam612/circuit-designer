@@ -5,7 +5,9 @@ import { Stage, Layer, Rect, Circle, Shape, Line } from "react-konva"
 import Konva from "konva"
 import styles from "./KonvaTestCanvas.module.css"
 import interact from "interactjs"
-import CircuitPart, { CIRCUIT_PART_NAME, PART_WIDTH, PART_HEIGHT } from "./circuit/CircuitPart"
+import CircuitPart, { CIRCUIT_PART_NAME, partSize } from "./circuit/CircuitPart"
+import { COMPONENT_DEFS, iconFor } from "@/lib/components"
+import { rotateComponent } from "@/lib/editing"
 import { GRID_SIZE, MAJOR_EVERY, snapToGrid, isSpotFree, pointKey, type Point } from "@/lib/grid"
 import {
   makeId,
@@ -17,7 +19,7 @@ import {
   planMove,
 } from "@/lib/wires"
 import { createPortal } from "react-dom"
-import type { ComponentType, CircuitComponent, Wire } from "@/types/circuit"
+import type { ComponentType, CircuitComponent, CircuitLayout, Wire } from "@/types/circuit"
 
 // The grid covers -GRID_EXTENT..GRID_EXTENT in both directions (canvas units)
 const GRID_EXTENT = 2000
@@ -34,8 +36,9 @@ const toBox = (a: Point, b: Point): Box => ({
 const boxesOverlap = (a: Box, b: Box) => a.x0 <= b.x1 && b.x0 <= a.x1 && a.y0 <= b.y1 && b.y0 <= a.y1
 const partBox = (c: CircuitComponent): Box => {
   const vertical = c.rotation % 180 !== 0
-  const halfLong = PART_WIDTH / 2
-  const halfShort = PART_HEIGHT / 2
+  const { width, height } = partSize(c.type)
+  const halfLong = width / 2
+  const halfShort = height / 2
   return vertical
     ? { x0: c.x - halfShort, y0: c.y - halfLong, x1: c.x + halfShort, y1: c.y + halfLong }
     : { x0: c.x - halfLong, y0: c.y - halfShort, x1: c.x + halfLong, y1: c.y + halfShort }
@@ -46,10 +49,14 @@ const SELECT_COLOR = "#3498db"
 const INVALID_COLOR = "#ef4444"
 
 interface KonvaTestCanvasProps {
-  onSelectedComponentChange?: (component: CircuitComponent | null) => void;
+  // The circuit is owned by the page (which keeps undo history and saves it)
+  layout: CircuitLayout;
+  onLayoutChange: (layout: CircuitLayout) => void;
+  // Ids of the selected components and wires
+  onSelectionChange?: (ids: string[]) => void;
 }
 
-const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentChange }) => {
+const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChange, onSelectionChange }) => {
   // Set initial dimensions to avoid hydration errors
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [isMounted, setIsMounted] = useState(false)
@@ -61,14 +68,15 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
   const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 })
   
   // Circuit contents
-  const [components, setComponents] = useState<CircuitComponent[]>([])
-  const [wires, setWires] = useState<Wire[]>([])
+  const { components, wires } = layout
   // Latest values for event handlers that are set up once (interact.js, keyboard) and
-  // would otherwise only ever see the initial empty lists
+  // would otherwise only ever see the first render's values
   const componentsRef = useRef(components)
   componentsRef.current = components
   const wiresRef = useRef(wires)
   wiresRef.current = wires
+  const onLayoutChangeRef = useRef(onLayoutChange)
+  onLayoutChangeRef.current = onLayoutChange
 
   // Selected component and wire ids
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -97,21 +105,16 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
   const viewComponents = movePreview?.components ?? components
   const viewWires = movePreview?.wires ?? wires
 
-  // Apply a new layout. Wires are tidied: cut where ends land along them, rejoined
-  // where a split is no longer needed.
+  // Apply a new layout (one undo step). Wires are tidied: cut where ends land along
+  // them, rejoined where a split is no longer needed.
   const commitLayout = (nextComponents: CircuitComponent[], nextWires: Wire[]) => {
-    setComponents(nextComponents)
-    setWires(normalizeWires(nextWires, nextComponents))
+    onLayoutChangeRef.current({ components: nextComponents, wires: normalizeWires(nextWires, nextComponents) })
   }
 
-  // Notify parent when selected component changes (only when exactly one is selected)
+  // Tell the page what's selected
   useEffect(() => {
-    if (onSelectedComponentChange) {
-      const ids = [...selectedIds];
-      const selected = ids.length === 1 ? components.find(c => c.id === ids[0]) || null : null;
-      onSelectedComponentChange(selected);
-    }
-  }, [selectedIds, components, onSelectedComponentChange]);
+    onSelectionChange?.([...selectedIds]);
+  }, [selectedIds, onSelectionChange]);
   
   // References
   const stageRef = useRef<Konva.Stage>(null)
@@ -137,18 +140,17 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
 
       // Centre the new component on the grid point nearest the cursor, matching the drag preview
       const { x, y } = clientToSnappedStage(stage, clientX, clientY);
-      if (!isSpotFree({ x, y, rotation: 0 }, componentsRef.current, getWireOccupiedPoints(wiresRef.current))) return;
+      const def = COMPONENT_DEFS[componentType];
+      const placement = { type: componentType, x, y, rotation: def.defaultRotation };
+      if (!isSpotFree(placement, componentsRef.current, getWireOccupiedPoints(wiresRef.current))) return;
       const newComponent: CircuitComponent = {
         id: makeId(componentType),
-        type: componentType,
-        x,
-        y,
-        rotation: 0
+        ...placement,
+        ...(def.value ? { value: def.value.default } : {}),
+        ...(def.toggles ? { closed: false } : {}),
       };
 
-      const next = [...componentsRef.current, newComponent];
-      setComponents(next);
-      setWires(prev => normalizeWires(prev, next));
+      commitLayout([...componentsRef.current, newComponent], wiresRef.current);
       setSelectedIds(new Set([newComponent.id]));
     };
     
@@ -165,6 +167,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
     // Over the canvas it jumps to the nearest grid point, so it shows exactly where the
     // component will land; elsewhere it follows the cursor. The sidebar card stays in place.
     let ghost: HTMLDivElement | null = null;
+    let ghostType: ComponentType | null = null;
     let ghostWidth = 0;
     let ghostHeight = 0;
 
@@ -180,9 +183,11 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
         const stageBox = stage.container().getBoundingClientRect();
         centreX = stageBox.left + stage.x() + snapped.x * stage.scaleX();
         centreY = stageBox.top + stage.y() + snapped.y * stage.scaleY();
-        blocked = !isSpotFree({ ...snapped, rotation: 0 }, componentsRef.current, getWireOccupiedPoints(wiresRef.current));
+        const rotation = ghostType ? COMPONENT_DEFS[ghostType].defaultRotation : 0;
+        blocked = !ghostType || !isSpotFree({ type: ghostType, ...snapped, rotation }, componentsRef.current, getWireOccupiedPoints(wiresRef.current));
       }
-      ghost.style.transform = `translate3d(${centreX - ghostWidth / 2}px, ${centreY - ghostHeight / 2}px, 0)`;
+      const rotation = ghostType ? COMPONENT_DEFS[ghostType].defaultRotation : 0;
+      ghost.style.transform = `translate3d(${centreX - ghostWidth / 2}px, ${centreY - ghostHeight / 2}px, 0) rotate(${rotation}deg)`;
       ghost.style.opacity = overCanvas ? '1' : '0.5';
       // Red outline: this spot is taken and dropping here does nothing
       ghost.style.outlineColor = blocked ? '#ef4444' : '#3498db';
@@ -198,8 +203,10 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
         const element = event.target as HTMLElement;
         const componentType = element.getAttribute('data-component-type') as ComponentType;
         const scale = stageRef.current?.scaleX() ?? 1;
-        ghostWidth = PART_WIDTH * scale;
-        ghostHeight = PART_HEIGHT * scale;
+        const size = partSize(componentType);
+        ghostType = componentType;
+        ghostWidth = size.width * scale;
+        ghostHeight = size.height * scale;
 
         ghost = document.createElement('div');
         Object.assign(ghost.style, {
@@ -214,7 +221,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
           outline: '2px dashed #3498db',
           outlineOffset: '4px',
           borderRadius: '2px',
-          background: `url(/icons/${componentType}.svg) center / 100% 100% no-repeat`,
+          background: `url(${iconFor({ type: componentType })}) center / 100% 100% no-repeat`,
         });
         document.body.appendChild(ghost);
         moveGhost(event.clientX, event.clientY);
@@ -468,13 +475,9 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
       if (e.key === 'r' || e.key === 'R') {
         if (selected.size !== 1) return;
         const [id] = selected;
-        const component = allComponents.find(c => c.id === id);
-        if (!component) return;
-        const rotated = { ...component, rotation: (component.rotation + 90) % 360 };
-        const next = allComponents.map(c => (c.id === id ? rotated : c));
         // Attached wires follow; no rotation if that would hit something
-        const nextWires = planMove(allComponents, allWires, next);
-        if (nextWires) commitLayout(next, nextWires);
+        const rotated = rotateComponent({ components: allComponents, wires: allWires }, id);
+        if (rotated) onLayoutChangeRef.current(rotated);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         commitLayout(
@@ -506,7 +509,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
       const segments = routeWire(wireDraft.start, end);
       if (canAddWires(segments, components, wires)) {
         const added = segments.map(s => ({ id: makeId('wire'), ...s }));
-        setWires(normalizeWires([...wires, ...added], components));
+        commitLayout(components, [...wires, ...added]);
       }
       setWireDraft(null);
     };
@@ -603,11 +606,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
   const renderComponents = () => viewComponents.map(component => (
     <CircuitPart
       key={component.id}
-      id={component.id}
-      type={component.type}
-      x={component.x}
-      y={component.y}
-      rotation={component.rotation}
+      component={component}
       isSelected={selectedIds.has(component.id)}
       onClick={(e) => handleSelect(component.id, e)}
       onDragStart={() => handlePartDragStart(component.id)}

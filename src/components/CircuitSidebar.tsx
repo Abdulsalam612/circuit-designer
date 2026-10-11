@@ -3,21 +3,13 @@
 import React from 'react';
 import Image from 'next/image';
 import styles from './CircuitSidebar.module.css';
-import type { ComponentType } from '@/types/circuit';
+import { COMPONENT_DEFS, COMPONENT_TYPES, iconFor } from '@/lib/components';
 
-interface CircuitComponentProps {
-  type: ComponentType;
-  label: string;
-  icon: string; // Path to icon or component symbol
-}
-
-const components: CircuitComponentProps[] = [
-  { type: 'resistor', label: 'Resistor', icon: '/icons/resistor.svg' },
-  { type: 'capacitor', label: 'Capacitor', icon: '/icons/capacitor.svg' },
-  { type: 'inductor', label: 'Inductor', icon: '/icons/inductor.svg' },
-  { type: 'battery', label: 'Battery', icon: '/icons/battery.svg' },
-  { type: 'switch', label: 'Switch', icon: '/icons/switch.svg' },
-];
+const components = COMPONENT_TYPES.map(type => ({
+  type,
+  label: COMPONENT_DEFS[type].label,
+  icon: iconFor({ type }),
+}));
 
 const CircuitSidebar = () => {
   return (

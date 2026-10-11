@@ -1,4 +1,12 @@
-export type ComponentType = 'resistor' | 'capacitor' | 'inductor' | 'battery' | 'switch';
+export type ComponentType =
+  | 'resistor'
+  | 'capacitor'
+  | 'inductor'
+  | 'battery'
+  | 'switch'
+  | 'led'
+  | 'lamp'
+  | 'ground';
 
 // A component placed on the editor canvas
 export interface CircuitComponent {
@@ -8,6 +16,11 @@ export interface CircuitComponent {
   x: number;
   y: number;
   rotation: number;
+  // Main electrical value in base SI units (ohms, farads, henries, volts...), for types
+  // that have one (see COMPONENT_DEFS)
+  value?: number;
+  // Switches only: whether the switch is closed (conducting)
+  closed?: boolean;
 }
 
 // A straight wire between two grid points (always horizontal or vertical).
@@ -19,4 +32,10 @@ export interface Wire {
   y1: number;
   x2: number;
   y2: number;
+}
+
+// Everything that makes up a circuit drawing
+export interface CircuitLayout {
+  components: CircuitComponent[];
+  wires: Wire[];
 }

@@ -1,10 +1,10 @@
+import { COMPONENT_DEFS } from './components';
+import type { ComponentType } from '@/types/circuit';
+
 // Snap grid for the circuit editor, in canvas units (before zoom)
 export const GRID_SIZE = 20;
 // A darker line every MAJOR_EVERY cells
 export const MAJOR_EVERY = 5;
-// Every component is this many grid cells long, lead end to lead end. Must be even so
-// that with the part centred on a grid point, both lead ends are on grid points too.
-export const PART_CELLS = 4;
 
 export const snapToGrid = (value: number) => Math.round(value / GRID_SIZE) * GRID_SIZE;
 
@@ -14,6 +14,7 @@ export interface Point {
 }
 
 interface Placement {
+  type: ComponentType;
   x: number; // centre
   y: number;
   rotation: number;
@@ -21,18 +22,21 @@ interface Placement {
 
 export const pointKey = (p: Point) => `${p.x},${p.y}`;
 
-// Grid points a component covers along its length: the two lead ends ("pins")
-// and the points in between ("body")
-export const getPartPoints = ({ x, y, rotation }: Placement) => {
+// Grid points a component covers along its length: the lead ends ("pins") and every
+// other point ("body"). Two-ended parts have a pin at each end; one-ended parts (ground)
+// only at the start.
+export const getPartPoints = ({ type, x, y, rotation }: Placement) => {
+  const { cells, pins: pinCount } = COMPONENT_DEFS[type];
   const rad = (rotation * Math.PI) / 180;
   const dx = Math.round(Math.cos(rad));
   const dy = Math.round(Math.sin(rad));
-  const half = PART_CELLS / 2;
+  const half = cells / 2;
   const pins: Point[] = [];
   const body: Point[] = [];
   for (let k = -half; k <= half; k++) {
     const point = { x: x + k * GRID_SIZE * dx, y: y + k * GRID_SIZE * dy };
-    (Math.abs(k) === half ? pins : body).push(point);
+    const isPin = k === -half || (k === half && pinCount === 2);
+    (isPin ? pins : body).push(point);
   }
   return { pins, body };
 };

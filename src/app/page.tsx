@@ -32,6 +32,7 @@ import {
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
+import WelcomeBack from "@/components/WelcomeBack"
 import { signOut } from "firebase/auth"
 
 export default function HomePage() {
@@ -602,137 +603,147 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Animated Hero Section */}
-      <section className="py-20 bg-gradient-to-br from-[#33A1FD]/10 to-[#FDCA40]/5 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#2176FF]/3 rounded-full opacity-50"></div>
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-[#FDCA40]/3 rounded-full opacity-50"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#33A1FD]/3 rounded-full opacity-50"></div>
-        </div>
+      {/* Signed in: pick up where you left off. Signed out: the landing hero. Nothing
+          while sign-in is still being checked, so neither flashes up by mistake. */}
+      {loading ? (
+        <section className="py-16 min-h-[420px] bg-gradient-to-br from-[#33A1FD]/10 to-[#FDCA40]/5" />
+      ) : user ? (
+        <WelcomeBack user={user} />
+      ) : (
+        <>
+        {/* Animated Hero Section */}
+        <section className="py-20 bg-gradient-to-br from-[#33A1FD]/10 to-[#FDCA40]/5 relative overflow-hidden">
+          {/* Animated background elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#2176FF]/3 rounded-full opacity-50"></div>
+            <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-[#FDCA40]/3 rounded-full opacity-50"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#33A1FD]/3 rounded-full opacity-50"></div>
+          </div>
 
-        <div className="container mx-auto px-6 relative z-10">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div
-                className={`transition-all duration-1000 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-              >
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid lg:grid-cols-2 gap-12 items-center">
                 <div
-                  className={`inline-flex items-center bg-[#2176FF]/10 text-[#2176FF] px-4 py-2 rounded-full text-sm font-medium mb-6 transition-all duration-700 delay-200 ${isLoaded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`}
+                  className={`transition-all duration-1000 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
                 >
-                  <Zap className="h-4 w-4 mr-2 animate-pulse" />
-                  Interactive Circuit Simulation
-                </div>
-
-                <h1
-                  className={`text-5xl lg:text-6xl font-bold text-[#31393C] mb-6 leading-tight transition-all duration-1000 delay-300 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
-                >
-                  Learn Electronics Through
-                  <span className="text-[#2176FF] relative">
-                    {" "}
-                    Interactive Circuits
-                    <div className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-[#2176FF] to-[#33A1FD] transform scale-x-0 animate-[scaleX_1s_ease-out_1.5s_forwards] origin-left"></div>
-                  </span>
-                </h1>
-
-                <p
-                  className={`text-xl text-gray-600 mb-8 leading-relaxed transition-all duration-1000 delay-500 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
-                >
-                  Build, simulate, and understand electrical circuits with our advanced virtual breadboard. Perfect for
-                  students, educators, and electronics enthusiasts.
-                </p>
-
-                {/* Animated CTAs */}
-                <div
-                  className={`flex flex-col items-center space-y-6 transition-all duration-1000 delay-700 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
-                >
-                  <Link href="/dashboard">
-                    <button className="bg-[#2176FF] hover:bg-[#33A1FD] text-white px-12 py-5 rounded-xl font-bold text-xl flex items-center justify-center transition-all duration-300 hover:scale-[1.02] shadow-2xl hover:shadow-[#2176FF]/20 group">
-                      <BookOpen className="mr-4 h-6 w-6 group-hover:scale-110 transition-transform duration-300" />
-                      Getting Started
-                    </button>
-                  </Link>
-
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Link href="/simulation">
-                      <button className="bg-white border-2 border-[#33A1FD] text-[#33A1FD] hover:bg-[#33A1FD]/5 hover:border-[#2176FF] px-6 py-3 rounded-lg font-semibold flex items-center justify-center transition-all duration-300 hover:scale-[1.02] shadow-lg group">
-                        <CircuitBoard className="mr-2 h-5 w-5 group-hover:rotate-3 transition-transform duration-300" />
-                        Start Building Circuits
-                      </button>
-                    </Link>
-
-                    <Link href="/play">
-                      <button className="bg-white border-2 border-[#F79824] text-[#F79824] hover:bg-[#F79824]/5 hover:border-[#FDCA40] px-6 py-3 rounded-lg font-semibold flex items-center justify-center transition-all duration-300 hover:scale-[1.02] shadow-lg group">
-                        <Play className="mr-2 h-5 w-5 group-hover:scale-105 transition-transform duration-300" />
-                        CirKit Kids Mode
-                      </button>
-                    </Link>
+                  <div
+                    className={`inline-flex items-center bg-[#2176FF]/10 text-[#2176FF] px-4 py-2 rounded-full text-sm font-medium mb-6 transition-all duration-700 delay-200 ${isLoaded ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`}
+                  >
+                    <Zap className="h-4 w-4 mr-2 animate-pulse" />
+                    Interactive Circuit Simulation
                   </div>
 
-                  <p className="text-sm text-gray-500 text-center max-w-md">
-                    New to electronics? Start with our guided lessons. Ready to build? Jump straight into the simulator.
+                  <h1
+                    className={`text-5xl lg:text-6xl font-bold text-[#31393C] mb-6 leading-tight transition-all duration-1000 delay-300 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                  >
+                    Learn Electronics Through
+                    <span className="text-[#2176FF] relative">
+                      {" "}
+                      Interactive Circuits
+                      <div className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-[#2176FF] to-[#33A1FD] transform scale-x-0 animate-[scaleX_1s_ease-out_1.5s_forwards] origin-left"></div>
+                    </span>
+                  </h1>
+
+                  <p
+                    className={`text-xl text-gray-600 mb-8 leading-relaxed transition-all duration-1000 delay-500 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                  >
+                    Build, simulate, and understand electrical circuits with our advanced virtual breadboard. Perfect for
+                    students, educators, and electronics enthusiasts.
                   </p>
-                </div>
-              </div>
 
-              {/* Animated Circuit Demo */}
-              <div
-                className={`relative transition-all duration-1000 delay-400 ${isLoaded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
-              >
-                <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200 relative overflow-hidden">
-                  {/* Animated background glow */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#2176FF]/5 via-transparent to-[#FDCA40]/5 animate-pulse"></div>
+                  {/* Animated CTAs */}
+                  <div
+                    className={`flex flex-col items-center space-y-6 transition-all duration-1000 delay-700 ${isLoaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+                  >
+                    <Link href="/dashboard">
+                      <button className="bg-[#2176FF] hover:bg-[#33A1FD] text-white px-12 py-5 rounded-xl font-bold text-xl flex items-center justify-center transition-all duration-300 hover:scale-[1.02] shadow-2xl hover:shadow-[#2176FF]/20 group">
+                        <BookOpen className="mr-4 h-6 w-6 group-hover:scale-110 transition-transform duration-300" />
+                        Getting Started
+                      </button>
+                    </Link>
 
-                  <div className="relative z-10">
-                    <div className="grid grid-cols-4 gap-4 mb-6">
-                      {/* More subtle animated components */}
-                      <div
-                        className={`bg-[#2176FF] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
-                        style={{ transitionDelay: "1000ms" }}
-                      >
-                        <Lightbulb className="h-8 w-8 text-white" />
-                      </div>
-                      <div
-                        className={`bg-[#33A1FD] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
-                        style={{ transitionDelay: "1100ms" }}
-                      >
-                        <div className="bg-white rounded-full h-4 w-4"></div>
-                      </div>
-                      <div
-                        className={`bg-[#FDCA40] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
-                        style={{ transitionDelay: "1200ms" }}
-                      >
-                        <div className="bg-white rounded-full h-4 w-4"></div>
-                      </div>
-                      <div
-                        className={`bg-[#F79824] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
-                        style={{ transitionDelay: "1300ms" }}
-                      >
-                        <Zap className="h-8 w-8 text-white" />
-                      </div>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Link href="/simulation">
+                        <button className="bg-white border-2 border-[#33A1FD] text-[#33A1FD] hover:bg-[#33A1FD]/5 hover:border-[#2176FF] px-6 py-3 rounded-lg font-semibold flex items-center justify-center transition-all duration-300 hover:scale-[1.02] shadow-lg group">
+                          <CircuitBoard className="mr-2 h-5 w-5 group-hover:rotate-3 transition-transform duration-300" />
+                          Start Building Circuits
+                        </button>
+                      </Link>
+
+                      <Link href="/play">
+                        <button className="bg-white border-2 border-[#F79824] text-[#F79824] hover:bg-[#F79824]/5 hover:border-[#FDCA40] px-6 py-3 rounded-lg font-semibold flex items-center justify-center transition-all duration-300 hover:scale-[1.02] shadow-lg group">
+                          <Play className="mr-2 h-5 w-5 group-hover:scale-105 transition-transform duration-300" />
+                          CirKit Kids Mode
+                        </button>
+                      </Link>
                     </div>
 
-                    <div className="h-32 bg-[#31393C]/5 rounded-lg flex items-center justify-center border-2 border-dashed border-[#2176FF]/30 relative overflow-hidden">
-                      {/* Subtle static circuit lines */}
-                      <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-4 left-4 w-8 h-0.5 bg-[#2176FF]"></div>
-                        <div className="absolute top-4 right-4 w-8 h-0.5 bg-[#33A1FD]"></div>
-                        <div className="absolute bottom-4 left-4 w-8 h-0.5 bg-[#FDCA40]"></div>
-                        <div className="absolute bottom-4 right-4 w-8 h-0.5 bg-[#F79824]"></div>
-                      </div>
-                      <span className="text-[#31393C] font-medium relative z-10">Virtual Breadboard</span>
-                    </div>
+                    <p className="text-sm text-gray-500 text-center max-w-md">
+                      New to electronics? Start with our guided lessons. Ready to build? Jump straight into the simulator.
+                    </p>
                   </div>
                 </div>
 
-                {/* More subtle floating elements */}
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-[#2176FF]/10 rounded-full"></div>
-                <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-[#FDCA40]/10 rounded-full"></div>
+                {/* Animated Circuit Demo */}
+                <div
+                  className={`relative transition-all duration-1000 delay-400 ${isLoaded ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"}`}
+                >
+                  <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-200 relative overflow-hidden">
+                    {/* Animated background glow */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#2176FF]/5 via-transparent to-[#FDCA40]/5 animate-pulse"></div>
+
+                    <div className="relative z-10">
+                      <div className="grid grid-cols-4 gap-4 mb-6">
+                        {/* More subtle animated components */}
+                        <div
+                          className={`bg-[#2176FF] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+                          style={{ transitionDelay: "1000ms" }}
+                        >
+                          <Lightbulb className="h-8 w-8 text-white" />
+                        </div>
+                        <div
+                          className={`bg-[#33A1FD] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+                          style={{ transitionDelay: "1100ms" }}
+                        >
+                          <div className="bg-white rounded-full h-4 w-4"></div>
+                        </div>
+                        <div
+                          className={`bg-[#FDCA40] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+                          style={{ transitionDelay: "1200ms" }}
+                        >
+                          <div className="bg-white rounded-full h-4 w-4"></div>
+                        </div>
+                        <div
+                          className={`bg-[#F79824] rounded-lg h-16 w-16 flex items-center justify-center shadow-md transition-all duration-700 hover:scale-105 hover:shadow-lg cursor-pointer ${animateComponents ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
+                          style={{ transitionDelay: "1300ms" }}
+                        >
+                          <Zap className="h-8 w-8 text-white" />
+                        </div>
+                      </div>
+
+                      <div className="h-32 bg-[#31393C]/5 rounded-lg flex items-center justify-center border-2 border-dashed border-[#2176FF]/30 relative overflow-hidden">
+                        {/* Subtle static circuit lines */}
+                        <div className="absolute inset-0 opacity-10">
+                          <div className="absolute top-4 left-4 w-8 h-0.5 bg-[#2176FF]"></div>
+                          <div className="absolute top-4 right-4 w-8 h-0.5 bg-[#33A1FD]"></div>
+                          <div className="absolute bottom-4 left-4 w-8 h-0.5 bg-[#FDCA40]"></div>
+                          <div className="absolute bottom-4 right-4 w-8 h-0.5 bg-[#F79824]"></div>
+                        </div>
+                        <span className="text-[#31393C] font-medium relative z-10">Virtual Breadboard</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* More subtle floating elements */}
+                  <div className="absolute -top-2 -right-2 w-4 h-4 bg-[#2176FF]/10 rounded-full"></div>
+                  <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-[#FDCA40]/10 rounded-full"></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+        </>
+      )}
 
       {/* Features Section */}
       <section id="features" className="py-20 bg-white" data-animate>

@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Firestore security rules for CirKit.
+// Each signed-in user can read and write only their own profile (users/{uid}) and their
+// own saved circuits (users/{uid}/circuits/{circuitId}); nobody else's.
+//
+// To apply: Firebase console -> Firestore Database -> Rules, paste this file, Publish.
+// (Or with the Firebase CLI: firebase deploy --only firestore:rules)
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /circuits/{circuitId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

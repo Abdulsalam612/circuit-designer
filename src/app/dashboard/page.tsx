@@ -305,12 +305,19 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold text-gray-900">Learning Dashboard</h1>
             </div>
 
-            <Link href="/simulation">
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2">
-                <Zap className="h-4 w-4" />
-                <span>Go to Simulator</span>
-              </button>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/circuits">
+                <button className="border border-gray-300 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
+                  My Circuits
+                </button>
+              </Link>
+              <Link href="/simulation">
+                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2">
+                  <Zap className="h-4 w-4" />
+                  <span>Go to Simulator</span>
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>

@@ -1,25 +1,26 @@
 "use client"
 
-import { Group, Image, Rect } from 'react-konva';
+import { Group, Image, Rect, Text } from 'react-konva';
 import useImage from 'use-image';
 import { KonvaEventObject } from 'konva/lib/Node';
-import type { ComponentType } from '@/types/circuit';
-import { GRID_SIZE, PART_CELLS } from '@/lib/grid';
+import type { CircuitComponent } from '@/types/circuit';
+import { GRID_SIZE } from '@/lib/grid';
+import { COMPONENT_DEFS, formatValue, iconFor } from '@/lib/components';
 
 // Konva name used to tell component clicks apart from clicks on the empty grid
 export const CIRCUIT_PART_NAME = 'circuit-part';
 
-// Symbol size in canvas units (before zoom). With the part centred on a grid point,
-// both lead ends also sit on grid points, including after a 90° rotation.
-export const PART_WIDTH = GRID_SIZE * PART_CELLS;
-export const PART_HEIGHT = PART_WIDTH * 0.4; // icons are 100x40
+// Symbols are drawn this tall (icons are 100x40, i.e. 2.5 times wider than tall)
+export const PART_HEIGHT = 32;
+
+// Drawn size of a part, in canvas units before zoom
+export const partSize = (type: CircuitComponent['type']) => ({
+  width: GRID_SIZE * COMPONENT_DEFS[type].cells,
+  height: PART_HEIGHT,
+});
 
 interface CircuitPartProps {
-  id: string;
-  type: ComponentType;
-  x: number; // centre of the part, on a grid point
-  y: number;
-  rotation: number;
+  component: CircuitComponent; // x, y is the centre of the part, on a grid point
   draggable?: boolean;
   // Drag handling (snapping, group moves, collision checks) lives in the canvas
   onDragStart?: (e: KonvaEventObject<DragEvent>) => void;
@@ -30,11 +31,7 @@ interface CircuitPartProps {
 }
 
 const CircuitPart = ({
-  id,
-  type,
-  x,
-  y,
-  rotation,
+  component,
   draggable,
   onDragStart,
   onDragMove,
@@ -42,14 +39,19 @@ const CircuitPart = ({
   onClick,
   isSelected
 }: CircuitPartProps) => {
-  const [image] = useImage(`/icons/${type}.svg`);
+  const { id, type, x, y, rotation, value } = component;
+  const [image] = useImage(iconFor(component));
+  const { width, height } = partSize(type);
+  const def = COMPONENT_DEFS[type];
+
+  // Value label beside the part, kept upright whatever the rotation
+  const vertical = rotation % 180 !== 0;
+  const label = def.value && value !== undefined ? formatValue(value, def.value.unit) : null;
+
   return (
     <Group
       x={x}
       y={y}
-      offsetX={PART_WIDTH / 2}
-      offsetY={PART_HEIGHT / 2}
-      rotation={rotation}
       draggable={draggable}
       onDragStart={onDragStart}
       onDragMove={onDragMove}
@@ -58,18 +60,31 @@ const CircuitPart = ({
       id={id}
       name={CIRCUIT_PART_NAME}
     >
-      {isSelected && (
-        <Rect
-          x={-4}
-          y={-4}
-          width={PART_WIDTH + 8}
-          height={PART_HEIGHT + 8}
-          stroke="#3498db"
-          strokeWidth={2}
-          cornerRadius={6}
+      <Group rotation={rotation} offsetX={width / 2} offsetY={height / 2}>
+        {isSelected && (
+          <Rect
+            x={-4}
+            y={-4}
+            width={width + 8}
+            height={height + 8}
+            stroke="#3498db"
+            strokeWidth={2}
+            cornerRadius={6}
+          />
+        )}
+        <Image image={image} width={width} height={height} alt="" />
+      </Group>
+      {label && (
+        <Text
+          text={label}
+          fontSize={11}
+          fill="#4b5563"
+          listening={false}
+          {...(vertical
+            ? { x: height / 2 + 4, y: -6 }
+            : { x: -width / 2, y: height / 2 + 2, width, align: 'center' })}
         />
       )}
-      <Image image={image} width={PART_WIDTH} height={PART_HEIGHT} alt="" />
     </Group>
   );
 };
