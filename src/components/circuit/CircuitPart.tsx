@@ -1,11 +1,10 @@
 "use client"
 
-import { useRef } from 'react';
 import { Group, Image, Rect } from 'react-konva';
 import useImage from 'use-image';
 import { KonvaEventObject } from 'konva/lib/Node';
 import type { ComponentType } from '@/types/circuit';
-import { GRID_SIZE, PART_CELLS, snapToGrid, type Point } from '@/lib/grid';
+import { GRID_SIZE, PART_CELLS } from '@/lib/grid';
 
 // Konva name used to tell component clicks apart from clicks on the empty grid
 export const CIRCUIT_PART_NAME = 'circuit-part';
@@ -22,12 +21,12 @@ interface CircuitPartProps {
   y: number;
   rotation: number;
   draggable?: boolean;
-  onDragStart?: () => void;
+  // Drag handling (snapping, group moves, collision checks) lives in the canvas
+  onDragStart?: (e: KonvaEventObject<DragEvent>) => void;
+  onDragMove?: (e: KonvaEventObject<DragEvent>) => void;
   onDragEnd?: (e: KonvaEventObject<DragEvent>) => void;
   onClick?: (e: KonvaEventObject<MouseEvent>) => void;
   isSelected?: boolean;
-  // Whether the part may move its centre to this grid point
-  canPlaceAt?: (centre: Point) => boolean;
 }
 
 const CircuitPart = ({
@@ -38,30 +37,12 @@ const CircuitPart = ({
   rotation,
   draggable,
   onDragStart,
+  onDragMove,
   onDragEnd,
   onClick,
-  isSelected,
-  canPlaceAt
+  isSelected
 }: CircuitPartProps) => {
   const [image] = useImage(`/icons/${type}.svg`);
-  // Last grid point the part was allowed to occupy during the current drag
-  const lastValid = useRef<Point>({ x, y });
-
-  const handleDragStart = (e: KonvaEventObject<DragEvent>) => {
-    lastValid.current = e.target.position();
-    onDragStart?.();
-  };
-
-  // Move in grid steps while dragging, and stay put rather than enter an occupied spot
-  const handleDragMove = (e: KonvaEventObject<DragEvent>) => {
-    const node = e.target;
-    const snapped = { x: snapToGrid(node.x()), y: snapToGrid(node.y()) };
-    if (!canPlaceAt || canPlaceAt(snapped)) {
-      lastValid.current = snapped;
-    }
-    node.position(lastValid.current);
-  };
-
   return (
     <Group
       x={x}
@@ -70,8 +51,8 @@ const CircuitPart = ({
       offsetY={PART_HEIGHT / 2}
       rotation={rotation}
       draggable={draggable}
-      onDragStart={handleDragStart}
-      onDragMove={handleDragMove}
+      onDragStart={onDragStart}
+      onDragMove={onDragMove}
       onDragEnd={onDragEnd}
       onClick={onClick}
       id={id}

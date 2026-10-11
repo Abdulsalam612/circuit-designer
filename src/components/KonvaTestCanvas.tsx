@@ -13,7 +13,8 @@ import {
   canAddWires,
   getConnectionPoints,
   getWireOccupiedPoints,
-  splitWiresAtConnections,
+  normalizeWires,
+  planMove,
 } from "@/lib/wires"
 import { createPortal } from "react-dom"
 import type { ComponentType, CircuitComponent, Wire } from "@/types/circuit"
@@ -24,6 +25,21 @@ const GRID_EXTENT = 2000
 // Konva names for clickable things that aren't components
 const WIRE_NAME = "wire"
 const PIN_HANDLE_NAME = "pin-handle"
+
+// Axis-aligned box helpers for box selection
+interface Box { x0: number; y0: number; x1: number; y1: number }
+const toBox = (a: Point, b: Point): Box => ({
+  x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y), x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y),
+})
+const boxesOverlap = (a: Box, b: Box) => a.x0 <= b.x1 && b.x0 <= a.x1 && a.y0 <= b.y1 && b.y0 <= a.y1
+const partBox = (c: CircuitComponent): Box => {
+  const vertical = c.rotation % 180 !== 0
+  const halfLong = PART_WIDTH / 2
+  const halfShort = PART_HEIGHT / 2
+  return vertical
+    ? { x0: c.x - halfShort, y0: c.y - halfLong, x1: c.x + halfShort, y1: c.y + halfLong }
+    : { x0: c.x - halfLong, y0: c.y - halfShort, x1: c.x + halfLong, y1: c.y + halfShort }
+}
 
 const WIRE_COLOR = "#1f2937"
 const SELECT_COLOR = "#3498db"
@@ -54,28 +70,48 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
   const wiresRef = useRef(wires)
   wiresRef.current = wires
 
-  // Selected component or wire id
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  // Component currently being dragged (its lead-end markers are hidden meanwhile)
-  const [draggingId, setDraggingId] = useState<string | null>(null)
+  // Selected component and wire ids
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const selectedIdsRef = useRef(selectedIds)
+  selectedIdsRef.current = selectedIds
   // Wire being drawn: from a lead end / wire end to the grid point under the cursor
   const [wireDraft, setWireDraft] = useState<{ start: Point; end: Point } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<string | null>(null)
+  // Box selection, in canvas coordinates
+  const [marquee, setMarquee] = useState<{ start: Point; end: Point; additive: boolean } | null>(null)
+  // Set after a box selection so the click that ends it doesn't clear the selection
+  const suppressNextClick = useRef(false)
 
-  // Apply a new component list. Lead ends that now land along a wire cut it there,
-  // so they connect.
-  const commitComponents = (next: CircuitComponent[]) => {
-    setComponents(next)
-    setWires(prev => splitWiresAtConnections(prev, next))
+  // Moving the selection: where the dragged part started, what's moving, and the
+  // layout as it would be at the current (valid) drag offset
+  const dragRef = useRef<{
+    origin: Point;
+    componentIds: Set<string>;
+    wireIds: Set<string>;
+    delta: Point;
+    preview: { components: CircuitComponent[]; wires: Wire[] } | null;
+  } | null>(null)
+  const [movePreview, setMovePreview] = useState<{ components: CircuitComponent[]; wires: Wire[] } | null>(null)
+
+  // What's on screen: the move preview while dragging, otherwise the saved layout
+  const viewComponents = movePreview?.components ?? components
+  const viewWires = movePreview?.wires ?? wires
+
+  // Apply a new layout. Wires are tidied: cut where ends land along them, rejoined
+  // where a split is no longer needed.
+  const commitLayout = (nextComponents: CircuitComponent[], nextWires: Wire[]) => {
+    setComponents(nextComponents)
+    setWires(normalizeWires(nextWires, nextComponents))
   }
 
-  // Notify parent when selected component changes
+  // Notify parent when selected component changes (only when exactly one is selected)
   useEffect(() => {
     if (onSelectedComponentChange) {
-      const selected = components.find(c => c.id === selectedId) || null;
+      const ids = [...selectedIds];
+      const selected = ids.length === 1 ? components.find(c => c.id === ids[0]) || null : null;
       onSelectedComponentChange(selected);
     }
-  }, [selectedId, components, onSelectedComponentChange]);
+  }, [selectedIds, components, onSelectedComponentChange]);
   
   // References
   const stageRef = useRef<Konva.Stage>(null)
@@ -112,8 +148,8 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
 
       const next = [...componentsRef.current, newComponent];
       setComponents(next);
-      setWires(prev => splitWiresAtConnections(prev, next));
-      setSelectedId(newComponent.id);
+      setWires(prev => normalizeWires(prev, next));
+      setSelectedIds(new Set([newComponent.id]));
     };
     
     const isOverCanvas = (clientX: number, clientY: number) => {
@@ -316,6 +352,15 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
 
   // Handle mouse events for right-click panning
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    suppressNextClick.current = false
+    // Left-drag on empty space starts a box selection (the grid layer doesn't listen,
+    // so empty space means the stage itself)
+    if (e.evt.button === 0 && e.target === e.target.getStage()) {
+      const pos = stageRef.current?.getRelativePointerPosition();
+      if (pos) setMarquee({ start: pos, end: pos, additive: e.evt.shiftKey });
+      return;
+    }
+
     // Check if it's a right-click (button 2)
     if (e.evt.button === 2) {
       e.evt.preventDefault() // Prevent context menu
@@ -349,6 +394,12 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
       if (end.x !== wireDraft.end.x || end.y !== wireDraft.end.y) {
         setWireDraft({ ...wireDraft, end });
       }
+      return;
+    }
+
+    if (marquee) {
+      const pos = stageRef.current?.getRelativePointerPosition();
+      if (pos) setMarquee({ ...marquee, end: pos });
       return;
     }
 
@@ -403,32 +454,41 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
     setStagePos({ x: dimensions.width / 10, y: dimensions.height / 10 })
   }
 
-  // R rotates the selected component, Delete/Backspace removes the selected component or wire
+  // R rotates the selected component (wires follow), Delete/Backspace removes everything
+  // selected, Escape clears the selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!selectedId) return;
+      const selected = selectedIdsRef.current;
+      if (selected.size === 0) return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
 
       const allComponents = componentsRef.current;
+      const allWires = wiresRef.current;
       if (e.key === 'r' || e.key === 'R') {
-        const component = allComponents.find(c => c.id === selectedId);
+        if (selected.size !== 1) return;
+        const [id] = selected;
+        const component = allComponents.find(c => c.id === id);
         if (!component) return;
         const rotated = { ...component, rotation: (component.rotation + 90) % 360 };
-        const others = allComponents.filter(c => c.id !== selectedId);
-        // Don't rotate into another component or across a wire
-        if (!isSpotFree(rotated, others, getWireOccupiedPoints(wiresRef.current))) return;
-        commitComponents(allComponents.map(c => (c.id === selectedId ? rotated : c)));
+        const next = allComponents.map(c => (c.id === id ? rotated : c));
+        // Attached wires follow; no rotation if that would hit something
+        const nextWires = planMove(allComponents, allWires, next);
+        if (nextWires) commitLayout(next, nextWires);
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
-        setComponents(allComponents.filter(c => c.id !== selectedId));
-        setWires(wiresRef.current.filter(w => w.id !== selectedId));
-        setSelectedId(null);
+        commitLayout(
+          allComponents.filter(c => !selected.has(c.id)),
+          allWires.filter(w => !selected.has(w.id)),
+        );
+        setSelectedIds(new Set());
+      } else if (e.key === 'Escape') {
+        setSelectedIds(new Set());
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedId]);
+  }, []);
 
   // Finish the wire being drawn when the mouse is released (even outside the canvas)
   useEffect(() => {
@@ -446,7 +506,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
       const segments = routeWire(wireDraft.start, end);
       if (canAddWires(segments, components, wires)) {
         const added = segments.map(s => ({ id: makeId('wire'), ...s }));
-        setWires(splitWiresAtConnections([...wires, ...added], components));
+        setWires(normalizeWires([...wires, ...added], components));
       }
       setWireDraft(null);
     };
@@ -454,63 +514,144 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, [wireDraft, components, wires]);
 
-  const handleSelect = (id: string) => {
-    setSelectedId(prev => prev === id ? null : id);
-  };
-
-  // Render components based on their type
-  const renderComponents = () => {
-    const wirePoints = getWireOccupiedPoints(wires);
-
-    // Wires stay where they are when a part moves away from them (the part detaches)
-    const handleComponentDragEnd = (id: string, e: Konva.KonvaEventObject<Event>) => {
-      setDraggingId(null);
-      commitComponents(components.map(component =>
-        component.id === id
-          ? { ...component, x: snapToGrid(e.target.x()), y: snapToGrid(e.target.y()) }
-          : component
-      ));
+  // Finish a box selection: select every component and wire the box touches
+  useEffect(() => {
+    if (!marquee) return;
+    const handleMouseUp = (e: MouseEvent) => {
+      let end = marquee.end;
+      const stage = stageRef.current;
+      if (stage) {
+        stage.setPointersPositions(e);
+        end = stage.getRelativePointerPosition() ?? end;
+      }
+      const box = toBox(marquee.start, end);
+      // A plain click (tiny box) is left to the click handler
+      const isDrag = (box.x1 - box.x0) * scale > 4 || (box.y1 - box.y0) * scale > 4;
+      if (isDrag) {
+        const hits = [
+          ...components.filter(c => boxesOverlap(partBox(c), box)).map(c => c.id),
+          ...wires.filter(w => boxesOverlap(toBox({ x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 }), box)).map(w => w.id),
+        ];
+        setSelectedIds(prev => new Set([...(marquee.additive ? prev : []), ...hits]));
+        suppressNextClick.current = true;
+      }
+      setMarquee(null);
     };
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [marquee, components, wires, scale]);
 
-    return components.map(component => {
-      const others = components.filter(c => c.id !== component.id);
-      return (
-        <CircuitPart
-          key={component.id}
-          id={component.id}
-          type={component.type}
-          x={component.x}
-          y={component.y}
-          rotation={component.rotation}
-          isSelected={selectedId === component.id}
-          onClick={() => handleSelect(component.id)}
-          onDragStart={() => setDraggingId(component.id)}
-          onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
-          canPlaceAt={(centre) => isSpotFree({ ...centre, rotation: component.rotation }, others, wirePoints)}
-          draggable={true}
-        />
-      );
+  // Click selects just this item; Shift+click adds it to / removes it from the selection
+  const handleSelect = (id: string, e: Konva.KonvaEventObject<MouseEvent>) => {
+    setSelectedIds(prev => {
+      if (e.evt.shiftKey) {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      }
+      return prev.size === 1 && prev.has(id) ? new Set() : new Set([id]);
     });
   };
 
-  const renderWires = () => wires.map(w => (
+  // Dragging a selected part moves the whole selection; dragging any other part
+  // selects and moves just that part. Wires attached to moving parts follow them.
+  const handlePartDragStart = (id: string) => {
+    let selection = selectedIdsRef.current;
+    if (!selection.has(id)) {
+      selection = new Set([id]);
+      setSelectedIds(selection);
+    }
+    const part = components.find(c => c.id === id);
+    if (!part) return;
+    dragRef.current = {
+      origin: { x: part.x, y: part.y },
+      componentIds: new Set(components.filter(c => selection.has(c.id)).map(c => c.id)),
+      wireIds: new Set(wires.filter(w => selection.has(w.id)).map(w => w.id)),
+      delta: { x: 0, y: 0 },
+      preview: null,
+    };
+  };
+
+  const handlePartDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const node = e.target;
+    const delta = { x: snapToGrid(node.x()) - drag.origin.x, y: snapToGrid(node.y()) - drag.origin.y };
+    if (delta.x !== drag.delta.x || delta.y !== drag.delta.y) {
+      const nextComponents = components.map(c =>
+        drag.componentIds.has(c.id) ? { ...c, x: c.x + delta.x, y: c.y + delta.y } : c
+      );
+      const isHome = delta.x === 0 && delta.y === 0;
+      const nextWires = isHome ? wires : planMove(components, wires, nextComponents, drag.wireIds, delta);
+      // Only accept positions where everything (parts and rerouted wires) fits
+      if (nextWires) {
+        drag.delta = delta;
+        drag.preview = isHome ? null : { components: nextComponents, wires: nextWires };
+        setMovePreview(drag.preview);
+      }
+    }
+    node.position({ x: drag.origin.x + drag.delta.x, y: drag.origin.y + drag.delta.y });
+  };
+
+  const handlePartDragEnd = () => {
+    const preview = dragRef.current?.preview;
+    if (preview) commitLayout(preview.components, preview.wires);
+    dragRef.current = null;
+    setMovePreview(null);
+  };
+
+  const renderComponents = () => viewComponents.map(component => (
+    <CircuitPart
+      key={component.id}
+      id={component.id}
+      type={component.type}
+      x={component.x}
+      y={component.y}
+      rotation={component.rotation}
+      isSelected={selectedIds.has(component.id)}
+      onClick={(e) => handleSelect(component.id, e)}
+      onDragStart={() => handlePartDragStart(component.id)}
+      onDragMove={handlePartDragMove}
+      onDragEnd={handlePartDragEnd}
+      draggable={true}
+    />
+  ));
+
+  const renderWires = () => viewWires.map(w => (
     <Line
       key={w.id}
       id={w.id}
       name={WIRE_NAME}
       points={[w.x1, w.y1, w.x2, w.y2]}
-      stroke={selectedId === w.id ? SELECT_COLOR : WIRE_COLOR}
+      stroke={selectedIds.has(w.id) ? SELECT_COLOR : WIRE_COLOR}
       strokeWidth={2}
       lineCap="round"
       hitStrokeWidth={10}
-      onClick={() => handleSelect(w.id)}
+      onClick={(e) => handleSelect(w.id, e)}
     />
   ));
 
+  const renderMarquee = () => {
+    if (!marquee) return null;
+    const box = toBox(marquee.start, marquee.end);
+    return (
+      <Rect
+        x={box.x0}
+        y={box.y0}
+        width={box.x1 - box.x0}
+        height={box.y1 - box.y0}
+        fill="rgba(52, 152, 219, 0.08)"
+        stroke={SELECT_COLOR}
+        strokeWidth={1 / scale}
+        dash={[4 / scale, 3 / scale]}
+        listening={false}
+      />
+    );
+  };
+
   // Lead ends and wire ends: drag from one to draw a wire.
   // Hollow circle = not connected yet, filled dot = junction of 3 or more.
-  const renderConnectionPoints = () => getConnectionPoints(components, wires)
-    .filter(cp => !draggingId || !cp.componentIds.includes(draggingId))
+  const renderConnectionPoints = () => getConnectionPoints(viewComponents, viewWires)
     .map(({ point, count }) => {
       const key = pointKey(point);
       const hovered = hoveredPoint === key && !wireDraft;
@@ -593,12 +734,16 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
   // Deselect when left-clicking empty space
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.button !== 0) return;
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false;
+      return;
+    }
     const clickedSomething =
       e.target.hasName(WIRE_NAME) ||
       e.target.hasName(PIN_HANDLE_NAME) ||
       !!e.target.findAncestor(`.${CIRCUIT_PART_NAME}`, true);
     if (!clickedSomething) {
-      setSelectedId(null);
+      setSelectedIds(new Set());
     }
   };
 
@@ -637,6 +782,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
           {renderComponents()}
           {renderConnectionPoints()}
           {renderWireDraft()}
+          {renderMarquee()}
         </Layer>
       </Stage>
       
@@ -675,10 +821,11 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
       )}
       
       {/* Instructions overlay */}
-      <div className="absolute top-4 left-4 bg-white p-2 rounded shadow text-sm font-medium text-black">
+      <div className="absolute bottom-3 left-3 bg-white/90 px-2 py-1.5 rounded shadow text-xs text-gray-700 pointer-events-none">
         <p>Drag components from sidebar</p>
         <p>Drag from a component&apos;s end to draw a wire</p>
-        <p>R rotate · Delete remove</p>
+        <p>Drag on empty space to box-select · Shift+click to add</p>
+        <p>R rotate · Delete remove · Esc deselect</p>
         <p>Right-click + drag to pan · wheel to zoom</p>
       </div>
     </div>
