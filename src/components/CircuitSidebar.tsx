@@ -3,8 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import styles from './CircuitSidebar.module.css';
-
-type ComponentType = 'resistor' | 'capacitor' | 'inductor' | 'battery' | 'switch';
+import type { ComponentType } from '@/types/circuit';
 
 interface CircuitComponentProps {
   type: ComponentType;

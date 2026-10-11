@@ -1,15 +1,7 @@
 "use client";
 
 import React from "react";
-
-// Define the shape of a circuit component
-export interface CircuitComponent {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  rotation: number;
-}
+import type { CircuitComponent } from "@/types/circuit";
 
 interface PropertiesPanelProps {
   component: CircuitComponent | null;

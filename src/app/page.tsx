@@ -30,6 +30,7 @@ import {
   EyeOff,
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { signOut } from "firebase/auth"
 
@@ -47,7 +48,6 @@ export default function HomePage() {
   const [signupName, setSignupName] = useState("")
   const [signupEmail, setSignupEmail] = useState("")
   const [signupPassword, setSignupPassword] = useState("")
-  const [signupSuccess, setSignupSuccess] = useState(false)
   const [signupLoading, setSignupLoading] = useState(false)
 
   // Animation states
@@ -57,6 +57,20 @@ export default function HomePage() {
 
   // AuthContext for user state
   const { user, loading } = useAuth()
+  const router = useRouter()
+  const [redirectAfterLogin, setRedirectAfterLogin] = useState<string | null>(null)
+
+  // Protected pages send logged-out users here as /?login=1&next=/path
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get("login") !== "1") return
+    setShowLoginModal(true)
+    const next = params.get("next")
+    // Only allow same-site paths, never "//evil.com"
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
+      setRedirectAfterLogin(next)
+    }
+  }, [])
 
   // Initialize animations on component mount
   useEffect(() => {
@@ -111,6 +125,7 @@ export default function HomePage() {
     try {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
       setShowLoginModal(false)
+      if (redirectAfterLogin) router.push(redirectAfterLogin)
     } catch (error: unknown) {
       if (error instanceof Error) {
         alert(error.message)
@@ -141,9 +156,6 @@ export default function HomePage() {
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    console.log("Signup handler called")
-    console.log("auth:", auth, "firestore:", firestore)
-    console.log("signupEmail:", signupEmail, "signupPassword:", signupPassword, "signupName:", signupName)
     setSignupLoading(true)
     try {
       if (!auth || !firestore) {
@@ -153,9 +165,7 @@ export default function HomePage() {
         throw new Error("Please fill all fields.")
       }
       const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword)
-      console.log("User created:", userCredential)
       await updateProfile(userCredential.user, { displayName: signupName })
-      console.log("Profile updated")
       await setDoc(doc(firestore, "users", userCredential.user.uid), {
         name: signupName,
         email: signupEmail,
@@ -168,17 +178,11 @@ export default function HomePage() {
         currentStreak: 0,
         totalPoints: 0,
       })
-      console.log("User doc written to Firestore")
       setSignupLoading(false)
-      setSignupSuccess(true)
       setSignupName("")
       setSignupEmail("")
       setSignupPassword("")
       setShowSignupModal(false)
-      setSignupSuccess(false)
-      setSignupPassword("")
-      setShowSignupModal(false)
-      setSignupSuccess(false)
     } catch (error: unknown) {
       setSignupLoading(false)
       console.error("Signup error:", error)
@@ -458,14 +462,10 @@ export default function HomePage() {
               <p className="text-gray-600 mt-1">Start your electronics learning journey today</p>
             </div>
 
-            {signupSuccess && (
-              <div className="mb-4 text-green-600 font-semibold text-center">Signup successful! Redirecting...</div>
-            )}
-
             <form
               onSubmit={handleSignup}
               className="space-y-4"
-              style={signupSuccess || signupLoading ? { pointerEvents: "none", opacity: 0.6 } : {}}
+              style={signupLoading ? { pointerEvents: "none", opacity: 0.6 } : {}}
             >
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-[#31393C] mb-1">

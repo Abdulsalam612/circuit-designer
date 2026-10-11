@@ -4,15 +4,9 @@ import { ArrowLeft, RotateCcw, Play, Pause, Settings, Save, Upload } from "lucid
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { useState } from "react";
-// Define the shape of a circuit component (duplicated from KonvaTestCanvas)
-interface CircuitComponent {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  rotation: number;
-}
 import PropertiesPanel from "../../components/PropertiesPanel";
+import { useRequireAuth } from "@/context/AuthContext";
+import type { CircuitComponent } from "@/types/circuit";
 
 // Dynamically import Konva components with SSR disabled
 const KonvaTestCanvas = dynamic(() => import("../../components/KonvaTestCanvas"), {
@@ -26,11 +20,16 @@ const CircuitSidebar = dynamic(() => import("../../components/CircuitSidebar"), 
 })
 
 export default function SimulationPage() {
+  const { user, loading } = useRequireAuth();
   const [selectedComponent, setSelectedComponent] = useState<CircuitComponent | null>(null);
   const [isSimulationRunning, setIsSimulationRunning] = useState(false)
 
   const toggleSimulation = () => {
     setIsSimulationRunning(!isSimulationRunning)
+  }
+
+  if (loading || !user) {
+    return <div className="p-8 text-center">{loading ? "Loading..." : "Redirecting to login..."}</div>;
   }
 
   return (

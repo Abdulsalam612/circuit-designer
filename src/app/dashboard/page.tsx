@@ -38,13 +38,13 @@ interface UserProgress {
 }
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useRequireAuth } from "@/context/AuthContext";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { firestore } from "@/firebase";
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"lessons" | "guides">("lessons");
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useRequireAuth();
   const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
   const [progressLoading, setProgressLoading] = useState(true);
 
@@ -52,25 +52,33 @@ export default function DashboardPage() {
     const fetchProgress = async () => {
       if (!user) return;
       setProgressLoading(true);
-      const docRef = doc(firestore, "users", user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setUserProgress({
-          completedLessons: Array.isArray(data.completedLessons) ? data.completedLessons : [],
-          completedGuides: Array.isArray(data.completedGuides) ? data.completedGuides : [],
-          totalLessons: data.totalLessons ?? 0,
-          currentStreak: data.currentStreak ?? 0,
-          totalPoints: data.totalPoints ?? 0,
-          level: data.level ?? 1,
-          xp: data.xp ?? 0,
-        });
+      try {
+        const docRef = doc(firestore, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUserProgress({
+            completedLessons: Array.isArray(data.completedLessons) ? data.completedLessons : [],
+            completedGuides: Array.isArray(data.completedGuides) ? data.completedGuides : [],
+            totalLessons: data.totalLessons ?? 0,
+            currentStreak: data.currentStreak ?? 0,
+            totalPoints: data.totalPoints ?? 0,
+            level: data.level ?? 1,
+            xp: data.xp ?? 0,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load progress:", error);
+      } finally {
+        setProgressLoading(false);
       }
-      setProgressLoading(false);
     };
     if (user) fetchProgress();
   }, [user]);
 
+  if (!authLoading && !user) {
+    return <div className="p-8 text-center">Redirecting to login...</div>;
+  }
   if (authLoading || progressLoading) {
     return <div className="p-8 text-center">Loading your progress...</div>;
   }

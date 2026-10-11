@@ -1,28 +1,33 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Stage, Layer, Rect, Circle, Line } from "react-konva"
+import { Stage, Layer, Rect, Circle, Shape, Line } from "react-konva"
 import Konva from "konva"
 import styles from "./KonvaTestCanvas.module.css"
 import interact from "interactjs"
-import Resistor from "./circuit/Resistor"
-import Capacitor from "./circuit/Capacitor"
-import Battery from "./circuit/Battery"
-import Inductor from "./circuit/Inductor"
-import Switch from "./circuit/Switch"
+import CircuitPart, { CIRCUIT_PART_NAME, PART_WIDTH, PART_HEIGHT } from "./circuit/CircuitPart"
+import { GRID_SIZE, MAJOR_EVERY, snapToGrid, isSpotFree, pointKey, type Point } from "@/lib/grid"
+import {
+  makeId,
+  routeWire,
+  canAddWires,
+  getConnectionPoints,
+  getWireOccupiedPoints,
+  splitWiresAtConnections,
+} from "@/lib/wires"
 import { createPortal } from "react-dom"
+import type { ComponentType, CircuitComponent, Wire } from "@/types/circuit"
 
-// Define component types
-type ComponentType = 'resistor' | 'capacitor' | 'inductor' | 'battery' | 'switch';
+// The grid covers -GRID_EXTENT..GRID_EXTENT in both directions (canvas units)
+const GRID_EXTENT = 2000
 
-// Define a circuit component
-interface CircuitComponent {
-  id: string;
-  type: ComponentType;
-  x: number;
-  y: number;
-  rotation: number;
-}
+// Konva names for clickable things that aren't components
+const WIRE_NAME = "wire"
+const PIN_HANDLE_NAME = "pin-handle"
+
+const WIRE_COLOR = "#1f2937"
+const SELECT_COLOR = "#3498db"
+const INVALID_COLOR = "#ef4444"
 
 interface KonvaTestCanvasProps {
   onSelectedComponentChange?: (component: CircuitComponent | null) => void;
@@ -39,17 +44,38 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
   const [isPanning, setIsPanning] = useState(false)
   const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 })
   
-  // New state for circuit components
+  // Circuit contents
   const [components, setComponents] = useState<CircuitComponent[]>([])
-  const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
+  const [wires, setWires] = useState<Wire[]>([])
+  // Latest values for event handlers that are set up once (interact.js, keyboard) and
+  // would otherwise only ever see the initial empty lists
+  const componentsRef = useRef(components)
+  componentsRef.current = components
+  const wiresRef = useRef(wires)
+  wiresRef.current = wires
+
+  // Selected component or wire id
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Component currently being dragged (its lead-end markers are hidden meanwhile)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  // Wire being drawn: from a lead end / wire end to the grid point under the cursor
+  const [wireDraft, setWireDraft] = useState<{ start: Point; end: Point } | null>(null)
+  const [hoveredPoint, setHoveredPoint] = useState<string | null>(null)
+
+  // Apply a new component list. Lead ends that now land along a wire cut it there,
+  // so they connect.
+  const commitComponents = (next: CircuitComponent[]) => {
+    setComponents(next)
+    setWires(prev => splitWiresAtConnections(prev, next))
+  }
 
   // Notify parent when selected component changes
   useEffect(() => {
     if (onSelectedComponentChange) {
-      const selected = components.find(c => c.id === selectedComponent) || null;
+      const selected = components.find(c => c.id === selectedId) || null;
       onSelectedComponentChange(selected);
     }
-  }, [selectedComponent, components, onSelectedComponentChange]);
+  }, [selectedId, components, onSelectedComponentChange]);
   
   // References
   const stageRef = useRef<Konva.Stage>(null)
@@ -60,85 +86,123 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
     const container = containerRef.current;
     setIsMounted(true)
     
+    // Nearest grid point to a screen position, in stage coordinates
+    const clientToSnappedStage = (stage: Konva.Stage, clientX: number, clientY: number) => {
+      const stageBox = stage.container().getBoundingClientRect();
+      const stageX = (clientX - stageBox.left - stage.x()) / stage.scaleX();
+      const stageY = (clientY - stageBox.top - stage.y()) / stage.scaleY();
+      return { x: snapToGrid(stageX), y: snapToGrid(stageY) };
+    };
+
     // Function to handle component drop
     const handleComponentDrop = (componentType: ComponentType, clientX: number, clientY: number) => {
       const stage = stageRef.current;
       if (!stage || !componentType) return;
-      
-      // Convert client coordinates to stage coordinates
-      const stageBox = stage.container().getBoundingClientRect();
-      const pointerX = clientX - stageBox.left;
-      const pointerY = clientY - stageBox.top;
-      
-      // Convert to stage coordinates accounting for stage transform
-      const stageX = (pointerX - stage.x()) / stage.scaleX();
-      const stageY = (pointerY - stage.y()) / stage.scaleY();
-      
-      // Create new component
+
+      // Centre the new component on the grid point nearest the cursor, matching the drag preview
+      const { x, y } = clientToSnappedStage(stage, clientX, clientY);
+      if (!isSpotFree({ x, y, rotation: 0 }, componentsRef.current, getWireOccupiedPoints(wiresRef.current))) return;
       const newComponent: CircuitComponent = {
-        id: `${componentType}-${Date.now()}`,
+        id: makeId(componentType),
         type: componentType,
-        x: stageX,
-        y: stageY,
+        x,
+        y,
         rotation: 0
       };
-      
-      // Add component to state
-      setComponents(prev => [...prev, newComponent]);
-      setSelectedComponent(newComponent.id);
-      
-      // Force stage update
-      stage.batchDraw();
+
+      const next = [...componentsRef.current, newComponent];
+      setComponents(next);
+      setWires(prev => splitWiresAtConnections(prev, next));
+      setSelectedId(newComponent.id);
     };
     
+    const isOverCanvas = (clientX: number, clientY: number) => {
+      const rect = container?.getBoundingClientRect();
+      return !!rect &&
+        clientX >= rect.left &&
+        clientX <= rect.right &&
+        clientY >= rect.top &&
+        clientY <= rect.bottom;
+    };
+
+    // Drag preview: a floating copy of the component symbol, drawn at the canvas zoom.
+    // Over the canvas it jumps to the nearest grid point, so it shows exactly where the
+    // component will land; elsewhere it follows the cursor. The sidebar card stays in place.
+    let ghost: HTMLDivElement | null = null;
+    let ghostWidth = 0;
+    let ghostHeight = 0;
+
+    const moveGhost = (clientX: number, clientY: number) => {
+      const stage = stageRef.current;
+      if (!ghost || !stage) return;
+      let centreX = clientX;
+      let centreY = clientY;
+      const overCanvas = isOverCanvas(clientX, clientY);
+      let blocked = false;
+      if (overCanvas) {
+        const snapped = clientToSnappedStage(stage, clientX, clientY);
+        const stageBox = stage.container().getBoundingClientRect();
+        centreX = stageBox.left + stage.x() + snapped.x * stage.scaleX();
+        centreY = stageBox.top + stage.y() + snapped.y * stage.scaleY();
+        blocked = !isSpotFree({ ...snapped, rotation: 0 }, componentsRef.current, getWireOccupiedPoints(wiresRef.current));
+      }
+      ghost.style.transform = `translate3d(${centreX - ghostWidth / 2}px, ${centreY - ghostHeight / 2}px, 0)`;
+      ghost.style.opacity = overCanvas ? '1' : '0.5';
+      // Red outline: this spot is taken and dropping here does nothing
+      ghost.style.outlineColor = blocked ? '#ef4444' : '#3498db';
+      document.body.style.cursor = blocked ? 'not-allowed' : 'grabbing';
+    };
+
     // Make sidebar components draggable
     interact('.componentItem').draggable({
-      inertia: true,
       autoScroll: true,
-      
+
       // Start dragging
       onstart: (event) => {
-        const element = event.target;
-        element.style.opacity = '0.8';
-        element.style.transform = 'scale(1.05)';
-        element.style.zIndex = '1000';
-        element.style.position = 'fixed';
-        element.style.pointerEvents = 'none';
+        const element = event.target as HTMLElement;
+        const componentType = element.getAttribute('data-component-type') as ComponentType;
+        const scale = stageRef.current?.scaleX() ?? 1;
+        ghostWidth = PART_WIDTH * scale;
+        ghostHeight = PART_HEIGHT * scale;
+
+        ghost = document.createElement('div');
+        Object.assign(ghost.style, {
+          position: 'fixed',
+          left: '0',
+          top: '0',
+          width: `${ghostWidth}px`,
+          height: `${ghostHeight}px`,
+          pointerEvents: 'none',
+          zIndex: '9999',
+          willChange: 'transform',
+          outline: '2px dashed #3498db',
+          outlineOffset: '4px',
+          borderRadius: '2px',
+          background: `url(/icons/${componentType}.svg) center / 100% 100% no-repeat`,
+        });
+        document.body.appendChild(ghost);
+        moveGhost(event.clientX, event.clientY);
+
+        element.style.opacity = '0.5';
+        document.body.style.cursor = 'grabbing';
       },
-      
+
       // While dragging
       onmove: (event) => {
-        const element = event.target;
-        const x = (parseFloat(element.getAttribute('data-x') || '0')) + event.dx;
-        const y = (parseFloat(element.getAttribute('data-y') || '0')) + event.dy;
-        
-        element.style.transform = `translate(${x}px, ${y}px) scale(1.05)`;
-        element.setAttribute('data-x', x.toString());
-        element.setAttribute('data-y', y.toString());
+        moveGhost(event.clientX, event.clientY);
       },
-      
+
       // End dragging
       onend: (event) => {
-        const element = event.target;
+        const element = event.target as HTMLElement;
         const componentType = element.getAttribute('data-component-type') as ComponentType;
-        const rect = container?.getBoundingClientRect();
-        
-        // Reset element style
-        element.style.opacity = '1';
-        element.style.transform = '';
-        element.style.zIndex = '';
-        element.style.position = '';
-        element.style.pointerEvents = '';
-        element.removeAttribute('data-x');
-        element.removeAttribute('data-y');
-        
-        // Check if drop is within canvas area
-        if (rect && 
-            event.clientX >= rect.left && 
-            event.clientX <= rect.right && 
-            event.clientY >= rect.top && 
-            event.clientY <= rect.bottom) {
-          // Handle component drop
+
+        ghost?.remove();
+        ghost = null;
+        element.style.opacity = '';
+        document.body.style.cursor = '';
+
+        if (isOverCanvas(event.clientX, event.clientY)) {
           handleComponentDrop(componentType, event.clientX, event.clientY);
         }
       }
@@ -173,6 +237,7 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
     
     // Clean up interact.js instances on unmount
     return () => {
+      ghost?.remove();
       interact('.componentItem').unset();
       if (container) {
       interact(container).unset();
@@ -276,6 +341,17 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
   }
   
   const handleMouseMove = () => {
+    // Drawing a wire: follow the nearest grid point
+    if (wireDraft) {
+      const pos = stageRef.current?.getRelativePointerPosition();
+      if (!pos) return;
+      const end = { x: snapToGrid(pos.x), y: snapToGrid(pos.y) };
+      if (end.x !== wireDraft.end.x || end.y !== wireDraft.end.y) {
+        setWireDraft({ ...wireDraft, end });
+      }
+      return;
+    }
+
     if (!isPanning) return;
     
     const stage = stageRef.current;
@@ -327,146 +403,202 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
     setStagePos({ x: dimensions.width / 10, y: dimensions.height / 10 })
   }
 
-  // Handle rotation of selected component with 'R' key
-  React.useEffect(() => {
+  // R rotates the selected component, Delete/Backspace removes the selected component or wire
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedId) return;
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+
+      const allComponents = componentsRef.current;
       if (e.key === 'r' || e.key === 'R') {
-        if (selectedComponent) {
-          setComponents(prevComponents =>
-            prevComponents.map(component =>
-              component.id === selectedComponent
-                ? { ...component, rotation: (component.rotation + 90) % 360 }
-                : component
-            )
-          );
-        }
+        const component = allComponents.find(c => c.id === selectedId);
+        if (!component) return;
+        const rotated = { ...component, rotation: (component.rotation + 90) % 360 };
+        const others = allComponents.filter(c => c.id !== selectedId);
+        // Don't rotate into another component or across a wire
+        if (!isSpotFree(rotated, others, getWireOccupiedPoints(wiresRef.current))) return;
+        commitComponents(allComponents.map(c => (c.id === selectedId ? rotated : c)));
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        setComponents(allComponents.filter(c => c.id !== selectedId));
+        setWires(wiresRef.current.filter(w => w.id !== selectedId));
+        setSelectedId(null);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedComponent]);
+  }, [selectedId]);
+
+  // Finish the wire being drawn when the mouse is released (even outside the canvas)
+  useEffect(() => {
+    if (!wireDraft) return;
+    const handleMouseUp = (e: MouseEvent) => {
+      // Read the release point directly: on a fast drag the last mousemove may not
+      // have re-rendered yet, so wireDraft.end can be stale
+      let end = wireDraft.end;
+      const stage = stageRef.current;
+      if (stage) {
+        stage.setPointersPositions(e);
+        const pos = stage.getRelativePointerPosition();
+        if (pos) end = { x: snapToGrid(pos.x), y: snapToGrid(pos.y) };
+      }
+      const segments = routeWire(wireDraft.start, end);
+      if (canAddWires(segments, components, wires)) {
+        const added = segments.map(s => ({ id: makeId('wire'), ...s }));
+        setWires(splitWiresAtConnections([...wires, ...added], components));
+      }
+      setWireDraft(null);
+    };
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, [wireDraft, components, wires]);
+
+  const handleSelect = (id: string) => {
+    setSelectedId(prev => prev === id ? null : id);
+  };
 
   // Render components based on their type
   const renderComponents = () => {
-    const handleComponentClick = (id: string) => {
-      setSelectedComponent(prev => prev === id ? null : id);
-    };
+    const wirePoints = getWireOccupiedPoints(wires);
 
+    // Wires stay where they are when a part moves away from them (the part detaches)
     const handleComponentDragEnd = (id: string, e: Konva.KonvaEventObject<Event>) => {
-      setComponents(prevComponents => 
-        prevComponents.map(component => 
-          component.id === id 
-            ? { ...component, x: e.target.x(), y: e.target.y() } 
-            : component
-        )
-      );
+      setDraggingId(null);
+      commitComponents(components.map(component =>
+        component.id === id
+          ? { ...component, x: snapToGrid(e.target.x()), y: snapToGrid(e.target.y()) }
+          : component
+      ));
     };
 
     return components.map(component => {
-      const isSelected = selectedComponent === component.id;
-      
-      // Render component based on type
-      switch (component.type) {
-        case 'resistor':
-          return (
-            <Resistor
-              key={component.id}
-              id={component.id}
-              x={component.x}
-              y={component.y}
-              rotation={component.rotation}
-              isSelected={isSelected}
-              onClick={() => handleComponentClick(component.id)}
-              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
-              draggable={true}
-            />
-          );
-        case 'capacitor':
-          return (
-            <Capacitor
-              key={component.id}
-              id={component.id}
-              x={component.x}
-              y={component.y}
-              rotation={component.rotation}
-              isSelected={isSelected}
-              onClick={() => handleComponentClick(component.id)}
-              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
-              draggable={true}
-            />
-          );
-        case 'battery':
-          return (
-            <Battery
-              key={component.id}
-              id={component.id}
-              x={component.x}
-              y={component.y}
-              rotation={component.rotation}
-              isSelected={isSelected}
-              onClick={() => handleComponentClick(component.id)}
-              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
-              draggable={true}
-            />
-          );
-        case 'inductor':
-          return (
-            <Inductor
-              key={component.id}
-              id={component.id}
-              x={component.x}
-              y={component.y}
-              rotation={component.rotation}
-              isSelected={isSelected}
-              onClick={() => handleComponentClick(component.id)}
-              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
-              draggable={true}
-            />
-          );
-        case 'switch':
-          return (
-            <Switch
-              key={component.id}
-              id={component.id}
-              x={component.x}
-              y={component.y}
-              rotation={component.rotation}
-              isSelected={isSelected}
-              onClick={() => handleComponentClick(component.id)}
-              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
-              draggable={true}
-            />
-          );
-        case 'inductor':
-        case 'battery':
-        case 'switch':
-        default:
-          // Placeholder for other component types
-          return (
-            <Rect
-              key={component.id}
-              x={component.x}
-              y={component.y}
-              width={40}
-              height={40}
-              fill="#f0f0f0"
-              stroke={isSelected ? "#3498db" : "black"}
-              strokeWidth={isSelected ? 2 : 1}
-              draggable={true}
-              onClick={() => handleComponentClick(component.id)}
-              onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
-            />
-          );
-      }
+      const others = components.filter(c => c.id !== component.id);
+      return (
+        <CircuitPart
+          key={component.id}
+          id={component.id}
+          type={component.type}
+          x={component.x}
+          y={component.y}
+          rotation={component.rotation}
+          isSelected={selectedId === component.id}
+          onClick={() => handleSelect(component.id)}
+          onDragStart={() => setDraggingId(component.id)}
+          onDragEnd={(e) => handleComponentDragEnd(component.id, e)}
+          canPlaceAt={(centre) => isSpotFree({ ...centre, rotation: component.rotation }, others, wirePoints)}
+          draggable={true}
+        />
+      );
     });
   };
 
-// ...
-  // Handle stage click to deselect components
+  const renderWires = () => wires.map(w => (
+    <Line
+      key={w.id}
+      id={w.id}
+      name={WIRE_NAME}
+      points={[w.x1, w.y1, w.x2, w.y2]}
+      stroke={selectedId === w.id ? SELECT_COLOR : WIRE_COLOR}
+      strokeWidth={2}
+      lineCap="round"
+      hitStrokeWidth={10}
+      onClick={() => handleSelect(w.id)}
+    />
+  ));
+
+  // Lead ends and wire ends: drag from one to draw a wire.
+  // Hollow circle = not connected yet, filled dot = junction of 3 or more.
+  const renderConnectionPoints = () => getConnectionPoints(components, wires)
+    .filter(cp => !draggingId || !cp.componentIds.includes(draggingId))
+    .map(({ point, count }) => {
+      const key = pointKey(point);
+      const hovered = hoveredPoint === key && !wireDraft;
+      return (
+        <React.Fragment key={key}>
+          {count === 1 && (
+            <Circle x={point.x} y={point.y} radius={3.5} fill="white" stroke="#6b7280" strokeWidth={1.5} listening={false} />
+          )}
+          {count >= 3 && (
+            <Circle x={point.x} y={point.y} radius={4} fill={WIRE_COLOR} listening={false} />
+          )}
+          {hovered && (
+            <Circle x={point.x} y={point.y} radius={7} stroke={SELECT_COLOR} strokeWidth={2} listening={false} />
+          )}
+          {/* Invisible, larger hit area */}
+          <Circle
+            x={point.x}
+            y={point.y}
+            radius={8}
+            fill="rgba(0,0,0,0)"
+            name={PIN_HANDLE_NAME}
+            onMouseEnter={() => {
+              setHoveredPoint(key);
+              document.body.style.cursor = 'crosshair';
+            }}
+            onMouseLeave={() => {
+              setHoveredPoint(null);
+              if (!wireDraft) document.body.style.cursor = 'default';
+            }}
+            onMouseDown={(e) => {
+              if (e.evt.button !== 0) return;
+              e.cancelBubble = true;
+              setWireDraft({ start: point, end: point });
+            }}
+          />
+        </React.Fragment>
+      );
+    });
+
+  const renderWireDraft = () => {
+    if (!wireDraft) return null;
+    const segments = routeWire(wireDraft.start, wireDraft.end);
+    if (segments.length === 0) return null;
+    const color = canAddWires(segments, components, wires) ? SELECT_COLOR : INVALID_COLOR;
+    return segments.map((s, i) => (
+      <Line
+        key={i}
+        points={[s.x1, s.y1, s.x2, s.y2]}
+        stroke={color}
+        strokeWidth={2}
+        dash={[6, 4]}
+        lineCap="round"
+        listening={false}
+      />
+    ));
+  };
+
+  // Minor lines every grid cell, darker major lines every MAJOR_EVERY cells.
+  // Drawn as one shape so the grid is cheap even with hundreds of lines.
+  const drawGrid = (ctx: Konva.Context) => {
+    const drawLines = (major: boolean) => {
+      ctx.beginPath();
+      for (let p = -GRID_EXTENT; p <= GRID_EXTENT; p += GRID_SIZE) {
+        const isMajor = Math.round(p / GRID_SIZE) % MAJOR_EVERY === 0;
+        if (isMajor !== major) continue;
+        ctx.moveTo(-GRID_EXTENT, p);
+        ctx.lineTo(GRID_EXTENT, p);
+        ctx.moveTo(p, -GRID_EXTENT);
+        ctx.lineTo(p, GRID_EXTENT);
+      }
+      ctx.strokeStyle = major ? "#d1d5db" : "#eef0f3";
+      // Keep lines 1 screen pixel wide at any zoom
+      ctx.lineWidth = 1 / scale;
+      ctx.stroke();
+    };
+    drawLines(false);
+    drawLines(true);
+  };
+
+  // Deselect when left-clicking empty space
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Only deselect if clicking on the stage itself, not a component
-    if (e.target === e.currentTarget) {
-      setSelectedComponent(null);
+    if (e.evt.button !== 0) return;
+    const clickedSomething =
+      e.target.hasName(WIRE_NAME) ||
+      e.target.hasName(PIN_HANDLE_NAME) ||
+      !!e.target.findAncestor(`.${CIRCUIT_PART_NAME}`, true);
+    if (!clickedSomething) {
+      setSelectedId(null);
     }
   };
 
@@ -491,35 +623,20 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
         onContextMenu={handleContextMenu}
         onClick={handleStageClick}
       >
-        <Layer>
-          {/* Grid or background elements - increased size to prevent empty areas */}
-          <Rect width={4000} height={4000} x={-2000} y={-2000} fill="#f9f9f9" />
-          
-          {/* Grid lines - horizontal */}
-          {Array.from({ length: 80 }, (_, i) => (
-            <Line
-              key={`h-${i}`}
-              points={[-2000, (i - 40) * 50, 2000, (i - 40) * 50]}
-              stroke="#e5e7eb"
-              strokeWidth={1}
-            />
-          ))}
-          
-          {/* Grid lines - vertical */}
-          {Array.from({ length: 80 }, (_, i) => (
-            <Line
-              key={`v-${i}`}
-              points={[(i - 40) * 50, -2000, (i - 40) * 50, 2000]}
-              stroke="#e5e7eb"
-              strokeWidth={1}
-            />
-          ))}
-          
+        {/* Grid on its own non-interactive layer: it isn't redrawn while components move,
+            and clicks on empty space go straight to the stage (which deselects) */}
+        <Layer listening={false}>
+          <Rect width={GRID_EXTENT * 2} height={GRID_EXTENT * 2} x={-GRID_EXTENT} y={-GRID_EXTENT} fill="#f9f9f9" />
+          <Shape sceneFunc={drawGrid} perfectDrawEnabled={false} />
           {/* Center marker */}
-          <Circle x={0} y={0} radius={5} fill="#cbd5e1" />
-          
-          {/* Render circuit components */}
+          <Circle x={0} y={0} radius={4} fill="#cbd5e1" />
+        </Layer>
+
+        <Layer>
+          {renderWires()}
           {renderComponents()}
+          {renderConnectionPoints()}
+          {renderWireDraft()}
         </Layer>
       </Stage>
       
@@ -559,9 +676,10 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ onSelectedComponentCh
       
       {/* Instructions overlay */}
       <div className="absolute top-4 left-4 bg-white p-2 rounded shadow text-sm font-medium text-black">
-        <p>Right-click + drag to pan</p>
-        <p>Mouse wheel to zoom</p>
         <p>Drag components from sidebar</p>
+        <p>Drag from a component&apos;s end to draw a wire</p>
+        <p>R rotate · Delete remove</p>
+        <p>Right-click + drag to pan · wheel to zoom</p>
       </div>
     </div>
   );

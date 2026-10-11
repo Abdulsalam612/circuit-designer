@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/firebase";
 
@@ -31,3 +32,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const useAuth = () => useContext(AuthContext);
+
+// For protected pages: sends logged-out users to the login modal, then back here after login
+export const useRequireAuth = () => {
+  const auth = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!auth.loading && !auth.user) {
+      router.replace(`/?login=1&next=${encodeURIComponent(pathname)}`);
+    }
+  }, [auth.loading, auth.user, router, pathname]);
+
+  return auth;
+};
