@@ -66,9 +66,12 @@ interface KonvaTestCanvasProps {
   onSelectionChange?: (ids: string[]) => void;
   // Results to show while the simulation is running
   simulation?: SimulationResult | null;
+  // Size the canvas to its parent element instead of the window (for embedding it in a
+  // page, e.g. lesson challenges)
+  fitContainer?: boolean;
 }
 
-const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation }) => {
+const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation, fitContainer = false }) => {
   // Set initial dimensions to avoid hydration errors
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [isMounted, setIsMounted] = useState(false)
@@ -308,8 +311,10 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
     const wheelContainer = containerRef.current;
     setIsMounted(true)
     
-    // Update dimensions based on window size
+    // Update dimensions based on window size (an embedded canvas is sized by the
+    // ResizeObserver below instead)
     const updateDimensions = () => {
+      if (fitContainer) return
       // Adjust these values based on your layout
       setDimensions({
         width: window.innerWidth - 360, // Adjusted to account for sidebar width
@@ -370,7 +375,22 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
         wheelContainer.removeEventListener('wheel', handleWheel as EventListener)
       }
     }
-  }, [scale, stagePos])
+  }, [scale, stagePos, fitContainer])
+
+  // Embedded canvas: follow the size of the element it sits in (the container only
+  // exists once mounted, before that a placeholder is shown)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!fitContainer || !isMounted || !container) return
+    const fit = (width: number, height: number) => {
+      if (width > 0 && height > 0) setDimensions({ width: Math.floor(width), height: Math.floor(height) })
+    }
+    // Measure now too: ResizeObserver only reports on the next rendered frame
+    fit(container.clientWidth, container.clientHeight)
+    const observer = new ResizeObserver(([entry]) => fit(entry.contentRect.width, entry.contentRect.height))
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [fitContainer, isMounted])
 
   // Handle mouse events for right-click panning
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {

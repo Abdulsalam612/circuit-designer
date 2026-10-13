@@ -62,6 +62,9 @@ export interface SimulationResult {
   // Current in each wire (wire id -> amps). Positive means it flows from the wire's
   // first end (x1, y1) to its second end (x2, y2).
   wireCurrents: Record<string, number>;
+  // Electrical node of each lead end (component id -> one node id per pin). Ends with
+  // the same node id are connected; used to tell series from parallel.
+  pinNodes: Record<string, string[]>;
   warnings: SimulationWarning[];
 }
 
@@ -350,7 +353,10 @@ export const simulate = (layout: CircuitLayout): SimulationResult => {
     });
   }
 
-  return { readings, pointVoltages, warnings, wireCurrents: computeWireCurrents(layout, readings, pinsOf) };
+  const pinNodes: Record<string, string[]> = {};
+  for (const [id, pins] of pinsOf) pinNodes[id] = pins.map(node);
+
+  return { readings, pointVoltages, pinNodes, warnings, wireCurrents: computeWireCurrents(layout, readings, pinsOf) };
 };
 
 // ---- Current in each wire ----

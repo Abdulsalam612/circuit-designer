@@ -1,22 +1,18 @@
 "use client"
 
-import { ArrowLeft, Play, CheckCircle, Star, BookOpen, Zap, Target, Clock, Award } from "lucide-react"
+import { ArrowLeft, ArrowRight, Play, CheckCircle, Star, BookOpen, Zap, Target, Clock, Award, Trophy } from "lucide-react"
 import Link from "next/link"
+import { useEffect, useState } from "react";
+import { useRequireAuth } from "@/context/AuthContext";
+import { doc, updateDoc } from "firebase/firestore";
+import { firestore } from "@/firebase";
+import { LESSONS, LEVELS } from "@/content/lessons";
+import { lessonState, nextLesson } from "@/lib/lessons";
+import { loadProgress, type LearningProgress } from "@/lib/progress";
+import LessonCard from "@/components/lessons/LessonCard";
+import ProgressBar from "@/components/lessons/ProgressBar";
 
-// Add type definitions after the imports
-type Difficulty = "Beginner" | "Intermediate" | "Advanced";
 type GuideType = "Safety" | "Reference" | "Troubleshooting" | "Advanced";
-
-interface Lesson {
-  id: number;
-  title: string;
-  description: string;
-  duration: string;
-  difficulty: Difficulty;
-  completed: boolean;
-  locked: boolean;
-  points: number;
-}
 
 interface Guide {
   id: number;
@@ -27,53 +23,19 @@ interface Guide {
   completed: boolean;
 }
 
-interface UserProgress {
-  completedLessons: number[];
-  completedGuides: number[];
-  totalLessons: number;
-  currentStreak: number;
-  totalPoints: number;
-  level: number;
-  xp?: number;
-}
-
-import { useEffect, useState } from "react";
-import { useRequireAuth } from "@/context/AuthContext";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { firestore } from "@/firebase";
-
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<"lessons" | "guides">("lessons");
   const { user, loading: authLoading } = useRequireAuth();
-  const [userProgress, setUserProgress] = useState<UserProgress | null>(null);
+  const [userProgress, setUserProgress] = useState<LearningProgress | null>(null);
   const [progressLoading, setProgressLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProgress = async () => {
-      if (!user) return;
-      setProgressLoading(true);
-      try {
-        const docRef = doc(firestore, "users", user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setUserProgress({
-            completedLessons: Array.isArray(data.completedLessons) ? data.completedLessons : [],
-            completedGuides: Array.isArray(data.completedGuides) ? data.completedGuides : [],
-            totalLessons: data.totalLessons ?? 0,
-            currentStreak: data.currentStreak ?? 0,
-            totalPoints: data.totalPoints ?? 0,
-            level: data.level ?? 1,
-            xp: data.xp ?? 0,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to load progress:", error);
-      } finally {
-        setProgressLoading(false);
-      }
-    };
-    if (user) fetchProgress();
+    if (!user) return;
+    setProgressLoading(true);
+    loadProgress(user.uid)
+      .then(setUserProgress)
+      .catch((error) => console.error("Failed to load progress:", error))
+      .finally(() => setProgressLoading(false));
   }, [user]);
 
   if (!authLoading && !user) {
@@ -86,105 +48,11 @@ export default function DashboardPage() {
     return <div className="p-8 text-center text-red-500">Could not load user progress.</div>;
   }
 
-  // Example lessons and guides (add more as needed)
-  const allLessons: Lesson[] = [
-    {
-      id: 1,
-      title: "Introduction to Electricity",
-      description: "Learn the basics of electrical current, voltage, and resistance",
-      duration: "15 min",
-      difficulty: "Beginner",
-      completed: false,
-      locked: false,
-      points: 50,
-    },
-    {
-      id: 2,
-      title: "Ohm's Law",
-      description: "Understand the relationship between voltage, current, and resistance.",
-      duration: "20 min",
-      difficulty: "Beginner",
-      completed: false,
-      locked: false,
-      points: 60,
-    },
-    {
-      id: 3,
-      title: "Your First Circuit",
-      description: "Build a simple LED circuit with a battery and resistor",
-      duration: "25 min",
-      difficulty: "Beginner",
-      completed: false,
-      locked: true,
-      points: 100,
-    },
-    {
-      id: 4,
-      title: "Series Circuits",
-      description: "Connect components in series and understand current flow",
-      duration: "30 min",
-      difficulty: "Intermediate",
-      completed: false,
-      locked: true,
-      points: 125,
-    },
-    {
-      id: 5,
-      title: "Parallel Circuits",
-      description: "Learn how parallel connections affect voltage and current",
-      duration: "30 min",
-      difficulty: "Intermediate",
-      completed: false,
-      locked: true,
-      points: 125,
-    },
-    {
-      id: 6,
-      title: "Ohm's Law Advanced",
-      description: "Master the fundamental relationship between V, I, and R",
-      duration: "35 min",
-      difficulty: "Intermediate",
-      completed: false,
-      locked: true,
-      points: 150,
-    },
-    {
-      id: 7,
-      title: "Switches and Control",
-      description: "Add interactive control to your circuits",
-      duration: "25 min",
-      difficulty: "Intermediate",
-      completed: false,
-      locked: true,
-      points: 100,
-    },
-    {
-      id: 8,
-      title: "Complex Circuits",
-      description: "Combine series and parallel elements",
-      duration: "40 min",
-      difficulty: "Advanced",
-      completed: false,
-      locked: true,
-      points: 200,
-    },
-  ];
-
-  // Determine completed/locked status from Firestore data
-  const completedLessons: number[] = userProgress?.completedLessons || [];
-  const completedGuides: number[] = userProgress?.completedGuides || [];
-
-  // Calculate lesson lock/completion state
-  const lessons: Lesson[] = allLessons.map((lesson, idx) => {
-    const completed = completedLessons.includes(lesson.id);
-    // Unlocked if first two, or previous lesson completed
-    const unlocked = idx < 2 || completedLessons.includes(allLessons[idx - 1]?.id);
-    return {
-      ...lesson,
-      completed,
-      locked: !unlocked && !completed,
-    };
-  });
+  // Lessons come from src/content/lessons; their state from the user's progress
+  const completedLessons = new Set(userProgress.completedLessons);
+  const completedCount = LESSONS.filter(l => completedLessons.has(l.id)).length;
+  const upNext = nextLesson(completedLessons);
+  const completedGuides: number[] = userProgress.completedGuides;
 
   // Guides: all unlocked, completed if in completedGuides
   const allGuides: Guide[] = [
@@ -228,19 +96,6 @@ export default function DashboardPage() {
 
 
 
-  const getDifficultyColor = (difficulty: Difficulty): string => {
-    switch (difficulty) {
-      case "Beginner":
-        return "bg-green-100 text-green-700"
-      case "Intermediate":
-        return "bg-yellow-100 text-yellow-700"
-      case "Advanced":
-        return "bg-red-100 text-red-700"
-      default:
-        return "bg-gray-100 text-gray-700"
-    }
-  }
-
   const getTypeColor = (type: GuideType): string => {
     switch (type) {
       case "Safety":
@@ -255,21 +110,6 @@ export default function DashboardPage() {
         return "bg-gray-100 text-gray-700"
     }
   }
-
-  // Handler to mark lesson as completed and unlock next
-  const handleCompleteLesson = async (lessonId: number) => {
-    if (!user || !userProgress) return;
-    if (userProgress.completedLessons.includes(lessonId)) return; // Already completed
-    const newCompleted = [...userProgress.completedLessons, lessonId];
-    const newXP = (userProgress.xp ?? 0) + 10;
-    const newPoints = (userProgress.totalPoints ?? 0) + 10;
-    await updateDoc(doc(firestore, "users", user.uid), {
-      completedLessons: newCompleted,
-      xp: newXP,
-      totalPoints: newPoints,
-    });
-    setUserProgress((prev) => prev ? { ...prev, completedLessons: newCompleted, xp: newXP, totalPoints: newPoints } : prev);
-  };
 
   // Handler to mark guide as completed
   const handleCompleteGuide = async (guideId: number) => {
@@ -331,14 +171,9 @@ export default function DashboardPage() {
               <Target className="h-5 w-5 text-blue-500" />
             </div>
             <div className="text-2xl font-bold text-gray-900 mb-1">
-              {userProgress.completedLessons.length}/{userProgress.totalLessons}
+              {completedCount}/{LESSONS.length}
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-500 h-2 rounded-full"
-                style={{ width: `${(userProgress.completedLessons.length / userProgress.totalLessons) * 100}%` }}
-              ></div>
-            </div>
+            <ProgressBar value={completedCount} max={LESSONS.length} />
           </div>
 
           <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -356,7 +191,7 @@ export default function DashboardPage() {
               <Award className="h-5 w-5 text-green-500" />
             </div>
             <div className="text-2xl font-bold text-gray-900">{userProgress.totalPoints}</div>
-            <p className="text-sm text-gray-500">+50 today</p>
+            <p className="text-sm text-gray-500">Earned from lessons</p>
           </div>
 
           <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -404,47 +239,66 @@ export default function DashboardPage() {
 
           <div className="p-6">
             {activeTab === "lessons" && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900">Interactive Lessons</h2>
-                  <p className="text-sm text-gray-500">Complete lessons to unlock new content</p>
-                </div>
-                <div className="grid md:grid-cols-2 gap-6">
-                  {lessons.map((lesson: Lesson) => (
-                    <div
-                      key={lesson.id}
-                      className={`bg-white rounded-lg p-6 border border-gray-200 shadow-sm flex flex-col justify-between ${lesson.locked ? 'opacity-50 pointer-events-none' : ''}`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-medium text-gray-900 flex items-center">
-                            {lesson.title}
-                            {lesson.completed && (
-                              <CheckCircle className="ml-2 h-5 w-5 text-green-500" />
-                            )}
-                          </h3>
-                          <span className={`px-2 py-1 rounded text-xs font-semibold ${getDifficultyColor(lesson.difficulty)}`}>{lesson.difficulty}</span>
+              <div className="space-y-8">
+                {/* Up next */}
+                {upNext ? (
+                  <Link
+                    href={`/learn/${upNext.id}`}
+                    className="flex items-center justify-between gap-4 rounded-xl bg-[#31393C] text-white p-5 hover:bg-[#31393C]/90 transition-colors group"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="bg-[#FDCA40] p-3 rounded-lg shrink-0">
+                        <Play className="h-5 w-5 text-[#31393C]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm text-white/70">{completedCount === 0 ? "Start here" : "Up next"} · Level {upNext.level}</p>
+                        <h3 className="text-lg font-semibold truncate">{upNext.title}</h3>
+                      </div>
+                    </div>
+                    <span className="flex items-center font-semibold text-[#FDCA40] shrink-0">
+                      {completedCount === 0 ? "Start" : "Continue"}
+                      <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-4 rounded-xl bg-green-50 border border-green-200 p-5">
+                    <Trophy className="h-8 w-8 text-green-600 shrink-0" />
+                    <div>
+                      <h3 className="font-semibold text-green-800">You&apos;ve completed every lesson!</h3>
+                      <p className="text-sm text-green-700">More levels are on the way. Try building your own circuits in the simulator.</p>
+                    </div>
+                  </div>
+                )}
+
+                {LEVELS.map(level => {
+                  const lessons = LESSONS.filter(l => l.level === level.level)
+                  if (lessons.length === 0) return null
+                  const done = lessons.filter(l => completedLessons.has(l.id)).length
+                  return (
+                    <section key={level.level}>
+                      <div className="flex items-end justify-between gap-4 mb-4">
+                        <div>
+                          <h2 className="text-lg font-semibold text-gray-900">Level {level.level}: {level.title}</h2>
+                          <p className="text-sm text-gray-500">{level.description}</p>
                         </div>
-                        <p className="text-gray-700 mb-4">{lesson.description}</p>
-                        <div className="flex items-center space-x-4 mb-2">
-                          <span className="flex items-center text-gray-500 text-sm">
-                            <Clock className="h-4 w-4 mr-1" /> {lesson.duration}
-                          </span>
-                          <span className="flex items-center text-gray-500 text-sm">
-                            <Star className="h-4 w-4 mr-1" /> {lesson.points} pts
-                          </span>
+                        <div className="w-32 shrink-0">
+                          <p className="text-xs text-gray-500 text-right mb-1">{done}/{lessons.length} done</p>
+                          <ProgressBar value={done} max={lessons.length} color="bg-green-500" />
                         </div>
                       </div>
-                      <button
-                        className={`mt-4 px-4 py-2 rounded bg-blue-600 text-white font-medium flex items-center space-x-2 hover:bg-blue-700 transition-colors ${lesson.completed ? 'bg-green-500 hover:bg-green-600' : ''}`}
-                        disabled={lesson.locked || lesson.completed}
-                        onClick={() => handleCompleteLesson(lesson.id)}
-                      >
-                        {lesson.completed ? <><CheckCircle className="h-5 w-5" /> Completed</> : <><Play className="h-5 w-5" /> Start Lesson</>}
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {lessons.map(lesson => (
+                          <LessonCard
+                            key={lesson.id}
+                            lesson={lesson}
+                            number={LESSONS.indexOf(lesson) + 1}
+                            state={lessonState(lesson.id, completedLessons)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )
+                })}
               </div>
             )}
 
