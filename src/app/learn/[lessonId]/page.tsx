@@ -13,13 +13,17 @@ import ProgressBar from "@/components/lessons/ProgressBar"
 import ReadStepView from "@/components/lessons/ReadStepView"
 import QuizStepView from "@/components/lessons/QuizStepView"
 import ChallengeStepView from "@/components/lessons/ChallengeStepView"
+import SiteHeader from "@/components/SiteHeader"
 
 const STEP_ICON = { read: BookOpen, quiz: HelpCircle, challenge: Wrench }
 const STEP_KIND_LABEL = { read: "Read", quiz: "Quiz", challenge: "Build challenge" }
 
 const Centered = ({ children }: { children: React.ReactNode }) => (
-  <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-    <div className="max-w-md text-center">{children}</div>
+  <div className="min-h-screen bg-gray-50 flex flex-col">
+    <SiteHeader />
+    <div className="flex-1 flex items-center justify-center p-6">
+      <div className="max-w-md text-center">{children}</div>
+    </div>
   </div>
 )
 
@@ -162,6 +166,7 @@ const LessonView = ({ lessonId }: { lessonId: string }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SiteHeader sticky={false} />
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
         <div className="px-6 py-3 flex items-center gap-4">
           <Link href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors" title="Back to lessons">

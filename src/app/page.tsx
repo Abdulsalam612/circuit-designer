@@ -33,7 +33,9 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import WelcomeBack from "@/components/WelcomeBack"
-import { signOut } from "firebase/auth"
+import SiteHeader from "@/components/SiteHeader"
+import { useToast } from "@/context/ToastContext"
+import { friendlyAuthError } from "@/lib/authErrors"
 
 export default function HomePage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -58,12 +60,14 @@ export default function HomePage() {
 
   // AuthContext for user state
   const { user, loading } = useAuth()
+  const toast = useToast()
   const router = useRouter()
   const [redirectAfterLogin, setRedirectAfterLogin] = useState<string | null>(null)
 
   // Protected pages send logged-out users here as /?login=1&next=/path
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    if (params.get("signup") === "1") setShowSignupModal(true)
     if (params.get("login") !== "1") return
     setShowLoginModal(true)
     const next = params.get("next")
@@ -112,27 +116,15 @@ export default function HomePage() {
     return () => observer.disconnect()
   }, [])
 
-  // Logout handler
-  const handleLogout = async () => {
-    try {
-      await signOut(auth)
-    } catch {
-      alert("Logout failed.")
-    }
-  }
-
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     try {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
       setShowLoginModal(false)
+      toast.success("Signed in. Welcome back!")
       if (redirectAfterLogin) router.push(redirectAfterLogin)
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        alert(error.message)
-      } else {
-        alert("Login failed. Unknown error.")
-      }
+      toast.error(friendlyAuthError(error, "Sign in failed. Please try again."))
     }
   }
 
@@ -146,11 +138,7 @@ export default function HomePage() {
       setResetSuccess(true)
       setResetEmail("")
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        setResetError(error.message)
-      } else {
-        setResetError("Failed to send reset email.")
-      }
+      setResetError(friendlyAuthError(error, "Failed to send reset email."))
     }
     setResetLoading(false)
   }
@@ -184,14 +172,10 @@ export default function HomePage() {
       setSignupEmail("")
       setSignupPassword("")
       setShowSignupModal(false)
+      toast.success(`Account created. Welcome to CirKit, ${signupName}!`)
     } catch (error: unknown) {
       setSignupLoading(false)
-      console.error("Signup error:", error)
-      if (error instanceof Error) {
-        alert(error.message)
-      } else {
-        alert("Signup failed. Unknown error.")
-      }
+      toast.error(friendlyAuthError(error, "Sign up failed. Please try again."))
     }
   }
 
@@ -209,7 +193,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       {/* Password Reset Modal */}
       {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fadeIn">
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
@@ -260,75 +244,18 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="bg-[#2176FF] p-2.5 rounded-lg">
-              <CircuitBoard className="h-7 w-7 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-[#31393C]">CirKit</span>
-          </div>
-
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-gray-600 hover:text-[#31393C] font-medium transition-colors">
-              Features
-            </Link>
-            <Link href="#education" className="text-gray-600 hover:text-[#31393C] font-medium transition-colors">
-              Education
-            </Link>
-            <Link href="#about" className="text-gray-600 hover:text-[#31393C] font-medium transition-colors">
-              About
-            </Link>
-            <div className="flex items-center space-x-4">
-              {!loading && user ? (
-                <>
-                  <span className="text-[#31393C] font-medium">{user.displayName || user.email}</span>
-                  <button
-                    className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                    onClick={handleLogout}
-                  >
-                    Log out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    className="px-4 py-2 bg-[#2176FF] text-white rounded hover:bg-[#33A1FD] transition-colors"
-                    onClick={() => setShowLoginModal(true)}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    className="px-4 py-2 bg-[#33A1FD] text-white rounded hover:bg-[#2176FF] transition-colors"
-                    onClick={() => setShowSignupModal(true)}
-                  >
-                    Sign Up
-                  </button>
-                </>
-              )}
-            </div>
-            <Link href="/play">
-              <button className="bg-[#F79824] hover:bg-[#FDCA40] text-white px-6 py-2.5 rounded-lg font-semibold transition-all transform hover:scale-105">
-                CirKit Kids
-              </button>
-            </Link>
-          </nav>
-
-          {/* Mobile menu button would go here */}
-          <div className="md:hidden">
-            <button className="text-gray-600 hover:text-[#31393C]">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </header>
+      <SiteHeader
+        sectionLinks={[
+          { href: "#features", label: "Features" },
+          { href: "#education", label: "Education" },
+        ]}
+        onSignIn={() => setShowLoginModal(true)}
+        onSignUp={() => setShowSignupModal(true)}
+      />
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-fadeIn">
             <button
               onClick={() => setShowLoginModal(false)}
@@ -446,7 +373,7 @@ export default function HomePage() {
 
       {/* Signup Modal */}
       {showSignupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-fadeIn">
             <button
               onClick={() => setShowSignupModal(false)}

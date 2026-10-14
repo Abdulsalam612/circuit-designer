@@ -1,0 +1,38 @@
+"use client"
+
+import { useEffect } from "react"
+import Link from "next/link"
+import { Home, RotateCcw } from "lucide-react"
+import StatusPage, { primaryButton, secondaryButton } from "@/components/StatusPage"
+
+// Shown when a page crashes while rendering. The site header (layout) still works, so the
+// user can try again or go somewhere else instead of seeing a blank screen.
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    // Keep the details for debugging; the page itself stays friendly
+    console.error(error)
+  }, [error])
+
+  return (
+    <StatusPage
+      code="Something went wrong"
+      title="Short circuit!"
+      message={
+        <>
+          <p>Something on this page broke. Anything you had already saved is safe.</p>
+          {error.digest && <p className="mt-2 text-xs text-gray-400">Error reference: {error.digest}</p>}
+        </>
+      }
+      variant="spark"
+    >
+      {/* React 19 moves <title> into <head> */}
+      <title>Something went wrong – CirKit</title>
+      <button onClick={reset} className={primaryButton}>
+        <RotateCcw className="h-4 w-4" /> Try again
+      </button>
+      <Link href="/" className={secondaryButton}>
+        <Home className="h-4 w-4" /> Go home
+      </Link>
+    </StatusPage>
+  )
+}

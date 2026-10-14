@@ -4,7 +4,7 @@
 > what it is, how it's built, every important decision and why, how the owner likes to
 > work, and exactly where things were left. **Keep it updated after every task** (§8 status + a §9 session log entry, see AGENTS.md) so any new chat can pick up seamlessly.
 
-Last updated: 13 Oct 2026
+Last updated: 14 Oct 2026
 
 ---
 
@@ -27,6 +27,7 @@ students' progress, achievements and a leaderboard.
 | Firebase project | `circuitdesigner-4e620` (Auth email/password + Firestore) |
 | Owner's planning notes (Obsidian) | `E:\Desketop\Obsidian\Placement\Circuit Project\` |
 | **Master roadmap / checklist** | `E:\Desketop\Obsidian\Placement\Circuit Project\Master Checklist.md` |
+| **Launch video** (OpenMontage, separate repo, AGPL – not part of CirKit) | `E:\Desketop\Circuit Designer\OpenMontage\projects\cirkit-learn-by-building\` – final in `renders/export/` (78.6s MP4, SRT, thumbnails, YouTube copy); publish stage awaiting owner approval, nothing uploaded |
 | Older checklists the master one was built from | `...\Circuit Project\Milestone Checklists\` (Circuit, General Website, Learning), `Notes.md`, `Libraries for circuit interface.md` |
 
 The **Master Checklist** is the source of truth for progress: Stages 0–10, `- [x]` done /
@@ -91,11 +92,13 @@ only `react` → would break at runtime).
 ### Pages (`src/app/`)
 | Route | File | Notes |
 |---|---|---|
-| `/` | `page.tsx` | Landing page + login/signup/password-reset modals (Firebase). **Signed in:** shows `WelcomeBack` (recent circuits, New circuit, Continue learning) instead of the hero. Opens the login modal when visited as `/?login=1&next=/path`. |
+| `/` | `page.tsx` | Landing page + login/signup/password-reset modals (Firebase). **Signed in:** shows `WelcomeBack` (recent circuits, New circuit, Continue learning) instead of the hero. Opens the login modal when visited as `/?login=1&next=/path`, the signup modal for `/?signup=1`. |
 | `/simulation` | `simulation/page.tsx` | **The circuit editor.** Owns the circuit state (undo history), saving, header toolbar, Properties panel, Simulation panel. Loads a circuit from `?id=`. Protected. |
 | `/circuits` | `circuits/page.tsx` | "My Circuits": open, rename, duplicate, delete. Back button → `/`. Protected. |
 | `/dashboard` | `dashboard/page.tsx` | Learning dashboard: stats, **"Up next"** banner, lessons grouped by level (from `src/content/lessons`), Guides tab (**still placeholder cards hard-coded in the page**). Protected. |
 | `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer**: steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
+| (404) | `not-found.tsx` | "Open circuit!" page (broken-wire picture, Home/Lessons/Editor). Real 404 status, tab title via React 19 `<title>`. |
+| (crash) | `error.tsx`, `global-error.tsx` | `error.tsx`: "Short circuit!" with Try again (`reset`) / Go home, inside the normal layout. `global-error.tsx`: self-contained fallback if the root layout itself crashes (production only; dev shows Next's overlay). |
 | `/play`, `/kidscircuit` | | Kids mode landing + an emoji grid builder (separate, not connected to the simulator yet). |
 
 ### Editor components (`src/components/`)
@@ -111,6 +114,16 @@ only `react` → would break at runtime).
 - `PropertiesPanel.tsx` – type, live readings (while simulating), value input with SI prefixes,
   switch Open/Closed, Rotate, Flip direction (polarized parts), position.
 - `WelcomeBack.tsx` – signed-in home panel.
+- `StatusPage.tsx` – shared layout for the 404/error pages (SiteHeader + inline SVG circuit:
+  `open` = loose wire ends drawn like the editor's hollow markers, `spark` = short circuit).
+- `ConfirmDialog.tsx` – styled replacement for `confirm()` (controlled; Esc/backdrop cancel,
+  Cancel focused first; `danger` = red button). Used for Delete on My Circuits.
+- `SiteHeader.tsx` – **shared top bar** for home, dashboard, My Circuits and lessons (not the
+  editor or kids mode, which keep their own toolbars): logo → `/`, Learn / Circuit Editor /
+  My Circuits (signed in only, active link blue), CirKit Kids, account dropdown (initials
+  avatar, name/email, links, Log out → `/`), mobile hamburger menu below `md`. Props:
+  `sectionLinks` (landing page `#features`/`#education`), `onSignIn`/`onSignUp` (landing opens
+  its modals; elsewhere → `/?login=1` / `/?signup=1`), `sticky` (off on lessons, whose own bar sticks).
 - `lessons/` – `ReadStepView` (renders content blocks), `QuizStepView`, `ChallengeStepView`
   (a mini editor: canvas with `fitContainer`, sidebar limited to the challenge's parts,
   Properties, Run, undo/redo/start again, goal checklist, hints), `LessonCard`, `ProgressBar`,
@@ -133,6 +146,10 @@ only `react` → would break at runtime).
 - `hooks/useCircuitHistory.ts` – undo/redo (100 steps) around the layout.
 - `hooks/useCircuitSaving.ts` – load from `?id=`, autosave (1.5 s debounce), Save/Ctrl+S,
   status, unsaved-changes warning.
+- `context/ToastContext.tsx` – **toasts**: `ToastProvider` (in `layout.tsx`) + `useToast()` →
+  `.success/.error/.info(message)`. Bottom right (bottom centre on phones), auto-dismiss
+  3.5/4/6 s (paused on hover), max 4, `role=alert` for errors. **Never use `alert()`** – use this.
+- `lib/authErrors.ts` – `friendlyAuthError(error, fallback)`: Firebase Auth codes → plain English.
 - `context/AuthContext.tsx` – `useAuth`, and **`useRequireAuth`** (redirects logged-out users
   to `/?login=1&next=<path>`; used by every protected page).
 - `firebase.ts` – Firebase init (`auth`, `firestore`).
@@ -294,6 +311,14 @@ battery 9 V, LED 2 V, lamp 100 Ω.
   a drag fired within ~300 ms of a drop can miss because the hit canvas hasn't redrawn.
   If `innerWidth` is 0 the pane is collapsed: set a size with `resize_window` (e.g. 1366×900)
   before testing layout; `computer` `left_click_drag` works for sidebar drops and wire drawing.
+- **Windows shell gotchas:** in Git Bash, `ffmpeg`/`ffprobe` (winget install) aren't on PATH –
+  run media commands in PowerShell after refreshing PATH:
+  `$env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [Environment]::GetEnvironmentVariable("Path","User")`.
+  Stop the dev server before `npm run build` (shared `.next/`). `.env.local` (Firebase vars)
+  exists locally and is gitignored; never commit it.
+- Commits: one commit per logical stage; the owner says "commit/push/deploy" explicitly. After
+  deploying, verify the live site really serves the new build (the Vercel alias can lag ~1 min
+  after "Deployment has completed").
 - For testing lessons without Firebase: in `learn/[lessonId]/page.tsx` replace `useRequireAuth()`
   with `{ user: null, loading: false }` (progress = empty, Finish saves nothing; to open a later
   lesson also fake `completedLessons`); same idea in `dashboard/page.tsx`. Restore afterwards.
@@ -316,6 +341,14 @@ battery 9 V, LED 2 V, lamp 100 Ω.
   - `59f7f58` DC simulation + battery/LED direction fix (polarized, Flip direction, “+” mark).
   - `988a387` Current-flow animation + pulsing status dot. **Deployed** (master = 988a387).
   - 12 Oct: tests moved into the repo (`npm test`), this context file added.
+- **13–14 Oct 2026 (with Claude):**
+  - `abaffc2` Lessons: 12 lessons (Levels 0–2), `/learn/[lessonId]` viewer, quizzes, simulator-checked
+    build challenges, dashboard from content files; handoff docs + tests committed. **Deployed.**
+  - `977955a` Stage 1 clean-up: Firebase config → env vars (set in Vercel), metadata/OG image,
+    README, CircuitJS removed, canvas renamed `CircuitCanvas`. **Deployed.**
+  - `ec092fd` Wire editing: hover highlight, drag to move, branch from mid-wire. **Deployed**
+    (master = `ec092fd`).
+  - Launch video made with OpenMontage (outside the repo; see "Where everything lives").
 - The owner's account has a saved circuit **"Lamp test circuit"** (battery, switch, lamp);
   its switch is currently **Open** (owner toggled it) – that's why it shows no flow.
 
@@ -323,34 +356,69 @@ battery 9 V, LED 2 V, lamp 100 Ω.
 
 ## 8. Current status & next steps
 
-**Done:** Stages 0, 2 (editor), 3 (save/load), most of 4 (simulation first version), and
-Stage 5 first version (12 lessons, Levels 0–2, viewer, quizzes, simulator-checked challenges) –
-committed `abaffc2` and **deployed** (master = editor-wiring = abaffc2). See the Master Checklist for the full picture.
-
-**Stage 1 finished 13 Oct 2026 (not committed yet).** Before deploying it, the owner must add
-the 6 `NEXT_PUBLIC_FIREBASE_*` vars in Vercel (see §2).
-
-**Stage 2 wiring finished 13 Oct 2026** (hover highlight, drag-to-move wires, branch from
-mid-wire) – not committed yet, together with Stage 1.
+**Done:** Stages 0, 1 (clean-up), 2 (editor, incl. wire hover/move/branch), 3 (save/load),
+most of 4 (simulation first version), and Stage 5 first version (12 lessons, Levels 0–2) –
+**all deployed** (master = editor-wiring = `ec092fd`, 14 Oct 2026). The 6
+`NEXT_PUBLIC_FIREBASE_*` vars are set in Vercel (Production + `editor-wiring` preview) and
+verified live (config inlined, login redirect works, no console errors). Only open Stage 2
+item: starting a wire from an empty grid point (optional). See the Master Checklist.
 
 **Suggested next steps (in order):**
-1. Owner to try the lessons signed in on the live site (first real points write to
-   Firestore). Possible follow-ups: Guides tab is still hard-coded placeholders (turn guides into
-   content too, or drop the tab); level-up from XP (`level` field never changes, card says
-   "50 pts to next level"); remove `totalLessons` from signup; more levels.
-2. **Hook kids mode** (`/kidscircuit`) to the real simulator, or rebuild it on the editor with
-   a simplified parts set.
-3. Simulation extras: capacitor/inductor transients (time stepping), wire hover highlight,
-   starting a wire from an empty grid point or mid-wire, voltage colouring on wires.
-4. Website (Stage 7): profile/settings page, toasts instead of `alert()`, 404 page,
-   mobile menu.
-5. Pitch prep (Stage 8): short demo video (build → simulate → lesson).
+1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
+   toasts + confirm dialog and 404/error pages done (not committed). Agreed order for the rest:
+   profile/settings page (add a "Profile" link to the account dropdown then; email/password
+   change and delete account need the owner to test signed in) → About/Contact/Terms/Privacy,
+   feedback form, dashboard stats panel.
+2. Stage 5 follow-ups: Guides tab is still hard-coded placeholder cards in `dashboard/page.tsx`
+   (turn guides into content like lessons, or drop the tab); level-up from XP (`level` never
+   changes, card says "50 pts to next level"); remove `totalLessons` from signup; more levels.
+   Owner hasn't yet tried a lesson signed in on the live site (first real points write).
+3. **Hook kids mode** (`/kidscircuit`) to the real simulator, or rebuild it on the editor.
+4. Simulation extras: capacitor/inductor transients, voltage colouring on wires, optional
+   "start a wire from an empty grid point".
+5. Gamification/classroom (Stage 6) and pitch (Stage 8: pitch deck, Spark/LEGO Education).
+   Launch video is done (see "Where everything lives"); its publish package awaits the owner.
 
 ---
 
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – **Stage 7: 404 and error pages** – `app/not-found.tsx`, `app/error.tsx`,
+  `app/global-error.tsx`, `components/StatusPage.tsx`. Tested: unknown URL → 404 status +
+  page + tab title, desktop and 375 px; a TEMP crashing route (deleted) → error page under the
+  header, Try again re-renders, Go home works. `global-error` only compiled (`npm run build`
+  passes), not triggered. Gotcha: `globals.css` still darkens `<body>` in OS dark mode
+  (create-next-app leftover) – pages must set their own opaque background. tsc/lint/227 tests
+  pass. Not committed.
+
+- 2026-10-14 – **Stage 7: toasts** – `context/ToastContext.tsx` (provider in `layout.tsx`),
+  `components/ConfirmDialog.tsx`, `lib/authErrors.ts`, `pop-in` animation in `globals.css`.
+  All 5 `alert()`s gone (login/signup errors → friendly toasts, success toasts for sign in /
+  sign up / log out); My Circuits: Delete uses the dialog, rename/duplicate/delete show
+  success/error toasts. Also fixed: modal backdrops were solid black (`bg-opacity-*` doesn't
+  exist in Tailwind 4 → `bg-black/50`); removed the signup `console.error` (it flagged normal
+  mistakes as dev-overlay issues). Tested: one failed login + one 3-char-password signup
+  (Firebase rejects both, nothing created), and with TEMP fake user + in-memory circuits
+  (reverted, `git diff` clean for those files): dialog Esc/backdrop/Cancel/Delete, error toast,
+  logout toast survives navigation, auto-dismiss, 375 px layout; fresh tab has no console
+  errors. tsc/lint/227 tests pass. Not committed.
+
+- 2026-10-14 – **Stage 7: shared navbar** `src/components/SiteHeader.tsx` (account dropdown,
+  mobile hamburger, responsive logo, active link) replaces the separate headers on `/`,
+  `/dashboard`, `/circuits`, `/learn/[id]` (page titles moved into the page bodies; landing's
+  broken "About" anchor dropped; `/?signup=1` opens signup). tsc/lint/227 tests pass.
+  Browser-tested at 1366 px and 375 px, signed out and with a TEMP fake user in
+  `AuthContext` + `loadProgress` (reads only, no writes; reverted, `git diff` clean for those
+  files): modals, dropdown open/close (outside click, Esc, links), navigation, lesson bar still
+  sticky, no horizontal scroll, Log out → `/`, logged-out redirect still works. Not committed.
+
+- 2026-10-14 – Committed and deployed Stage 1 (`977955a`) and Stage 2 wiring (`ec092fd`);
+  tests (227 checks), tsc, lint, build all passed first. master fast-forwarded and pushed;
+  Vercel deploy succeeded; live site verified (new /opengraph-image 200, Firebase config from
+  Vercel env vars present, /dashboard redirects to login, no console errors). This doc update
+  is not committed yet.
 
 - 2026-10-14 – **Launch/demo video made with OpenMontage** (separate folder
   `E:\Desketop\Circuit Designer\OpenMontage`, AGPL, not part of this repo). Project

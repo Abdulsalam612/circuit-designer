@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, ArrowRight, Play, CheckCircle, Star, BookOpen, Zap, Target, Clock, Award, Trophy } from "lucide-react"
+import { ArrowRight, Play, CheckCircle, Star, BookOpen, Zap, Target, Clock, Award, Trophy } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/context/AuthContext";
@@ -11,6 +11,7 @@ import { lessonState, nextLesson } from "@/lib/lessons";
 import { loadProgress, type LearningProgress } from "@/lib/progress";
 import LessonCard from "@/components/lessons/LessonCard";
 import ProgressBar from "@/components/lessons/ProgressBar";
+import SiteHeader from "@/components/SiteHeader";
 
 type GuideType = "Safety" | "Reference" | "Troubleshooting" | "Advanced";
 
@@ -129,40 +130,11 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/" className="flex items-center text-gray-600 hover:text-gray-900 transition-colors group">
-                <div className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors">
-                  <ArrowLeft className="h-5 w-5" />
-                  <span className="font-medium">Back to CirKit</span>
-                </div>
-              </Link>
-
-              <div className="h-6 w-px bg-gray-300"></div>
-
-              <h1 className="text-xl font-semibold text-gray-900">Learning Dashboard</h1>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link href="/circuits">
-                <button className="border border-gray-300 hover:bg-gray-100 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors">
-                  My Circuits
-                </button>
-              </Link>
-              <Link href="/simulation">
-                <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2">
-                  <Zap className="h-4 w-4" />
-                  <span>Go to Simulator</span>
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Learning Dashboard</h1>
+
         {/* Progress Overview */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 border border-gray-200">

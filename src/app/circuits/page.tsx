@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
-import { ArrowLeft, Plus, Copy, Trash2, Pencil, CircuitBoard, Loader2 } from "lucide-react"
+import { Plus, Copy, Trash2, Pencil, CircuitBoard, Loader2 } from "lucide-react"
 import { useRequireAuth } from "@/context/AuthContext"
 import {
   deleteCircuit,
@@ -11,6 +11,9 @@ import {
   renameCircuit,
   type CircuitSummary,
 } from "@/lib/circuitStore"
+import SiteHeader from "@/components/SiteHeader"
+import ConfirmDialog from "@/components/ConfirmDialog"
+import { useToast } from "@/context/ToastContext"
 
 const formatDate = (date: Date | null) =>
   date
@@ -23,6 +26,8 @@ export default function MyCircuitsPage() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<CircuitSummary | null>(null)
+  const toast = useToast()
 
   const refresh = useCallback(async () => {
     if (!user) return
@@ -40,14 +45,15 @@ export default function MyCircuitsPage() {
 
   useEffect(() => { refresh() }, [refresh])
 
-  // Runs a change against one circuit, then reloads the list
-  const act = async (id: string, action: () => Promise<unknown>) => {
+  // Runs a change against one circuit, then reloads the list and says how it went
+  const act = async (id: string, action: () => Promise<unknown>, done: string) => {
     setBusyId(id)
     try {
       await action()
       await refresh()
+      toast.success(done)
     } catch {
-      setError("That didn't work. Please try again.")
+      toast.error("That didn't work. Please try again.")
     } finally {
       setBusyId(null)
     }
@@ -60,7 +66,7 @@ export default function MyCircuitsPage() {
     const trimmed = name.trim()
     const current = circuits?.find(c => c.id === id)
     if (!trimmed || trimmed === current?.name) return
-    act(id, () => renameCircuit(user.uid, id, trimmed))
+    act(id, () => renameCircuit(user.uid, id, trimmed), `Renamed to "${trimmed}".`)
   }
 
   if (loading || !user) {
@@ -69,16 +75,11 @@ export default function MyCircuitsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Link href="/" className="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-medium">Home</span>
-            </Link>
-            <div className="h-6 w-px bg-gray-300"></div>
-            <h1 className="text-xl font-semibold text-gray-900">My Circuits</h1>
-          </div>
+      <SiteHeader />
+
+      <main className="max-w-4xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">My Circuits</h1>
           <Link
             href="/simulation"
             className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-[#2176FF] hover:bg-[#33A1FD] text-white font-medium transition-colors"
@@ -87,9 +88,7 @@ export default function MyCircuitsPage() {
             <span>New circuit</span>
           </Link>
         </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
         {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
         {circuits === null ? (
@@ -140,18 +139,14 @@ export default function MyCircuitsPage() {
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => act(circuit.id, () => duplicateCircuit(user.uid, circuit.id))}
+                    onClick={() => act(circuit.id, () => duplicateCircuit(user.uid, circuit.id), `Made a copy of "${circuit.name}".`)}
                     className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100"
                     title="Duplicate"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`Delete "${circuit.name}"? This can't be undone.`)) {
-                        act(circuit.id, () => deleteCircuit(user.uid, circuit.id))
-                      }
-                    }}
+                    onClick={() => setPendingDelete(circuit)}
                     className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50"
                     title="Delete"
                   >
@@ -163,6 +158,21 @@ export default function MyCircuitsPage() {
           </ul>
         )}
       </main>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this circuit?"
+        message={<>&ldquo;{pendingDelete?.name}&rdquo; will be deleted for good. This can&apos;t be undone.</>}
+        confirmLabel="Delete"
+        danger
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (!pendingDelete) return
+          const { id, name } = pendingDelete
+          setPendingDelete(null)
+          act(id, () => deleteCircuit(user.uid, id), `Deleted "${name}".`)
+        }}
+      />
     </div>
   )
 }
