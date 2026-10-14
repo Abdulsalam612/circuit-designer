@@ -21,13 +21,15 @@ interface LevelBadgeProps {
   level: number
   // Show only the resistor (e.g. in tight spots); the label stays available to screen readers
   compact?: boolean
+  // On dark backgrounds (e.g. an ink card)
+  onDark?: boolean
 }
 
-export default function LevelBadge({ level, compact = false }: LevelBadgeProps) {
+export default function LevelBadge({ level, compact = false, onDark = false }: LevelBadgeProps) {
   const band = bandColour(level)
   return (
     <span
-      className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted"
+      className={`inline-flex items-center gap-1.5 text-xs font-medium ${onDark ? "text-white/75" : "text-ink-muted"}`}
       title={`Level ${level}: a ${band.name} band means ${level % 10} in the resistor colour code`}
     >
       <svg viewBox="0 0 28 10" className="h-3.5 w-10 shrink-0" aria-hidden="true">

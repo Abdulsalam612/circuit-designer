@@ -6,11 +6,11 @@ interface ProgressBarProps {
   color?: string;
 }
 
-const ProgressBar = ({ value, max, className = "", color = "bg-[#2176FF]" }: ProgressBarProps) => {
+const ProgressBar = ({ value, max, className = "", color = "bg-signal" }: ProgressBarProps) => {
   const percent = max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0
   return (
     <div
-      className={`w-full bg-gray-200 rounded-full h-2 overflow-hidden ${className}`}
+      className={`w-full bg-line rounded-full h-2 overflow-hidden ${className}`}
       role="progressbar"
       aria-valuenow={value}
       aria-valuemin={0}
