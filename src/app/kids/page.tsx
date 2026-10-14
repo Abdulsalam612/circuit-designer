@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
-import { ArrowLeft, ArrowLeftRight, Cpu, Music, Play, TowerControl, Waves } from "lucide-react"
+import { ArrowLeft, Cpu, KeyRound, Music, Play, TowerControl, Waves } from "lucide-react"
 import { KIDS_MISSIONS } from "@/content/kids"
 import type { KidsMission } from "@/types/kids"
 import { KidsLogo } from "@/components/kids/KidsTopBar"
@@ -21,7 +21,7 @@ const PARTS: { title: string; intro: string; kind: KidsMission["kind"]; coming: 
     intro: "Snap pieces together and make things happen. No code yet – just electricity.",
     kind: "circuit",
     coming: [
-      { title: "Backwards", learn: "turning the battery round turns the motor round", icon: ArrowLeftRight },
+      { title: "Does it conduct?", learn: "which things let electricity through", icon: KeyRound },
     ],
   },
   {
@@ -37,9 +37,28 @@ const PARTS: { title: string; intro: string; kind: KidsMission["kind"]; coming: 
   },
 ]
 
-// The picture on a mission card: a circuit loop for Part 1, the car on its track for Part 2
-function CardArt({ kind }: { kind: KidsMission["kind"] }) {
-  if (kind === "circuit") {
+// The picture on a mission card: the desk fan, a circuit loop with the car (Part 1), or the
+// car on its track (Part 2)
+function CardArt({ mission }: { mission: KidsMission }) {
+  if (mission.kind === "circuit" && mission.scene === "fan") {
+    return (
+      <svg viewBox="0 0 520 220" className="block h-auto w-full" aria-hidden="true">
+        <rect x="0" y="176" width="520" height="44" fill="#8A6A4C" />
+        <ellipse cx="150" cy="176" rx="50" ry="9" fill="#1D2326" />
+        <rect x="143" y="110" width="14" height="66" rx="5" fill="#5B666B" />
+        <circle cx="150" cy="96" r="62" fill="#3D474B" stroke="#FFFFFF" strokeWidth="5" />
+        {[0, 120, 240].map(r => (
+          <path key={r} d="M150 96 Q125 56 150 40 Q175 56 150 96 Z" fill="#2176FF" stroke="#1048A8" strokeWidth="2" transform={`rotate(${r + 20} 150 96)`} />
+        ))}
+        <circle cx="150" cy="96" r="10" fill="#1048A8" />
+        {[70, 100, 130].map(y => <path key={y} d={`M235 ${y} q25 -8 50 0 t50 0 t50 0`} fill="none" stroke="#8AB4F8" strokeWidth="4" strokeLinecap="round" strokeDasharray="16 14" />)}
+        <rect x="380" y="164" width="110" height="9" rx="2" fill="#FFFFFF" />
+        <rect x="374" y="154" width="110" height="9" rx="2" fill="#FFFFFF" />
+        <rect x="420" y="70" width="80" height="9" rx="2" fill="#FFFFFF" transform="rotate(-22 460 74)" />
+      </svg>
+    )
+  }
+  if (mission.kind === "circuit") {
     return (
       <svg viewBox="0 0 520 220" className="block h-auto w-full" aria-hidden="true">
         <rect x="150" y="40" width="220" height="140" rx="18" fill="none" stroke="#31393C" strokeWidth="12" />
@@ -91,7 +110,7 @@ export default function KidsHome() {
                   href={`/kids/${mission.id}`}
                   className="group flex flex-col overflow-hidden rounded-panel bg-ink text-white shadow-[0_4px_0_var(--color-ink-dark)] transition-transform hover:-translate-y-0.5"
                 >
-                  <div className="bg-ink-dark"><CardArt kind={mission.kind} /></div>
+                  <div className="bg-ink-dark"><CardArt mission={mission} /></div>
                   <div className="flex flex-1 flex-col gap-2 p-6">
                     <span className="text-sm text-white/75">Mission {i + 1}</span>
                     <span className="font-display text-2xl font-semibold tracking-[-0.02em]">{mission.title}</span>

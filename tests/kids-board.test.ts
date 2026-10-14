@@ -6,6 +6,8 @@ import { allGaps, boardToLayout, canPlace, checkGoals, kidsFeedback, partAt, pie
 import makeItGo from '../src/content/kids/missions/make-it-go';
 import faster from '../src/content/kids/missions/faster';
 import lightsOn from '../src/content/kids/missions/lights-on';
+import backwards from '../src/content/kids/missions/backwards';
+import gentleBreeze from '../src/content/kids/missions/gentle-breeze';
 import { CIRCUIT_MISSIONS } from '../src/content/kids';
 import type { Piece, PieceKind } from '../src/types/kids';
 
@@ -187,6 +189,31 @@ const solution = (): Piece[] => [
   check('lights: kids are told one bulb is still dark', kidsFeedback(oneDark, oneDarkResult).text.includes('still dark'));
   check('lights: an empty loop talks about the bulb, not a motor',
     kidsFeedback([piece('battery', 0, 1, 'v'), piece('lamp', 1, 0, 'h')], simulate(boardToLayout([piece('battery', 0, 1, 'v'), piece('lamp', 1, 0, 'h')]))).text.includes('the bulb'));
+}
+
+// ---- "Backwards": turn the battery (or the motor) round ----
+{
+  const turn = (id: string) => backwards.start.map(p => (p.id === id ? { ...p, flipped: true } : p));
+  check('backwards: the start drives forwards, not backwards', !checkGoals(backwards.start, backwards.goals)[0].met);
+  check('backwards: turning the battery round solves it', checkGoals(turn('start-battery'), backwards.goals).every(g => g.met));
+  check('backwards: turning the motor round solves it too', checkGoals(turn('start-motor'), backwards.goals).every(g => g.met));
+  const both = turn('start-battery').map(p => (p.id === 'start-motor' ? { ...p, flipped: true } : p));
+  check('backwards: turning both round goes forwards again', !checkGoals(both, backwards.goals)[0].met);
+}
+
+// ---- "Gentle breeze": a resistor slows the fan ----
+{
+  const motorSpeed = (pieces: Piece[]) => simulate(boardToLayout(pieces)).readings['start-motor'].speed ?? 0;
+  check('breeze: the start fan is too fast for the papers', !checkGoals(gentleBreeze.start, gentleBreeze.goals)[1].met && checkGoals(gentleBreeze.start, gentleBreeze.goals)[0].met);
+  const withResistor = [
+    ...gentleBreeze.start.filter(p => !(p.kind === 'wire' && p.at.r === 3 && p.at.c < 2)),
+    piece('resistor', 0, 3, 'h'),
+  ];
+  check('breeze: the answer fits the board', withResistor.every((p, i) => canPlace(withResistor.slice(0, i), p, gentleBreeze.board)));
+  const slow = motorSpeed(withResistor);
+  check('breeze: the resistor slows the fan to a quarter speed', Math.abs(slow - 0.25) < 0.02, `${slow}`);
+  check('breeze: with the resistor every goal is met', checkGoals(withResistor, gentleBreeze.goals).every(g => g.met));
+  check('breeze: a "max speed" goal fails when too fast', !checkGoals(solution(), [{ kind: 'motor-spins', text: '', maxSpeed: 0.35 }])[0].met);
 }
 
 // ---- Content checks ----

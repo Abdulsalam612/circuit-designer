@@ -220,6 +220,8 @@ function PartFace({ kind, piece, speed, brightness, horizontal }: { kind: Exclud
             className={spinning ? "kids-spin" : undefined}
             style={spinning ? { animationDuration: `${0.5 / Math.abs(speed)}s`, animationDirection: speed < 0 ? "reverse" : "normal" } : undefined}
           >
+            {/* Centres the spin on the hub */}
+            <circle r={21} fill="transparent" />
             {[0, 120, 240].map(r => <path key={r} d="M0 0 L5 -17 Q0 -21 -5 -17 Z" fill="#1048A8" transform={`rotate(${r})`} />)}
             <circle r={4} fill="#1048A8" />
           </g>

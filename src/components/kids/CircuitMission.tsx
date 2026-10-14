@@ -10,6 +10,7 @@ import type { KidsCircuitMission, Piece, PieceKind } from "@/types/kids"
 import KidsTopBar from "./KidsTopBar"
 import SnapBoard, { PIECE_NAMES } from "./SnapBoard"
 import { CarShape } from "./CarArt"
+import FanScene from "./FanScene"
 import StatusLed from "@/components/ui/StatusLed"
 import Button from "@/components/ui/Button"
 
@@ -171,7 +172,7 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
             />
           </div>
 
-          <Track speed={motorSpeed} light={lampLight} />
+          {mission.scene === "fan" ? <FanScene speed={motorSpeed} /> : <Track speed={motorSpeed} light={lampLight} />}
         </section>
 
         <aside className="flex shrink-0 flex-col gap-4 lg:w-80 lg:overflow-y-auto">

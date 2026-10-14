@@ -1,4 +1,5 @@
-import type { KidsCircuitMission, Piece } from '@/types/kids';
+import type { KidsCircuitMission } from '@/types/kids';
+import { FIRST_LOOP } from './first-loop';
 
 // Part 1, mission 2: starts from a finished "Make it go" loop. The car crawls at half speed
 // and can't be stopped, so the child takes wires off the bottom of the loop to make room for
@@ -12,8 +13,6 @@ import type { KidsCircuitMission, Piece } from '@/types/kids';
 //   o[+ battery]o[switch]o──o
 //
 // A battery facing the wrong way cancels the first one out, and the kid feedback says so.
-
-const wire = (c: number, r: number, dir: 'h' | 'v'): Piece => ({ id: `start-wire-${c}-${r}-${dir}`, kind: 'wire', at: { c, r }, dir });
 
 const faster: KidsCircuitMission = {
   kind: 'circuit',
@@ -30,13 +29,7 @@ const faster: KidsCircuitMission = {
     { kind: 'switch', count: 1 },
     { kind: 'wire', count: 12 },
   ],
-  start: [
-    { id: 'start-battery', kind: 'battery', at: { c: 0, r: 1 }, dir: 'v' },
-    { id: 'start-motor', kind: 'motor', at: { c: 2, r: 0 }, dir: 'h' },
-    wire(0, 0, 'v'), wire(0, 0, 'h'), wire(1, 0, 'h'), wire(4, 0, 'h'),
-    wire(5, 0, 'v'), wire(5, 1, 'v'), wire(5, 2, 'v'),
-    wire(0, 3, 'h'), wire(1, 3, 'h'), wire(2, 3, 'h'), wire(3, 3, 'h'), wire(4, 3, 'h'),
-  ],
+  start: FIRST_LOOP,
   goals: [
     { kind: 'motor-spins', text: 'The car goes at full speed', minSpeed: 0.9 },
     { kind: 'switch-controls', text: 'The switch starts and stops the car' },

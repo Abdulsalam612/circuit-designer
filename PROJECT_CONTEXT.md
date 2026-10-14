@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 76 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 91 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -132,7 +132,12 @@ only `react` → would break at runtime).
   Rotate (quarter turn on its middle stud, if there's room) / Turn around / Take it off;
   tapping a **switch** flicks it on/off; goals with `StatusLed`, `kidsFeedback` sentence,
   hint, car track driven by motor speed via rAF, 3 stars + "Next mission" once solved;
-  simulate runs on every change). Animations `kids-flow` / `kids-spin` in globals.css.
+  simulate runs on every change). A circuit mission's `scene` picks what it drives: the car
+  `Track` (default) or `FanScene` (desk fan: blades at motor speed, papers flutter in a gentle
+  breeze, blow away above 0.35). Animations `kids-flow` / `kids-spin` / `kids-paper-flutter` /
+  `kids-paper-fly` in globals.css – these deliberately ignore `prefers-reduced-motion` (the
+  motion is the simulator's answer, like the car; the owner's Windows has animations off, which
+  froze them). Spinning groups hold a transparent circle round the hub so they turn on it.
 - `ui/` – **design system components** (§5.8): `Button` (variants primary/secondary/glow/
   ghost/danger, sizes sm/md/lg, `href` → Link; `buttonClass()`), `Card` (`card`/`panel`/`ink`/
   `glow`, `interactive`; `cardClass()`), `Badge` (tones), `LevelBadge` (resistor colour code),
@@ -199,10 +204,11 @@ only `react` → would break at runtime).
   covered), ends on the same stud connect; `canPlace`, `partAt` (a part centred on the tapped
   stud, across if it fits, else upright), `rotated`, `boardToLayout` (real layout; kids battery 4.5 V so one battery =
   half motor speed, two in series = full), `checkGoals` (`motor-spins` ± direction, `lamp-lit`,
-  `lamp-lit` takes a `count` of bulbs, `no-short` – needs a battery, `switch-controls` – judged with the switch on and off),
+  `motor-spins` can have a `maxSpeed`, `lamp-lit` takes a `count` of bulbs, `no-short` – needs a battery, `switch-controls` – judged with the switch on and off),
   `kidsFeedback` (also "batteries pushing against each other", "one bulb is still dark",
   "bulbs on but dim – give each its own path"; the open-loop message names the motor or bulb). Missions in `content/kids/`
-  (Part 1 `make-it-go`, `faster`, `lights-on`; Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
+  (Part 1 `make-it-go`, `faster`, `lights-on`, `backwards`, `gentle-breeze` – the last three
+  start from `missions/first-loop.ts`; Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
   hides parts (the port) from the editor's parts bin (`EDITOR_TYPES`); the motor is in the editor.
 - `lib/circuitStore.ts` – Firestore CRUD for circuits, `parseLayout` (validation), JSON
   import/export (`format: 'cirkit-circuit'`).
@@ -477,8 +483,9 @@ https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. Milestone 1 (engine, `3f61892
 and **circuits first done**: snap board + Part 1 mission "Make it go", `/kids` split into
 Part 1 / Part 2 (committed `94f9ed5`). **"Faster!"** (second battery + switch), parts placed
 on studs, Rotate, tap-to-flick switch (committed `877aaf6`). **"Lights on"** (two bulbs: in a row
-dim, side by side bright) – **not committed**.
-Next: Part 1 "Backwards";
+dim, side by side bright) (committed `52ca177`). **"Backwards"** and **"Gentle breeze"** (first
+non-car mission: desk fan + resistor) – **not committed**.
+Next ideas: Part 1 "Does it conduct?" (conductors/insulators – needs new pieces);
 Part 2's Build step to become the snap board with a hub port in place of the switch; save
 stars to progress; retire `/play` and `/kidscircuit`.
 Open design question for the owner: "end of program stops everything" also switches the light
@@ -509,6 +516,19 @@ off immediately (so "light B on" just before the end is only a flash). Known: `/
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
 
+- 2026-10-14 – Fan/papers looked static: the owner's browser reports reduced motion, and the
+  kids animations were switched off for it. Now they always run (essential motion); blades
+  centred on their hubs (no wobble); stronger paper flutter. Checked: animations running and
+  advancing, fan turns on (170, 62), papers fly at 0.5 and flutter with the resistor.
+- 2026-10-14 – Committed "Lights on" (`52ca177`). Owner: only car missions is boring.
+  **"Backwards"** (car reverses out of the garage: turn the battery – or the motor – round) and
+  **"Gentle breeze"** (desk fan scene; start loop blows papers away at 0.5, a resistor slows
+  it to 0.25: papers flutter). New `scene` field + `FanScene`, fan card art, `maxSpeed` on
+  `motor-spins`, shared `FIRST_LOOP`. Coming-soon Part 1 card: "Does it conduct?". Board
+  tests 76 → 91. Browser-tested at 1194×834: Backwards solved by real taps (battery → Turn
+  around → "driving backwards", 3 stars); Gentle breeze starts "papers fly off", removed two
+  wires, resistor placed by real tap → "papers stay on the desk", all goals, 3 stars; list
+  shows missions 1–6; 375 px no overflow.
 - 2026-10-14 – Committed "Faster!" (`877aaf6`). **"Lights on" mission**: two headlight bulbs from
   one 4.5 V battery (lamp 30 Ω): in a row each ≈ 0.34 bright → goal "both on" met, "both bright"
   (≥ 0.8) not, feedback "give each bulb its own path"; side by side each 1.0 → solved.

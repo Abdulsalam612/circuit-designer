@@ -83,7 +83,8 @@ export interface Piece {
 
 // What the simulator must show for the mission to be done
 export type CircuitGoal =
-  | { kind: 'motor-spins'; text: string; direction?: 'forwards' | 'backwards'; minSpeed?: number }
+  // A motor turns at least `minSpeed` (default 0.3) and, if given, no faster than `maxSpeed`
+  | { kind: 'motor-spins'; text: string; direction?: 'forwards' | 'backwards'; minSpeed?: number; maxSpeed?: number }
   // At least `count` bulbs (default 1) shine at `minBrightness` or more
   | { kind: 'lamp-lit'; text: string; minBrightness?: number; count?: number }
   | { kind: 'no-short'; text: string }
@@ -104,6 +105,8 @@ export interface KidsCircuitMission {
   tray: { kind: PieceKind; count: number }[];
   start: Piece[];
   goals: CircuitGoal[];
+  // What the circuit drives on screen: the car on its road (default) or a desk fan
+  scene?: 'car' | 'fan';
 }
 
 export type KidsMission = KidsCodeMission | KidsCircuitMission;

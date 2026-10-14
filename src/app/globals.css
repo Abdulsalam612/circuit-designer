@@ -151,6 +151,27 @@
   transform-origin: center;
   animation: kids-spin 1s linear infinite;
 }
-@media (prefers-reduced-motion: reduce) {
-  .kids-flow, .kids-spin { animation: none; }
+/* "Gentle breeze": papers flutter in a breeze, or blow off the desk in a gale */
+@keyframes kids-paper-flutter {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: translateY(-6px) rotate(14deg); }
+  60% { transform: translateY(-2px) rotate(6deg); }
 }
+.kids-paper-flutter {
+  transform-box: fill-box;
+  transform-origin: right bottom;
+  animation: kids-paper-flutter 1.2s ease-in-out infinite;
+}
+@keyframes kids-paper-fly {
+  from { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  to { transform: translate(380px, -80px) rotate(-30deg); opacity: 0; }
+}
+.kids-paper-fly {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kids-paper-fly 1.4s ease-in infinite;
+}
+/* No reduced-motion override here on purpose: in CirKit Kids this motion IS the simulator's
+   answer (the motor spins because the loop is complete, the papers fly because the fan is
+   too fast), like the car that drives. It is essential, not decoration, so it always runs.
+   Decorative motion elsewhere (hero-flow, pop-in, led) still respects the setting. */

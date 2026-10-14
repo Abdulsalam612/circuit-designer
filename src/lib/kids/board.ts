@@ -148,6 +148,7 @@ const goalMet = (pieces: Piece[], goal: CircuitGoal, result: SimulationResult): 
       const min = goal.minSpeed ?? 0.3;
       return of('motor').some(r => {
         const s = r.speed ?? 0;
+        if (goal.maxSpeed !== undefined && Math.abs(s) > goal.maxSpeed) return false;
         if (goal.direction === 'backwards') return s <= -min;
         if (goal.direction === 'forwards') return s >= min;
         return Math.abs(s) >= min;

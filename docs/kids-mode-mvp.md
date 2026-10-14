@@ -50,6 +50,10 @@ finished "Make it go" loop: take wires off, add a second battery (full speed) an
 **"Lights on"** (built): two headlight bulbs from one battery. In a row both glow dimly (each
 gets half the push, about a third as bright), so only "both on" is met and the feedback asks
 for "its own path"; side by side each bulb gets the full push and both shine.
+**"Backwards"** (built): turn the battery (or the motor) round and the car reverses.
+**"Gentle breeze"** (built, the first mission that isn't the car): a desk fan blows the
+homework off the desk; a resistor slows it to a gentle breeze. Each circuit mission names a
+`scene` (car or fan), so new missions can drive new machines.
 
 ### Part 2: a code mission ("Drive to the flag")
 
@@ -141,8 +145,8 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 
 1. **Engine** – motor + hub models, runner, tests (no UI). *Done.*
 2. **Workbench** – `/kids` with Build / Code / Play for "Drive to the flag", Blockly themed. *Done.*
-3. **Circuits first** – snap board + "Make it go", "Faster!" and "Lights on"; `/kids` split into Part 1 / Part 2. *Done.*
-4. **More missions** – Part 1: "Backwards"; Part 2's build step
+3. **Circuits first** – snap board + "Make it go", "Faster!", "Lights on", "Backwards", "Gentle breeze"; `/kids` split into Part 1 / Part 2. *Done.*
+4. **More missions** – Part 1: "Does it conduct?" (conductors and insulators), more scenes; Part 2's build step
    becomes the snap board with a hub port in place of the switch; stars saved to progress;
    retire `/play`, `/kidscircuit`.
 5. **Pitch build** – polish, a 60-second demo video (OpenMontage), teacher one-pager.
