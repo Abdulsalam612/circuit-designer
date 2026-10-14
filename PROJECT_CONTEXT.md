@@ -97,6 +97,7 @@ only `react` → would break at runtime).
 | `/circuits` | `circuits/page.tsx` | "My Circuits": open, rename, duplicate, delete. Back button → `/`. Protected. |
 | `/dashboard` | `dashboard/page.tsx` | Learning dashboard: stats, **"Up next"** banner, lessons grouped by level (from `src/content/lessons`), Guides tab (**still placeholder cards hard-coded in the page**). Protected. |
 | `/profile` | `profile/page.tsx` | **Profile & settings**: overview (avatar, name, email, join date, level/points/lessons), name + preset avatar (saved together), email (verified badge, send verification, change via `verifyBeforeUpdateEmail`), password change, delete account (password in a `ConfirmDialog`). Email/password/delete ask for the current password every time (re-auth). Own login guard (not `useRequireAuth`) so deleting lands on `/`, not the login box. Protected. |
+| `/about`, `/privacy`, `/terms` | `about/`, `privacy/`, `terms/page.tsx` | Server components with `metadata` titles, laid out by `InfoPage`. **Privacy must stay true to the code** (no analytics/tracking cookies; Firebase + Vercel are the only processors; self-service delete) – update it if that changes. Owner is **UK-based**; contact email `abdulsalam.sami01@gmail.com` (`CONTACT_EMAIL` in `SiteFooter.tsx`); Terms governed by England & Wales law; Privacy has controller, lawful basis, UK GDPR rights + ICO. Not lawyer-reviewed. |
 | `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer**: steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
 | (404) | `not-found.tsx` | "Open circuit!" page (broken-wire picture, Home/Lessons/Editor). Real 404 status, tab title via React 19 `<title>`. |
 | (crash) | `error.tsx`, `global-error.tsx` | `error.tsx`: "Short circuit!" with Try again (`reset`) / Go home, inside the normal layout. `global-error.tsx`: self-contained fallback if the root layout itself crashes (production only; dev shows Next's overlay). |
@@ -115,6 +116,9 @@ only `react` → would break at runtime).
 - `PropertiesPanel.tsx` – type, live readings (while simulating), value input with SI prefixes,
   switch Open/Closed, Rotate, Flip direction (polarized parts), position.
 - `WelcomeBack.tsx` – signed-in home panel.
+- `SiteFooter.tsx` – shared footer (landing + info pages): Product / CirKit / Help & legal
+  columns, only real links; exports `GITHUB_URL`, `ISSUES_URL`. `InfoPage.tsx` – layout for
+  text pages (header, title band, plain h2/p/ul styled via `[&_h2]:` selectors, footer).
 - `UserAvatar.tsx` – preset avatar (`lib/avatars.ts`: 8 electronics icons on brand colours,
   ids stored as `avatar` on `users/{uid}` – never rename) or initials on blue.
 - `StatusPage.tsx` – shared layout for the 404/error pages (SiteHeader + inline SVG circuit:
@@ -374,9 +378,8 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
-   toasts, 404/error pages committed (`3bffa54`, not pushed); **profile page done, not
-   committed – the owner still needs to try it signed in** (name/avatar save, verification
-   email, password change; email change and delete account ideally on a spare account). Next: About/Contact/Terms/Privacy,
+   toasts, 404/error pages committed (`3bffa54`, not pushed); **profile page committed (`a267821`, owner tested it signed in – all works). About/Privacy/
+   Terms pages + shared footer committed (see log). Next: About/Contact/Terms/Privacy,
    feedback form, dashboard stats panel.
 2. Stage 5 follow-ups: Guides tab is still hard-coded placeholder cards in `dashboard/page.tsx`
    (turn guides into content like lessons, or drop the tab); level-up from XP (`level` never
@@ -393,6 +396,19 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Owner: based in the UK, contact email abdulsalam.sami01@gmail.com. Added to
+  footer ("Contact" mailto), About, Privacy ("Who we are" controller, lawful basis, UK GDPR
+  rights, ICO complaint link) and Terms ("Law": England and Wales). Committed with the
+  About/Privacy/Terms pages.
+
+- 2026-10-14 – Committed the profile page as `a267821` (owner tested signed in: all works).
+  **Stage 7: About / Privacy / Terms** – `app/about`, `app/privacy`, `app/terms`,
+  `components/InfoPage.tsx`, `components/SiteFooter.tsx` (landing's footer replaced: dead `#`
+  links gone, © year dynamic); signup box Terms/Privacy links → `/terms`, `/privacy` (new tab);
+  header shows "About" to signed-out visitors. Checked every internal link (200), external
+  policy links (200), titles, 375 px. Owner to review the wording (esp. Privacy "Children" and
+  Terms "Responsibility"; contact is GitHub Issues). tsc/lint/227 tests pass. Not committed.
 
 - 2026-10-14 – **Stage 7: profile & settings page** `/profile` – `app/profile/page.tsx`,
   `lib/account.ts`, `lib/avatars.ts`, `components/UserAvatar.tsx`; `AuthContext` gains live

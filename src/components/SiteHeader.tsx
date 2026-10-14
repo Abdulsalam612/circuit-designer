@@ -24,6 +24,8 @@ const APP_LINKS: NavLink[] = [
   { href: "/circuits", label: "My Circuits" },
 ]
 
+const PUBLIC_LINKS: NavLink[] = [{ href: "/about", label: "About" }]
+
 interface SiteHeaderProps {
   // Extra in-page links, e.g. the landing page's "#features"
   sectionLinks?: NavLink[]
@@ -74,7 +76,7 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
   const displayName = profile?.name || user?.displayName || user?.email || ""
   const signedIn = !loading && !!user
   // Signed-out visitors can't open the app pages, so only show them the public links
-  const links = signedIn ? APP_LINKS : []
+  const links = signedIn ? APP_LINKS : loading ? [] : PUBLIC_LINKS
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
     || (href === "/dashboard" && pathname.startsWith("/learn/"))
 

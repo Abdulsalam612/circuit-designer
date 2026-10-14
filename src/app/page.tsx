@@ -34,6 +34,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import WelcomeBack from "@/components/WelcomeBack"
 import SiteHeader from "@/components/SiteHeader"
+import SiteFooter from "@/components/SiteFooter"
 import { useToast } from "@/context/ToastContext"
 import { friendlyAuthError } from "@/lib/authErrors"
 
@@ -477,11 +478,12 @@ export default function HomePage() {
                 />
                 <label htmlFor="terms" className="ml-2 block text-sm text-[#31393C]">
                   I agree to the{" "}
-                  <a href="#" className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
-                    Terms of Service
+                  {/* New tab, so the half-filled signup form isn't lost */}
+                  <a href="/terms" target="_blank" rel="noopener" className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
+                    Terms of Use
                   </a>{" "}
                   and{" "}
-                  <a href="#" className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
+                  <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
                     Privacy Policy
                   </a>
                 </label>
@@ -974,93 +976,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#31393C] text-white py-12">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-[#2176FF] p-2 rounded-lg">
-                  <CircuitBoard className="h-6 w-6 text-white" />
-                </div>
-                <span className="text-xl font-bold">CirKit</span>
-              </div>
-              <p className="text-gray-400">Making electronics education accessible and engaging for everyone.</p>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4 text-[#33A1FD]">Product</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li>
-                  <Link href="/dashboard" className="hover:text-white transition-colors">
-                    Learning Dashboard
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/simulation" className="hover:text-white transition-colors">
-                    Circuit Builder
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/play" className="hover:text-white transition-colors">
-                    Kids Mode
-                  </Link>
-                </li>
-                <li>
-                  <a href="#features" className="hover:text-white transition-colors">
-                    Features
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4 text-[#FDCA40]">Education</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li>
-                  <a href="#education" className="hover:text-white transition-colors">
-                    For Schools
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Curriculum
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Resources
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-semibold mb-4 text-[#F79824]">Support</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Help Center
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Contact
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Community
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 CirKit. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* Enhanced Animation Styles */}
       <style jsx>{`
