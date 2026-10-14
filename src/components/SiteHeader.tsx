@@ -95,22 +95,22 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
   const signUp = () => (onSignUp ? onSignUp() : router.push("/?signup=1"))
 
   const linkClass = (href: string) =>
-    `font-medium transition-colors ${isActive(href) ? "text-[#2176FF]" : "text-gray-600 hover:text-[#31393C]"}`
+    `font-medium transition-colors ${isActive(href) ? "text-signal" : "text-ink-muted hover:text-ink"}`
 
   return (
-    <header className={`bg-white/95 backdrop-blur-sm border-b border-gray-200 z-40 ${sticky ? "sticky top-0" : "relative"}`}>
+    <header className={`bg-white/95 backdrop-blur-sm border-b border-line z-40 ${sticky ? "sticky top-0" : "relative"}`}>
       <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2.5 shrink-0" aria-label="CirKit home">
-          <div className="bg-[#2176FF] p-2 rounded-lg">
+          <div className="bg-brand p-2 rounded-control">
             <CircuitBoard className="h-6 w-6 text-white" />
           </div>
-          <span className="text-xl sm:text-2xl font-bold text-[#31393C]">CirKit</span>
+          <span className="text-xl sm:text-2xl font-bold text-ink">CirKit</span>
         </Link>
 
         {/* Desktop */}
         <nav className="hidden md:flex items-center gap-6 lg:gap-8">
           {sectionLinks.map(link => (
-            <a key={link.href} href={link.href} className="font-medium text-gray-600 hover:text-[#31393C] transition-colors">
+            <a key={link.href} href={link.href} className="font-medium text-ink-muted hover:text-ink transition-colors">
               {link.label}
             </a>
           ))}
@@ -121,7 +121,7 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
           ))}
           <Link
             href="/play"
-            className="bg-[#F79824] hover:bg-[#FDCA40] text-white px-5 py-2 rounded-lg font-semibold transition-colors"
+            className="bg-carrot hover:bg-glow text-ink px-5 py-2 rounded-control font-semibold shadow-[0_2px_0_var(--color-carrot-dark)] transition-colors"
           >
             CirKit Kids
           </Link>
@@ -132,31 +132,31 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
             <div ref={accountRef} className="relative">
               <button
                 onClick={() => setAccountOpen(open => !open)}
-                className="flex items-center gap-1.5 rounded-full p-0.5 pr-1.5 hover:bg-gray-100 transition-colors"
+                className="flex items-center gap-1.5 rounded-full p-0.5 pr-1.5 hover:bg-ink/5 transition-colors"
                 aria-haspopup="menu"
                 aria-expanded={accountOpen}
                 aria-label="Account menu"
               >
                 <UserAvatar name={displayName} avatar={profile?.avatar} />
-                <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${accountOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`h-4 w-4 text-ink-muted transition-transform ${accountOpen ? "rotate-180" : ""}`} />
               </button>
 
               {accountOpen && (
-                <div role="menu" onClick={closeOnLink(setAccountOpen)} className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 bg-white shadow-lg py-2">
-                  <div className="px-4 py-2 border-b border-gray-100 mb-1">
-                    {displayName !== user.email && <p className="font-semibold text-[#31393C] truncate">{displayName}</p>}
-                    <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                <div role="menu" onClick={closeOnLink(setAccountOpen)} className="absolute right-0 mt-2 w-64 rounded-card border border-line bg-white shadow-lg py-2">
+                  <div className="px-4 py-2 border-b border-line mb-1">
+                    {displayName !== user.email && <p className="font-semibold text-ink truncate">{displayName}</p>}
+                    <p className="text-sm text-ink-muted truncate">{user.email}</p>
                   </div>
                   <AccountLink href="/profile" icon={UserRound} label="Profile & settings" />
                   <AccountLink href="/dashboard" icon={BookOpen} label="Learning dashboard" />
                   <AccountLink href="/circuits" icon={FolderOpen} label="My Circuits" />
                   <AccountLink href="/simulation" icon={Zap} label="New circuit" />
                   <AccountLink href="/feedback" icon={MessageSquare} label="Send feedback" />
-                  <div className="border-t border-gray-100 mt-1 pt-1">
+                  <div className="border-t border-line mt-1 pt-1">
                     <button
                       role="menuitem"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-danger hover:bg-danger-tint transition-colors"
                     >
                       <LogOut className="h-4 w-4" />
                       Log out
@@ -167,10 +167,10 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <button onClick={signIn} className="px-4 py-2 rounded-lg font-medium text-[#2176FF] hover:bg-[#2176FF]/10 transition-colors">
+              <button onClick={signIn} className="px-4 py-2 rounded-control font-medium text-signal hover:bg-signal-tint transition-colors">
                 Sign In
               </button>
-              <button onClick={signUp} className="px-4 py-2 rounded-lg font-medium bg-[#2176FF] hover:bg-[#33A1FD] text-white transition-colors">
+              <button onClick={signUp} className="px-4 py-2 rounded-control font-medium bg-signal hover:bg-signal-hover text-white transition-colors">
                 Sign Up
               </button>
             </div>
@@ -179,7 +179,7 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
 
         {/* Mobile */}
         <button
-          className="md:hidden p-2 -mr-2 rounded-lg text-gray-600 hover:text-[#31393C] hover:bg-gray-100"
+          className="md:hidden p-2 -mr-2 rounded-control text-ink-muted hover:text-ink hover:bg-ink/5"
           onClick={() => setMenuOpen(open => !open)}
           aria-expanded={menuOpen}
           aria-controls="mobile-menu"
@@ -190,20 +190,20 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
       </div>
 
       {menuOpen && (
-        <nav id="mobile-menu" onClick={closeOnLink(setMenuOpen)} className="md:hidden border-t border-gray-200 bg-white px-4 pb-4">
+        <nav id="mobile-menu" onClick={closeOnLink(setMenuOpen)} className="md:hidden border-t border-line bg-white px-4 pb-4">
           {signedIn && (
-            <div className="flex items-center gap-3 py-3 border-b border-gray-100">
+            <div className="flex items-center gap-3 py-3 border-b border-line">
               <UserAvatar name={displayName} avatar={profile?.avatar} />
               <div className="min-w-0 flex-1">
-                {displayName !== user?.email && <p className="font-semibold text-[#31393C] truncate">{displayName}</p>}
-                <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+                {displayName !== user?.email && <p className="font-semibold text-ink truncate">{displayName}</p>}
+                <p className="text-sm text-ink-muted truncate">{user?.email}</p>
               </div>
-              <Link href="/profile" className="shrink-0 text-sm font-medium text-[#2176FF]">Profile</Link>
+              <Link href="/profile" className="shrink-0 text-sm font-medium text-signal">Profile</Link>
             </div>
           )}
           <div className="flex flex-col py-2">
             {sectionLinks.map(link => (
-              <a key={link.href} href={link.href} className="py-2.5 font-medium text-gray-600">
+              <a key={link.href} href={link.href} className="py-2.5 font-medium text-ink-muted">
                 {link.label}
               </a>
             ))}
@@ -215,24 +215,24 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
           </div>
           <Link
             href="/play"
-            className="block text-center bg-[#F79824] hover:bg-[#FDCA40] text-white px-5 py-2.5 rounded-lg font-semibold transition-colors"
+            className="block text-center bg-carrot hover:bg-glow text-ink px-5 py-2.5 rounded-control font-semibold shadow-[0_2px_0_var(--color-carrot-dark)] transition-colors"
           >
             CirKit Kids
           </Link>
           {signedIn ? (
             <button
               onClick={handleLogout}
-              className="mt-2 w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+              className="mt-2 w-full flex items-center justify-center gap-2 px-5 py-2.5 rounded-control font-medium text-danger border border-danger/30 hover:bg-danger-tint transition-colors"
             >
               <LogOut className="h-4 w-4" />
               Log out
             </button>
           ) : !loading && (
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <button onClick={() => { setMenuOpen(false); signIn() }} className="px-4 py-2.5 rounded-lg font-medium text-[#2176FF] border border-[#2176FF]/30">
+              <button onClick={() => { setMenuOpen(false); signIn() }} className="px-4 py-2.5 rounded-control font-medium text-signal border border-signal/30">
                 Sign In
               </button>
-              <button onClick={() => { setMenuOpen(false); signUp() }} className="px-4 py-2.5 rounded-lg font-medium bg-[#2176FF] text-white">
+              <button onClick={() => { setMenuOpen(false); signUp() }} className="px-4 py-2.5 rounded-control font-medium bg-signal text-white">
                 Sign Up
               </button>
             </div>
@@ -245,8 +245,8 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
 
 function AccountLink({ href, icon: Icon, label }: { href: string; icon: typeof BookOpen; label: string }) {
   return (
-    <Link role="menuitem" href={href} className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-      <Icon className="h-4 w-4 text-gray-400" />
+    <Link role="menuitem" href={href} className="flex items-center gap-3 px-4 py-2 text-sm text-ink hover:bg-paper transition-colors">
+      <Icon className="h-4 w-4 text-ink-faint" />
       {label}
     </Link>
   )

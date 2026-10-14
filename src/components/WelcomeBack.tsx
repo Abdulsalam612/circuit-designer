@@ -6,6 +6,7 @@ import type { User } from "firebase/auth"
 import { BookOpen, CircuitBoard, FolderOpen, Loader2, Plus } from "lucide-react"
 import { listCircuits, type CircuitSummary } from "@/lib/circuitStore"
 import Card, { cardClass } from "@/components/ui/Card"
+import CircuitThumbnail from "@/components/CircuitThumbnail"
 import { heading, text } from "@/components/ui/typography"
 
 // How many recent circuits to show on the home page
@@ -70,8 +71,8 @@ export default function WelcomeBack({ user }: { user: User }) {
               <div className="space-y-3">
                 {latest && (
                   <Link href={`/simulation?id=${latest.id}`} className={cardClass("card", true, "flex items-center gap-4 p-4")}>
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-signal text-white">
-                      <CircuitBoard className="h-6 w-6" />
+                    <span className="block h-14 w-24 shrink-0 overflow-hidden rounded-control border border-line bg-grid">
+                      <CircuitThumbnail layout={latest.layout} className="h-full w-full p-1" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold text-ink">{latest.name}</span>

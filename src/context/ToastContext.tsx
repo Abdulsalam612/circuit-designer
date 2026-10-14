@@ -27,9 +27,9 @@ const DURATION_MS: Record<ToastKind, number> = { success: 3500, info: 4000, erro
 const MAX_VISIBLE = 4
 
 const STYLE: Record<ToastKind, { icon: typeof Info; iconClass: string; bar: string }> = {
-  success: { icon: CheckCircle2, iconClass: "text-green-600", bar: "bg-green-500" },
-  error: { icon: XCircle, iconClass: "text-red-600", bar: "bg-red-500" },
-  info: { icon: Info, iconClass: "text-[#2176FF]", bar: "bg-[#2176FF]" },
+  success: { icon: CheckCircle2, iconClass: "text-success", bar: "bg-success" },
+  error: { icon: XCircle, iconClass: "text-danger", bar: "bg-danger" },
+  info: { icon: Info, iconClass: "text-signal", bar: "bg-signal" },
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -80,14 +80,14 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: number)
       role={toast.kind === "error" ? "alert" : "status"}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className="pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-xl border border-gray-200 bg-white py-3 pl-4 pr-3 shadow-lg animate-pop-in"
+      className="pointer-events-auto relative flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-card border border-line bg-white py-3 pl-4 pr-3 shadow-lg animate-pop-in"
     >
       <span className={`absolute inset-y-0 left-0 w-1 ${bar}`} />
       <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${iconClass}`} />
-      <p className="flex-1 text-sm text-[#31393C]">{toast.message}</p>
+      <p className="flex-1 text-sm text-ink">{toast.message}</p>
       <button
         onClick={() => onDismiss(toast.id)}
-        className="-m-1 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+        className="-m-1 rounded p-1 text-ink-faint hover:bg-ink/5 hover:text-ink-muted"
         aria-label="Dismiss"
       >
         <X className="h-4 w-4" />

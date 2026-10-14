@@ -7,6 +7,9 @@ import { Bug, CheckCircle2, HelpCircle, Lightbulb, Loader2, MessageSquare, type 
 import SiteHeader from "@/components/SiteHeader"
 import SiteFooter, { CONTACT_EMAIL } from "@/components/SiteFooter"
 import { useAuth } from "@/context/AuthContext"
+import { buttonClass } from "@/components/ui/Button"
+import { inputClass } from "@/components/ui/Field"
+import { heading, text } from "@/components/ui/typography"
 import { useToast } from "@/context/ToastContext"
 import {
   MAX_EMAIL_LENGTH,
@@ -32,22 +35,20 @@ const TYPES: { id: FeedbackType; label: string; icon: LucideIcon; placeholder: s
 const safePath = (value: string | null) =>
   value && value.startsWith("/") && !value.startsWith("//") ? value : undefined
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[#31393C] focus:border-[#2176FF] focus:outline-none focus:ring-2 focus:ring-[#2176FF]/20"
 
 export default function FeedbackPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-surface">
       <title>Send feedback – CirKit</title>
       <SiteHeader />
-      <main className="flex-1 bg-gradient-to-br from-[#33A1FD]/10 to-[#FDCA40]/5">
+      <main className="flex-1 bg-grid">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-[#31393C]">Send feedback</h1>
-          <p className="mt-3 text-lg text-gray-600">
+          <h1 className={heading.xl}>Send feedback</h1>
+          <p className={`${text.lead} mt-3`}>
             Found a bug, got an idea or stuck on something? Tell us – every message is read.
           </p>
           {/* useSearchParams needs a Suspense boundary for static rendering */}
-          <Suspense fallback={<div className="mt-8 h-96 rounded-xl border border-gray-200 bg-white" />}>
+          <Suspense fallback={<div className="mt-8 h-96 rounded-panel border border-line bg-surface" />}>
             <FeedbackForm />
           </Suspense>
         </div>
@@ -118,17 +119,17 @@ function FeedbackForm() {
 
   if (sent) {
     return (
-      <div className="mt-8 rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm" role="status">
-        <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
-        <h2 className="mt-4 text-xl font-semibold text-[#31393C]">Thanks – message received!</h2>
-        <p className="mt-2 text-gray-600">
+      <div className="mt-8 rounded-panel border border-line bg-surface p-8 text-center shadow-sm" role="status">
+        <CheckCircle2 className="mx-auto h-12 w-12 text-success" />
+        <h2 className={`${heading.lg} mt-4`}>Thanks – message received!</h2>
+        <p className="mt-2 text-ink-muted">
           {email.trim() ? "If it needs an answer, we'll reply by email." : "Thanks for helping make CirKit better."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <button onClick={reset} className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-[#31393C] hover:bg-gray-50">
+          <button onClick={reset} className={buttonClass("secondary")}>
             Send another
           </button>
-          <Link href="/" className="rounded-lg bg-[#2176FF] px-4 py-2 font-medium text-white hover:bg-[#33A1FD]">
+          <Link href="/" className={buttonClass("primary")}>
             Back to CirKit
           </Link>
         </div>
@@ -137,15 +138,15 @@ function FeedbackForm() {
   }
 
   return (
-    <form onSubmit={submit} className="mt-8 space-y-6 rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
+    <form onSubmit={submit} className="mt-8 space-y-6 rounded-panel border border-line bg-surface p-5 sm:p-6 shadow-sm">
       <fieldset>
-        <legend className="mb-2 block text-sm font-medium text-[#31393C]">What&apos;s it about?</legend>
+        <legend className="mb-2 block text-sm font-medium text-ink">What&apos;s it about?</legend>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {TYPES.map(({ id, label, icon: Icon }) => (
             <label
               key={id}
-              className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-lg border px-2 py-3 text-center text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#2176FF]/40 ${
-                type === id ? "border-[#2176FF] bg-[#2176FF]/5 text-[#2176FF]" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+              className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-control border px-2 py-3 text-center text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-signal/40 ${
+                type === id ? "border-signal bg-signal-tint text-signal-dark shadow-[0_2px_0_var(--color-signal)]" : "border-line text-ink-muted hover:bg-paper"
               }`}
             >
               <input type="radio" name="type" value={id} checked={type === id} onChange={() => setType(id)} className="sr-only" />
@@ -157,7 +158,7 @@ function FeedbackForm() {
       </fieldset>
 
       <div>
-        <label htmlFor="feedback-message" className="mb-1 block text-sm font-medium text-[#31393C]">Your message</label>
+        <label htmlFor="feedback-message" className="mb-1 block text-sm font-medium text-ink">Your message</label>
         <textarea
           id="feedback-message"
           required
@@ -168,14 +169,14 @@ function FeedbackForm() {
           placeholder={current.placeholder}
           className={`${inputClass} resize-y`}
         />
-        <p className={`mt-1 text-right text-xs ${message.length > MAX_MESSAGE_LENGTH * 0.9 ? "text-amber-600" : "text-gray-400"}`}>
+        <p className={`mt-1 text-right text-xs ${message.length > MAX_MESSAGE_LENGTH * 0.9 ? "text-carrot-ink" : "text-ink-muted"}`}>
           {message.length}/{MAX_MESSAGE_LENGTH}
         </p>
       </div>
 
       <div>
-        <label htmlFor="feedback-email" className="mb-1 block text-sm font-medium text-[#31393C]">
-          Email <span className="font-normal text-gray-400">(optional)</span>
+        <label htmlFor="feedback-email" className="mb-1 block text-sm font-medium text-ink">
+          Email <span className="font-normal text-ink-muted">(optional)</span>
         </label>
         <input
           id="feedback-email"
@@ -186,16 +187,16 @@ function FeedbackForm() {
           autoComplete="email"
           className={inputClass}
         />
-        <p className="mt-1 text-xs text-gray-500">Only if you&apos;d like a reply.</p>
+        <p className="mt-1 text-xs text-ink-muted">Only if you&apos;d like a reply.</p>
       </div>
 
       {type === "bug" && (
-        <label className="flex items-start gap-2 text-sm text-gray-600">
+        <label className="flex items-start gap-2 text-sm text-ink-muted">
           <input
             type="checkbox"
             checked={includeDetails}
             onChange={e => setIncludeDetails(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#2176FF]"
+            className="mt-0.5 h-4 w-4 rounded border-line-strong accent-signal"
           />
           <span>
             Include technical details to help us fix it: your browser{fromPage ? <> and the page you were on (<code>{fromPage}</code>)</> : null}.
@@ -210,20 +211,20 @@ function FeedbackForm() {
       </div>
 
       {failed && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-control border border-danger/30 bg-danger-tint px-3 py-2 text-sm text-danger" role="alert">
           Please try again in a moment, or email us at{" "}
           <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium underline">{CONTACT_EMAIL}</a>.
         </p>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-gray-500">
-          We only use this to read and reply to your message. <Link href="/privacy" className="text-[#2176FF] hover:underline">Privacy Policy</Link>
+        <p className="text-xs text-ink-muted">
+          We only use this to read and reply to your message. <Link href="/privacy" className="text-signal hover:underline">Privacy Policy</Link>
         </p>
         <button
           type="submit"
           disabled={!trimmed || sending}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#2176FF] px-5 py-2.5 font-medium text-white transition-colors hover:bg-[#33A1FD] disabled:cursor-not-allowed disabled:opacity-50"
+          className={buttonClass("primary")}
         >
           {sending && <Loader2 className="h-4 w-4 animate-spin" />}
           Send

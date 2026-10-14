@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
-import { Plus, Copy, Trash2, Pencil, CircuitBoard, Loader2 } from "lucide-react"
+import { Plus, Copy, Trash2, Pencil, Loader2 } from "lucide-react"
 import { useRequireAuth } from "@/context/AuthContext"
 import {
   deleteCircuit,
@@ -13,6 +13,11 @@ import {
 } from "@/lib/circuitStore"
 import SiteHeader from "@/components/SiteHeader"
 import ConfirmDialog from "@/components/ConfirmDialog"
+import CircuitThumbnail from "@/components/CircuitThumbnail"
+import Button from "@/components/ui/Button"
+import Card from "@/components/ui/Card"
+import { inputClass } from "@/components/ui/Field"
+import { heading, text } from "@/components/ui/typography"
 import { useToast } from "@/context/ToastContext"
 
 const formatDate = (date: Date | null) =>
@@ -70,89 +75,109 @@ export default function MyCircuitsPage() {
   }
 
   if (loading || !user) {
-    return <div className="p-8 text-center">{loading ? "Loading..." : "Redirecting to login..."}</div>
+    return (
+      <div className="min-h-screen bg-grid">
+        <SiteHeader />
+        <p className="p-16 text-center text-ink-muted" role="status">{loading ? "Loading…" : "Redirecting to sign in…"}</p>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-grid">
       <SiteHeader />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Circuits</h1>
-          <Link
-            href="/simulation"
-            className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-[#2176FF] hover:bg-[#33A1FD] text-white font-medium transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New circuit</span>
-          </Link>
-        </div>
+      <main className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
+        <header className="flex flex-wrap items-end justify-between gap-4 pt-12 pb-8">
+          <div>
+            <h1 className={heading.xl}>My Circuits</h1>
+            <p className={`${text.lead} mt-3`}>
+              {circuits && circuits.length > 0
+                ? `${circuits.length} saved circuit${circuits.length === 1 ? "" : "s"}, newest first.`
+                : "Everything you build in the editor is saved here."}
+            </p>
+          </div>
+          <Button href="/simulation"><Plus className="h-4 w-4" /> New circuit</Button>
+        </header>
 
-        {error && <p className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+        {error && <p className="mb-6 rounded-card border border-danger/30 bg-danger-tint px-4 py-3 text-sm text-danger" role="alert">{error}</p>}
 
         {circuits === null ? (
-          <div className="flex items-center justify-center py-16 text-gray-500">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading your circuits…
-          </div>
+          <p className="flex items-center justify-center gap-2 py-16 text-ink-muted" role="status">
+            <Loader2 className="h-5 w-5 animate-spin" /> Loading your circuits…
+          </p>
         ) : circuits.length === 0 ? (
-          <div className="text-center py-16">
-            <CircuitBoard className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-600 mb-4">You haven&apos;t saved any circuits yet.</p>
-            <Link href="/simulation" className="text-[#2176FF] font-medium hover:underline">
-              Build your first circuit
-            </Link>
-          </div>
+          <Card tone="panel" className="mx-auto max-w-lg p-10 text-center">
+            <h2 className={heading.lg}>No circuits yet</h2>
+            <p className="mt-2 text-ink-muted">Build something in the editor and it will be saved here automatically.</p>
+            <Button href="/simulation" className="mt-6"><Plus className="h-4 w-4" /> Build your first circuit</Button>
+          </Card>
         ) : (
-          <ul className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100 shadow-sm">
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {circuits.map(circuit => (
-              <li key={circuit.id} className={`flex items-center gap-4 px-5 py-4 ${busyId === circuit.id ? "opacity-50" : ""}`}>
-                <CircuitBoard className="h-6 w-6 text-[#2176FF] shrink-0" />
-                <div className="flex-1 min-w-0">
-                  {renaming?.id === circuit.id ? (
-                    <input
-                      autoFocus
-                      value={renaming.name}
-                      onChange={(e) => setRenaming({ id: circuit.id, name: e.target.value })}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") commitRename()
-                        if (e.key === "Escape") setRenaming(null)
-                      }}
-                      className="w-full rounded border border-gray-300 px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              <li key={circuit.id}>
+                <Card className={`flex h-full flex-col overflow-hidden ${busyId === circuit.id ? "opacity-50" : ""}`}>
+                  {/* The drawing opens the circuit */}
+                  <Link
+                    href={`/simulation?id=${circuit.id}`}
+                    className="group block border-b border-line bg-grid"
+                    aria-label={`Open ${circuit.name}`}
+                  >
+                    <CircuitThumbnail
+                      layout={circuit.layout}
+                      className="h-40 w-full p-3 transition-transform duration-200 group-hover:scale-[1.03]"
                     />
-                  ) : (
-                    <Link href={`/simulation?id=${circuit.id}`} className="font-medium text-gray-900 hover:text-[#2176FF] truncate block">
-                      {circuit.name}
-                    </Link>
-                  )}
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {circuit.componentCount} component{circuit.componentCount === 1 ? "" : "s"} · Edited {formatDate(circuit.updatedAt)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => setRenaming({ id: circuit.id, name: circuit.name })}
-                    className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                    title="Rename"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => act(circuit.id, () => duplicateCircuit(user.uid, circuit.id), `Made a copy of "${circuit.name}".`)}
-                    className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                    title="Duplicate"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setPendingDelete(circuit)}
-                    className="p-2 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                  </Link>
+                  <div className="flex flex-1 flex-col gap-1 p-4">
+                    {renaming?.id === circuit.id ? (
+                      <input
+                        autoFocus
+                        aria-label="Circuit name"
+                        value={renaming.name}
+                        onChange={(e) => setRenaming({ id: circuit.id, name: e.target.value })}
+                        onBlur={commitRename}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") commitRename()
+                          if (e.key === "Escape") setRenaming(null)
+                        }}
+                        className={`${inputClass} py-1.5`}
+                      />
+                    ) : (
+                      <Link href={`/simulation?id=${circuit.id}`} className="block truncate font-semibold text-ink hover:text-signal">
+                        {circuit.name}
+                      </Link>
+                    )}
+                    <p className="tabular text-sm text-ink-muted">
+                      {circuit.componentCount} part{circuit.componentCount === 1 ? "" : "s"}, edited {formatDate(circuit.updatedAt)}
+                    </p>
+                    <div className="mt-auto flex items-center justify-end gap-1 pt-2">
+                      <button
+                        onClick={() => setRenaming({ id: circuit.id, name: circuit.name })}
+                        className="rounded-control p-2 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink"
+                        title="Rename"
+                        aria-label={`Rename ${circuit.name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => act(circuit.id, () => duplicateCircuit(user.uid, circuit.id), `Made a copy of "${circuit.name}".`)}
+                        className="rounded-control p-2 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink"
+                        title="Duplicate"
+                        aria-label={`Duplicate ${circuit.name}`}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setPendingDelete(circuit)}
+                        className="rounded-control p-2 text-ink-muted transition-colors hover:bg-danger-tint hover:text-danger"
+                        title="Delete"
+                        aria-label={`Delete ${circuit.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </Card>
               </li>
             ))}
           </ul>

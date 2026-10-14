@@ -22,13 +22,13 @@ import {
   sendVerification,
 } from "@/lib/account"
 import { friendlyAccountError } from "@/lib/authErrors"
+import { buttonClass } from "@/components/ui/Button"
+import Badge from "@/components/ui/Badge"
+import { inputClass } from "@/components/ui/Field"
+import { heading } from "@/components/ui/typography"
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[#31393C] focus:border-[#2176FF] focus:outline-none focus:ring-2 focus:ring-[#2176FF]/20"
-const primaryButton =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-[#2176FF] px-4 py-2 font-medium text-white hover:bg-[#33A1FD] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-const secondaryButton =
-  "inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-[#31393C] hover:bg-gray-50 transition-colors disabled:opacity-50"
+const primaryButton = buttonClass("primary")
+const secondaryButton = buttonClass("secondary")
 
 export default function ProfilePage() {
   const { user, loading } = useAuth()
@@ -45,19 +45,31 @@ export default function ProfilePage() {
   }, [loading, user, router, pathname])
 
   if (loading || !user) {
-    return <div className="p-8 text-center">{loading ? "Loading..." : "Redirecting..."}</div>
+    return (
+      <div className="min-h-screen bg-grid">
+        <SiteHeader />
+        <p className="p-16 text-center text-ink-muted" role="status">{loading ? "Loading…" : "Redirecting to sign in…"}</p>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-grid">
       <SiteHeader />
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Profile &amp; settings</h1>
-        <Overview user={user} />
-        <ProfileSection user={user} />
-        <EmailSection user={user} />
-        <PasswordSection user={user} />
-        <DeleteSection user={user} deletingRef={deletingRef} />
+      <main className="mx-auto max-w-5xl px-5 pb-20 sm:px-8">
+        <h1 className={`${heading.xl} pt-12 pb-8`}>Profile &amp; settings</h1>
+        {/* Overview stays in view on desktop while the settings scroll */}
+        <div className="grid items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+          <div className="lg:sticky lg:top-20">
+            <Overview user={user} />
+          </div>
+          <div className="space-y-6">
+            <ProfileSection user={user} />
+            <EmailSection user={user} />
+            <PasswordSection user={user} />
+            <DeleteSection user={user} deletingRef={deletingRef} />
+          </div>
+        </div>
       </main>
     </div>
   )
@@ -70,9 +82,9 @@ function Card({ title, description, children, danger = false }: {
   danger?: boolean
 }) {
   return (
-    <section className={`rounded-xl border bg-white p-5 sm:p-6 shadow-sm ${danger ? "border-red-200" : "border-gray-200"}`}>
-      <h2 className={`text-lg font-semibold ${danger ? "text-red-700" : "text-[#31393C]"}`}>{title}</h2>
-      {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
+    <section className={`rounded-panel border bg-surface p-5 sm:p-7 ${danger ? "border-danger/30" : "border-line"}`}>
+      <h2 className={`${heading.md} ${danger ? "text-danger" : ""}`}>{title}</h2>
+      {description && <p className="mt-1 text-sm text-ink-muted">{description}</p>}
       <div className="mt-4">{children}</div>
     </section>
   )
@@ -81,9 +93,9 @@ function Card({ title, description, children, danger = false }: {
 function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-[#31393C] mb-1">{label}</label>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-ink">{label}</label>
       {children}
-      {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
+      {hint && <p className="mt-1.5 text-sm text-ink-muted">{hint}</p>}
     </div>
   )
 }
@@ -111,22 +123,22 @@ function Overview({ user }: { user: User }) {
   ]
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-5 sm:p-6 shadow-sm">
-      <div className="flex items-center gap-4">
+    <section className="rounded-panel border border-line bg-surface p-6 shadow-key">
+      <div className="flex items-center gap-4 lg:flex-col lg:items-start">
         <UserAvatar name={name} avatar={profile?.avatar} size={64} />
         <div className="min-w-0">
-          <p className="text-xl font-semibold text-[#31393C] truncate">{name}</p>
-          <p className="text-sm text-gray-500 truncate">{user.email}</p>
-          {joined && <p className="text-xs text-gray-400 mt-0.5">Joined {joined}</p>}
+          <p className="truncate font-display text-xl font-semibold tracking-[-0.01em] text-ink">{name}</p>
+          <p className="truncate text-sm text-ink-muted">{user.email}</p>
+          {joined && <p className="mt-0.5 text-xs text-ink-muted">Joined {joined}</p>}
         </div>
       </div>
       <dl className="mt-5 grid grid-cols-3 gap-3">
         {stats.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="rounded-lg bg-gray-50 px-3 py-3 text-center">
-            <dt className="flex items-center justify-center gap-1.5 text-xs font-medium text-gray-500">
+          <div key={label} className="rounded-control bg-paper px-2 py-3 text-center">
+            <dt className="flex items-center justify-center gap-1.5 text-xs font-medium text-ink-muted">
               <Icon className="h-3.5 w-3.5" /> {label}
             </dt>
-            <dd className="mt-1 text-lg font-bold text-[#31393C]">{value}</dd>
+            <dd className="tabular mt-1 font-display text-lg font-semibold text-ink">{value}</dd>
           </div>
         ))}
       </dl>
@@ -186,11 +198,11 @@ function ProfileSection({ user }: { user: User }) {
             autoComplete="name"
             className={inputClass}
           />
-          {nameError && name !== savedName && <p className="mt-1 text-xs text-red-600">{nameError}</p>}
+          {nameError && name !== savedName && <p className="mt-1.5 text-sm text-danger">{nameError}</p>}
         </Field>
 
         <fieldset>
-          <legend className="block text-sm font-medium text-[#31393C] mb-2">Avatar</legend>
+          <legend className="mb-2 block text-sm font-medium text-ink">Avatar</legend>
           <div className="flex flex-wrap gap-2">
             <AvatarChoice selected={avatar === null} label="Initials" onSelect={() => { touched.current = true; setAvatar(null) }}>
               <UserAvatar name={trimmed || savedName} avatar={null} size={44} />
@@ -230,11 +242,11 @@ function AvatarChoice({ selected, label, onSelect, children }: {
       aria-pressed={selected}
       aria-label={label}
       title={label}
-      className={`relative rounded-full p-1 transition-shadow ${selected ? "ring-2 ring-[#2176FF] ring-offset-1" : "hover:ring-2 hover:ring-gray-300"}`}
+      className={`relative rounded-full p-1 transition-shadow ${selected ? "ring-2 ring-signal ring-offset-1" : "hover:ring-2 hover:ring-line-strong"}`}
     >
       {children}
       {selected && (
-        <span className="absolute -right-0.5 -bottom-0.5 rounded-full bg-[#2176FF] p-0.5 text-white">
+        <span className="absolute -right-0.5 -bottom-0.5 rounded-full bg-signal p-0.5 text-white">
           <Check className="h-3 w-3" />
         </span>
       )}
@@ -288,24 +300,22 @@ function EmailSection({ user }: { user: User }) {
   return (
     <Card title="Email">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Mail className="h-4 w-4 text-gray-400" />
-        <span className="font-medium text-[#31393C] break-all">{user.email}</span>
+        <Mail className="h-4 w-4 text-ink-faint" />
+        <span className="break-all font-medium text-ink">{user.email}</span>
         {user.emailVerified ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-            <ShieldCheck className="h-3.5 w-3.5" /> Verified
-          </span>
+          <Badge tone="success" icon={<ShieldCheck className="h-3.5 w-3.5" />}>Verified</Badge>
         ) : (
-          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Not verified</span>
+          <Badge tone="warning">Not verified</Badge>
         )}
       </div>
 
       {!user.emailVerified && (
-        <p className="mt-3 text-sm text-gray-600">
+        <p className="mt-3 text-sm text-ink-muted">
           {verificationSent
             ? "Check your inbox for the link (and your spam folder). Reload this page after clicking it."
             : "Verify your email so you can always get back into your account."}{" "}
           {!verificationSent && (
-            <button onClick={verify} disabled={busy} className="font-medium text-[#2176FF] hover:underline disabled:opacity-50">
+            <button onClick={verify} disabled={busy} className="font-medium text-signal hover:underline disabled:opacity-50">
               Send verification email
             </button>
           )}
@@ -313,14 +323,14 @@ function EmailSection({ user }: { user: User }) {
       )}
 
       {sentTo && (
-        <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-sm text-[#31393C]">
+        <p className="mt-3 rounded-control border border-signal/25 bg-signal-tint px-3 py-2.5 text-sm text-ink" role="status">
           We&apos;ve sent a link to <strong className="break-all">{sentTo}</strong>. Your email changes once you click it,
           and you&apos;ll then need to sign in again with the new address.
         </p>
       )}
 
       {open ? (
-        <form onSubmit={submit} className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+        <form onSubmit={submit} className="mt-4 space-y-4 border-t border-line pt-4">
           <Field label="New email" htmlFor="new-email">
             <input id="new-email" type="email" required value={newEmail} onChange={e => setNewEmail(e.target.value)} autoComplete="email" className={inputClass} />
           </Field>
@@ -385,11 +395,11 @@ function PasswordSection({ user }: { user: User }) {
           </Field>
           <Field label="New password" htmlFor="new-password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
             <input id="new-password" type="password" required value={next} onChange={e => setNext(e.target.value)} autoComplete="new-password" className={inputClass} />
-            {tooShort && <p className="mt-1 text-xs text-red-600">Too short.</p>}
+            {tooShort && <p className="mt-1.5 text-sm text-danger">Too short.</p>}
           </Field>
           <Field label="Confirm new password" htmlFor="confirm-password">
             <input id="confirm-password" type="password" required value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" className={inputClass} />
-            {mismatch && <p className="mt-1 text-xs text-red-600">The passwords don&apos;t match.</p>}
+            {mismatch && <p className="mt-1.5 text-sm text-danger">The passwords don&apos;t match.</p>}
           </Field>
           <div className="flex gap-2">
             <button type="submit" disabled={busy || !ready} className={primaryButton}>
@@ -436,7 +446,7 @@ function DeleteSection({ user, deletingRef }: { user: User; deletingRef: React.R
 
   return (
     <Card title="Delete account" description="Permanently delete your account, saved circuits and learning progress." danger>
-      <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-red-300 px-4 py-2 font-medium text-red-700 hover:bg-red-50 transition-colors">
+      <button onClick={() => setOpen(true)} className="inline-flex h-11 items-center gap-2 rounded-control border border-danger/40 px-5 font-medium text-danger transition-colors hover:bg-danger-tint">
         <AlertTriangle className="h-4 w-4" />
         Delete my account
       </button>

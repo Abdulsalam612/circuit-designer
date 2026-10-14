@@ -1,4 +1,6 @@
 import SiteHeader from "@/components/SiteHeader"
+import { buttonClass } from "@/components/ui/Button"
+import { heading } from "@/components/ui/typography"
 
 // Shared layout for the 404 and error pages: site header, a circuit picture, a short
 // explanation and a few ways out.
@@ -16,12 +18,12 @@ export default function StatusPage({ code, title, message, variant, children }: 
     // Opaque white base: the site is light-only, but globals.css still darkens <body> in dark mode
     <div className="min-h-screen flex flex-col bg-white">
       <SiteHeader />
-      <main className="flex-1 flex items-center justify-center px-4 py-12 bg-gradient-to-br from-[#33A1FD]/10 to-[#FDCA40]/5">
+      <main className="flex-1 flex items-center justify-center px-4 py-12 bg-grid">
         <div className="max-w-lg text-center">
           <BrokenCircuit variant={variant} />
-          <p className="mt-6 text-sm font-semibold tracking-wider text-[#2176FF] uppercase">{code}</p>
-          <h1 className="mt-2 text-3xl sm:text-4xl font-bold text-[#31393C]">{title}</h1>
-          <div className="mt-3 text-gray-600">{message}</div>
+          <p className="mt-6 text-sm font-medium text-signal">{code}</p>
+          <h1 className={`${heading.xl} mt-2`}>{title}</h1>
+          <div className="mt-3 text-ink-muted">{message}</div>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">{children}</div>
         </div>
       </main>
@@ -29,10 +31,9 @@ export default function StatusPage({ code, title, message, variant, children }: 
   )
 }
 
-export const primaryButton =
-  "inline-flex items-center gap-2 rounded-lg bg-[#2176FF] px-5 py-2.5 font-medium text-white hover:bg-[#33A1FD] transition-colors"
-export const secondaryButton =
-  "inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 font-medium text-[#31393C] hover:bg-gray-50 transition-colors"
+// The 404 and error pages' buttons are the shared design-system ones
+export const primaryButton = buttonClass("primary")
+export const secondaryButton = buttonClass("secondary")
 
 // Battery + lamp loop with a gap in the right-hand wire. "open": two loose ends drawn like
 // the editor's unconnected-end markers (hollow circles). "spark": a short circuit flash.

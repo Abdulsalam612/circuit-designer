@@ -5,7 +5,7 @@ import StatusPage, { primaryButton, secondaryButton } from "@/components/StatusP
 export default function NotFound() {
   return (
     <StatusPage
-      code="404 · Page not found"
+      code="Error 404: page not found"
       title="Open circuit!"
       message="This page isn't connected to anything. The link may be broken, or the page may have moved."
       variant="open"

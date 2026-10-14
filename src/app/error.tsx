@@ -22,7 +22,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
       message={
         <>
           <p>Something on this page broke. Anything you had already saved is safe.</p>
-          {error.digest && <p className="mt-2 text-xs text-gray-400">Error reference: {error.digest}</p>}
+          {error.digest && <p className="mt-2 text-xs text-ink-muted">Error reference: {error.digest}</p>}
         </>
       }
       variant="spark"

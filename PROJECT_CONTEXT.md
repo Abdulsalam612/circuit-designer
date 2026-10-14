@@ -95,7 +95,7 @@ only `react` → would break at runtime).
 |---|---|---|
 | `/` | `page.tsx` | Landing page (sections in `components/landing/`, redesigned 14 Oct 2026) + login/signup/password-reset modals (Firebase). **Signed in:** shows `WelcomeBack` (recent circuits, New circuit, Continue learning) instead of the hero. Opens the login modal when visited as `/?login=1&next=/path`, the signup modal for `/?signup=1`. |
 | `/simulation` | `simulation/page.tsx` | **The circuit editor.** Owns the circuit state (undo history), saving, header toolbar, Properties panel, Simulation panel. Loads a circuit from `?id=`. Protected. |
-| `/circuits` | `circuits/page.tsx` | "My Circuits": open, rename, duplicate, delete. Back button → `/`. Protected. |
+| `/circuits` | `circuits/page.tsx` | "My Circuits" (redesigned 14 Oct 2026: grid of cards with a `CircuitThumbnail` of each circuit): open, rename, duplicate, delete. Back button → `/`. Protected. |
 | `/dashboard` | `dashboard/page.tsx` | "Your learning" (redesigned 14 Oct 2026): "Up next" ink card, `StatsPanel`, the course as one panel per level with `LessonPath` (lessons as LEDs on a wire). The placeholder Guides tab and dead Quick actions were removed. Protected. |
 | `/profile` | `profile/page.tsx` | **Profile & settings**: overview (avatar, name, email, join date, level/points/lessons), name + preset avatar (saved together), email (verified badge, send verification, change via `verifyBeforeUpdateEmail`), password change, delete account (password in a `ConfirmDialog`). Email/password/delete ask for the current password every time (re-auth). Own login guard (not `useRequireAuth`) so deleting lands on `/`, not the login box. Protected. |
 | `/about`, `/privacy`, `/terms` | `about/`, `privacy/`, `terms/page.tsx` | Server components with `metadata` titles, laid out by `InfoPage`. **Privacy must stay true to the code** (no analytics/tracking cookies; Firebase + Vercel are the only processors; self-service delete) – update it if that changes. Owner is **UK-based**; contact email `abdulsalam.sami01@gmail.com` (`CONTACT_EMAIL` in `SiteFooter.tsx`); Terms governed by England & Wales law; Privacy has controller, lawful basis, UK GDPR rights + ICO. Not lawyer-reviewed. |
@@ -131,6 +131,8 @@ only `react` → would break at runtime).
 - `SiteFooter.tsx` – shared footer (landing + info pages): Product / CirKit / Help & legal
   columns, only real links; exports `GITHUB_URL`, `ISSUES_URL`. `InfoPage.tsx` – layout for
   text pages (header, title band, plain h2/p/ul styled via `[&_h2]:` selectors, footer).
+- `CircuitThumbnail.tsx` – static SVG drawing of a saved circuit (wires + part icons, fitted);
+  used on My Circuits and the home page. `CircuitSummary` now carries `layout` (no extra reads).
 - `StatsPanel.tsx` – dashboard stats tiles: lessons, quizzes passed, challenges solved,
   circuits saved, points, time learning. Only real data (replaced the fake "streak" and
   "Level 1 · 50 pts to next level" cards); streaks/levels come back with Stage 6.
@@ -424,9 +426,10 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 
 **Current focus (14 Oct 2026): visual redesign** of the website. Critique done; direction
 "playful but credible" approved; design system committed (`e0c8852`); **landing page
-redesigned (`7d0c63b`); **dashboard redesigned (`f6719b4`); **lesson pages redesigned**
-(not committed). Next: profile, My Circuits, editor chrome (also the challenge workbench's
-sidebar/Properties/zoom), auth modals, kids mode, footer. Known: `/play` overflows by ~20 px on phones (pre-existing).
+redesigned (`7d0c63b`); **dashboard redesigned (`f6719b4`); **lesson pages (`7986cb6`); **profile, My Circuits,
+feedback + token sweep of shared components** (not committed). Old styles now left only in:
+auth modals (`app/page.tsx`), the editor (`simulation/page.tsx`, `PropertiesPanel`,
+`CircuitCanvas`, sidebar – also used by build challenges) and kids mode (`/play`, `/kidscircuit`). Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -452,6 +455,17 @@ sidebar/Properties/zoom), auth modals, kids mode, footer. Known: `/play` overflo
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed lesson pages (`7986cb6`). **Profile + My Circuits redesign**: My
+  Circuits is a card grid with real circuit thumbnails (new `CircuitThumbnail`; `listCircuits`
+  returns `layout`; ticks Stage 3 "thumbnails"); home "Your circuits" shows the latest one's
+  thumbnail; profile uses shared Button/Field/Badge, two-column layout with a sticky overview.
+  **Token sweep** of shared components (SiteHeader, SiteFooter, ToastContext, ConfirmDialog,
+  StatusPage, InfoPage, global-error, error, feedback page): no raw hex/gray left there;
+  "CirKit Kids" button now ink on carrot (white was 2.2:1), footer headings glow, 404/info
+  pages on grid paper with display headings, no ALL-CAPS labels. Browser-tested with TEMP fake
+  user + in-memory circuits (restored): thumbnails incl. empty, rename/Esc, delete dialog,
+  profile, 404, footer, feedback; no overflow at 375 px. tsc/lint/tests pass. Not committed.
 
 - 2026-10-14 – Committed the dashboard (`f6719b4`). **Lesson pages redesign**: lesson bar with
   LevelBadge + new `StepTrack`; Badge for step kind; reading steps (larger body text, tokenised

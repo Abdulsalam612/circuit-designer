@@ -25,6 +25,8 @@ export interface CircuitSummary {
   name: string;
   updatedAt: Date | null;
   componentCount: number;
+  // The drawing itself, for thumbnails (the list query reads whole docs anyway)
+  layout: CircuitLayout;
 }
 
 const circuitsOf = (uid: string) => collection(firestore, 'users', uid, 'circuits');
@@ -86,6 +88,7 @@ export const listCircuits = async (uid: string): Promise<CircuitSummary[]> => {
       name: typeof data.name === 'string' ? data.name : DEFAULT_CIRCUIT_NAME,
       updatedAt: (data.updatedAt as Timestamp | null)?.toDate?.() ?? null,
       componentCount: Array.isArray(data.components) ? data.components.length : 0,
+      layout: parseLayout(data) ?? { components: [], wires: [] },
     };
   });
 };

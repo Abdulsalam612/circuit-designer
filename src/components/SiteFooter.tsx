@@ -10,7 +10,7 @@ export const CONTACT_EMAIL = "abdulsalam.sami01@gmail.com"
 const COLUMNS: { title: string; colour: string; links: { href: string; label: string; external?: boolean }[] }[] = [
   {
     title: "Product",
-    colour: "text-[#33A1FD]",
+    colour: "text-glow",
     links: [
       { href: "/simulation", label: "Circuit Editor" },
       { href: "/dashboard", label: "Lessons" },
@@ -20,7 +20,7 @@ const COLUMNS: { title: string; colour: string; links: { href: string; label: st
   },
   {
     title: "CirKit",
-    colour: "text-[#FDCA40]",
+    colour: "text-glow",
     links: [
       { href: "/about", label: "About" },
       { href: GITHUB_URL, label: "Source code", external: true },
@@ -28,7 +28,7 @@ const COLUMNS: { title: string; colour: string; links: { href: string; label: st
   },
   {
     title: "Help & legal",
-    colour: "text-[#F79824]",
+    colour: "text-glow",
     links: [
       { href: "/feedback?type=bug", label: "Report a problem" },
       { href: "/feedback", label: "Send feedback" },
@@ -41,23 +41,23 @@ const COLUMNS: { title: string; colour: string; links: { href: string; label: st
 
 export default function SiteFooter() {
   return (
-    <footer className="bg-[#31393C] text-white py-12">
+    <footer className="bg-ink text-white py-12">
       <div className="container mx-auto px-6">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div>
             <Link href="/" className="flex items-center space-x-3 mb-4">
-              <div className="bg-[#2176FF] p-2 rounded-lg">
+              <div className="bg-brand p-2 rounded-control">
                 <CircuitBoard className="h-6 w-6 text-white" />
               </div>
               <span className="text-xl font-bold">CirKit</span>
             </Link>
-            <p className="text-gray-400">Making electronics education accessible and engaging for everyone.</p>
+            <p className="text-white/70">Making electronics education accessible and engaging for everyone.</p>
           </div>
 
           {COLUMNS.map(column => (
             <div key={column.title}>
               <h3 className={`font-semibold mb-4 ${column.colour}`}>{column.title}</h3>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-white/70">
                 {column.links.map(link => (
                   <li key={link.label}>
                     {link.external ? (
@@ -80,7 +80,7 @@ export default function SiteFooter() {
           ))}
         </div>
 
-        <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+        <div className="border-t border-white/15 mt-8 pt-8 text-center text-white/70">
           <p>&copy; {new Date().getFullYear()} CirKit · Made by Abdulsalam Sami</p>
         </div>
       </div>

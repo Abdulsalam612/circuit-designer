@@ -57,18 +57,18 @@ export default function ConfirmDialog({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-2xl animate-pop-in"
+        className="w-full max-w-sm rounded-card bg-white p-6 shadow-2xl animate-pop-in"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
           {danger && (
-            <div className="shrink-0 rounded-full bg-red-100 p-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
+            <div className="shrink-0 rounded-full bg-danger-tint p-2">
+              <AlertTriangle className="h-5 w-5 text-danger" />
             </div>
           )}
           <div className="min-w-0">
-            <h2 id="confirm-title" className="text-lg font-semibold text-[#31393C]">{title}</h2>
-            {message && <div className="mt-1 text-sm text-gray-600 break-words">{message}</div>}
+            <h2 id="confirm-title" className="text-lg font-semibold text-ink">{title}</h2>
+            {message && <div className="mt-1 text-sm text-ink-muted break-words">{message}</div>}
           </div>
         </div>
         {children && <div className="mt-4">{children}</div>}
@@ -76,15 +76,15 @@ export default function ConfirmDialog({
           <button
             ref={cancelRef}
             onClick={onCancel}
-            className="rounded-lg px-4 py-2 font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            className="rounded-control px-4 py-2 font-medium text-ink hover:bg-ink/5 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className={`rounded-lg px-4 py-2 font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              danger ? "bg-red-600 hover:bg-red-700" : "bg-[#2176FF] hover:bg-[#33A1FD]"
+            className={`rounded-control px-4 py-2 font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              danger ? "bg-danger hover:bg-danger-hover" : "bg-signal hover:bg-signal-hover"
             }`}
           >
             {confirmLabel}
