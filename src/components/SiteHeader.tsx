@@ -4,10 +4,11 @@ import { useEffect, useRef, useState, type MouseEvent } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "firebase/auth"
-import { BookOpen, ChevronDown, CircuitBoard, FolderOpen, LogOut, Menu, X, Zap } from "lucide-react"
+import { BookOpen, ChevronDown, CircuitBoard, FolderOpen, LogOut, Menu, UserRound, X, Zap } from "lucide-react"
 import { auth } from "@/firebase"
 import { useAuth } from "@/context/AuthContext"
 import { useToast } from "@/context/ToastContext"
+import UserAvatar from "@/components/UserAvatar"
 
 // Shared top bar for the website pages (home, dashboard, My Circuits, lessons).
 // The editor and kids mode keep their own toolbars – they need the space.
@@ -33,21 +34,13 @@ interface SiteHeaderProps {
   sticky?: boolean
 }
 
-const initialsOf = (name: string) =>
-  name
-    .split(/[\s@._-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0].toUpperCase())
-    .join("")
-
 // Following a link to the page you're already on doesn't change the path, so close explicitly
 const closeOnLink = (setOpen: (open: boolean) => void) => (e: MouseEvent) => {
   if ((e.target as HTMLElement).closest("a")) setOpen(false)
 }
 
 export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, sticky = true }: SiteHeaderProps) {
-  const { user, loading } = useAuth()
+  const { user, loading, profile } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
   const toast = useToast()
@@ -78,7 +71,7 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
     }
   }, [accountOpen])
 
-  const displayName = user?.displayName || user?.email || ""
+  const displayName = profile?.name || user?.displayName || user?.email || ""
   const signedIn = !loading && !!user
   // Signed-out visitors can't open the app pages, so only show them the public links
   const links = signedIn ? APP_LINKS : []
@@ -142,18 +135,17 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
                 aria-expanded={accountOpen}
                 aria-label="Account menu"
               >
-                <span className="h-9 w-9 rounded-full bg-[#33A1FD] text-white text-sm font-semibold flex items-center justify-center">
-                  {initialsOf(displayName) || "?"}
-                </span>
+                <UserAvatar name={displayName} avatar={profile?.avatar} />
                 <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform ${accountOpen ? "rotate-180" : ""}`} />
               </button>
 
               {accountOpen && (
                 <div role="menu" onClick={closeOnLink(setAccountOpen)} className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 bg-white shadow-lg py-2">
                   <div className="px-4 py-2 border-b border-gray-100 mb-1">
-                    {user.displayName && <p className="font-semibold text-[#31393C] truncate">{user.displayName}</p>}
+                    {displayName !== user.email && <p className="font-semibold text-[#31393C] truncate">{displayName}</p>}
                     <p className="text-sm text-gray-500 truncate">{user.email}</p>
                   </div>
+                  <AccountLink href="/profile" icon={UserRound} label="Profile & settings" />
                   <AccountLink href="/dashboard" icon={BookOpen} label="Learning dashboard" />
                   <AccountLink href="/circuits" icon={FolderOpen} label="My Circuits" />
                   <AccountLink href="/simulation" icon={Zap} label="New circuit" />
@@ -198,13 +190,12 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
         <nav id="mobile-menu" onClick={closeOnLink(setMenuOpen)} className="md:hidden border-t border-gray-200 bg-white px-4 pb-4">
           {signedIn && (
             <div className="flex items-center gap-3 py-3 border-b border-gray-100">
-              <span className="h-9 w-9 shrink-0 rounded-full bg-[#33A1FD] text-white text-sm font-semibold flex items-center justify-center">
-                {initialsOf(displayName) || "?"}
-              </span>
-              <div className="min-w-0">
-                {user?.displayName && <p className="font-semibold text-[#31393C] truncate">{user.displayName}</p>}
+              <UserAvatar name={displayName} avatar={profile?.avatar} />
+              <div className="min-w-0 flex-1">
+                {displayName !== user?.email && <p className="font-semibold text-[#31393C] truncate">{displayName}</p>}
                 <p className="text-sm text-gray-500 truncate">{user?.email}</p>
               </div>
+              <Link href="/profile" className="shrink-0 text-sm font-medium text-[#2176FF]">Profile</Link>
             </div>
           )}
           <div className="flex flex-col py-2">

@@ -96,6 +96,7 @@ only `react` → would break at runtime).
 | `/simulation` | `simulation/page.tsx` | **The circuit editor.** Owns the circuit state (undo history), saving, header toolbar, Properties panel, Simulation panel. Loads a circuit from `?id=`. Protected. |
 | `/circuits` | `circuits/page.tsx` | "My Circuits": open, rename, duplicate, delete. Back button → `/`. Protected. |
 | `/dashboard` | `dashboard/page.tsx` | Learning dashboard: stats, **"Up next"** banner, lessons grouped by level (from `src/content/lessons`), Guides tab (**still placeholder cards hard-coded in the page**). Protected. |
+| `/profile` | `profile/page.tsx` | **Profile & settings**: overview (avatar, name, email, join date, level/points/lessons), name + preset avatar (saved together), email (verified badge, send verification, change via `verifyBeforeUpdateEmail`), password change, delete account (password in a `ConfirmDialog`). Email/password/delete ask for the current password every time (re-auth). Own login guard (not `useRequireAuth`) so deleting lands on `/`, not the login box. Protected. |
 | `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer**: steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
 | (404) | `not-found.tsx` | "Open circuit!" page (broken-wire picture, Home/Lessons/Editor). Real 404 status, tab title via React 19 `<title>`. |
 | (crash) | `error.tsx`, `global-error.tsx` | `error.tsx`: "Short circuit!" with Try again (`reset`) / Go home, inside the normal layout. `global-error.tsx`: self-contained fallback if the root layout itself crashes (production only; dev shows Next's overlay). |
@@ -114,6 +115,8 @@ only `react` → would break at runtime).
 - `PropertiesPanel.tsx` – type, live readings (while simulating), value input with SI prefixes,
   switch Open/Closed, Rotate, Flip direction (polarized parts), position.
 - `WelcomeBack.tsx` – signed-in home panel.
+- `UserAvatar.tsx` – preset avatar (`lib/avatars.ts`: 8 electronics icons on brand colours,
+  ids stored as `avatar` on `users/{uid}` – never rename) or initials on blue.
 - `StatusPage.tsx` – shared layout for the 404/error pages (SiteHeader + inline SVG circuit:
   `open` = loose wire ends drawn like the editor's hollow markers, `spark` = short circuit).
 - `ConfirmDialog.tsx` – styled replacement for `confirm()` (controlled; Esc/backdrop cancel,
@@ -150,7 +153,13 @@ only `react` → would break at runtime).
   `.success/.error/.info(message)`. Bottom right (bottom centre on phones), auto-dismiss
   3.5/4/6 s (paused on hover), max 4, `role=alert` for errors. **Never use `alert()`** – use this.
 - `lib/authErrors.ts` – `friendlyAuthError(error, fallback)`: Firebase Auth codes → plain English.
-- `context/AuthContext.tsx` – `useAuth`, and **`useRequireAuth`** (redirects logged-out users
+- `lib/account.ts` – `saveProfile` (Auth displayName + `users/{uid}` name/avatar),
+  `sendVerification`, `changeEmail`, `changePassword`, `deleteAccount` (re-auth → delete
+  `circuits/*` in batches → user doc → Auth user). `lib/authErrors.ts` also has
+  `friendlyAccountError` (wrong current password etc.).
+- `context/AuthContext.tsx` – `useAuth` (now also **`profile`**: live `{name, avatar}` from
+  `users/{uid}` via `onSnapshot`, used by the header; also copies a changed sign-in email onto
+  the doc), and **`useRequireAuth`** (redirects logged-out users
   to `/?login=1&next=<path>`; used by every protected page).
 - `firebase.ts` – Firebase init (`auth`, `firestore`).
 - `types/lesson.ts` – `Lesson`, steps (`read` / `quiz` / `challenge`), content blocks, `ChallengeGoal`.
@@ -365,9 +374,9 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
-   toasts + confirm dialog and 404/error pages done (not committed). Agreed order for the rest:
-   profile/settings page (add a "Profile" link to the account dropdown then; email/password
-   change and delete account need the owner to test signed in) → About/Contact/Terms/Privacy,
+   toasts, 404/error pages committed (`3bffa54`, not pushed); **profile page done, not
+   committed – the owner still needs to try it signed in** (name/avatar save, verification
+   email, password change; email change and delete account ideally on a spare account). Next: About/Contact/Terms/Privacy,
    feedback form, dashboard stats panel.
 2. Stage 5 follow-ups: Guides tab is still hard-coded placeholder cards in `dashboard/page.tsx`
    (turn guides into content like lessons, or drop the tab); level-up from XP (`level` never
@@ -384,6 +393,17 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – **Stage 7: profile & settings page** `/profile` – `app/profile/page.tsx`,
+  `lib/account.ts`, `lib/avatars.ts`, `components/UserAvatar.tsx`; `AuthContext` gains live
+  `profile`; `SiteHeader` shows avatar/name from it + "Profile & settings" link (mobile:
+  "Profile"); `ConfirmDialog` gains `children` + `confirmDisabled`. Avatars are presets, not
+  uploads (no Firebase Storage needed). Tested with TEMP stubs in AuthContext/account/progress
+  (backed up to the scratchpad and restored; no "TEMP" left, no Firebase calls): save
+  name+avatar → header updates live, validation, wrong/right password for password/email/
+  delete, same-email check, verification toast, delete → `/` + toast, Esc/disabled states,
+  375 px. **Not tested against real Firebase** (owner to try). tsc/lint/227 tests pass.
+  Earlier the same day: committed navbar/toasts/404 as `3bffa54` (not pushed).
 
 - 2026-10-14 – **Stage 7: 404 and error pages** – `app/not-found.tsx`, `app/error.tsx`,
   `app/global-error.tsx`, `components/StatusPage.tsx`. Tested: unknown URL → 404 status +

@@ -13,6 +13,10 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   // Red confirm button, for things that can't be undone
   danger?: boolean
+  // Extra content under the message, e.g. a password field
+  children?: React.ReactNode
+  // Confirm greyed out (e.g. until a field is filled, or while working)
+  confirmDisabled?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -23,15 +27,18 @@ export default function ConfirmDialog({
   message,
   confirmLabel = "Confirm",
   danger = false,
+  children,
+  confirmDisabled = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   const cancelRef = useRef<HTMLButtonElement>(null)
+  const hasChildren = !!children
 
   // Focus Cancel when it opens, so pressing Enter by reflex doesn't delete anything
   useEffect(() => {
-    if (open) cancelRef.current?.focus()
-  }, [open])
+    if (open && !hasChildren) cancelRef.current?.focus()
+  }, [open, hasChildren])
 
   useEffect(() => {
     if (!open) return
@@ -64,6 +71,7 @@ export default function ConfirmDialog({
             {message && <div className="mt-1 text-sm text-gray-600 break-words">{message}</div>}
           </div>
         </div>
+        {children && <div className="mt-4">{children}</div>}
         <div className="mt-6 flex justify-end gap-2">
           <button
             ref={cancelRef}
@@ -74,7 +82,8 @@ export default function ConfirmDialog({
           </button>
           <button
             onClick={onConfirm}
-            className={`rounded-lg px-4 py-2 font-medium text-white transition-colors ${
+            disabled={confirmDisabled}
+            className={`rounded-lg px-4 py-2 font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               danger ? "bg-red-600 hover:bg-red-700" : "bg-[#2176FF] hover:bg-[#33A1FD]"
             }`}
           >
