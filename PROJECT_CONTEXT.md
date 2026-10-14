@@ -80,7 +80,8 @@ Next.js 15.5 (App Router, all pages are client components) · React 19.3 · Type
 Tailwind CSS 4 · Firebase 11 (Auth + Firestore) · **Konva / react-konva** for the canvas ·
 **interact.js** for dragging parts from the sidebar · lucide-react icons · tsx (tests only).
 Brand palette: Gunmetal `#31393C`, Blue `#2176FF`, Celestial `#33A1FD`, Sunglow `#FDCA40`,
-Carrot `#F79824`.
+Carrot `#F79824`. Fonts (since 14 Oct 2026): **Unbounded** (headings) + **Lexend** (body) via
+`next/font`, see §5.8.
 
 **React and react-dom must always be the exact same version** (an `npm audit fix` once bumped
 only `react` → would break at runtime).
@@ -116,6 +117,11 @@ only `react` → would break at runtime).
   (elements have class `componentItem` + `data-component-type`).
 - `PropertiesPanel.tsx` – type, live readings (while simulating), value input with SI prefixes,
   switch Open/Closed, Rotate, Flip direction (polarized parts), position.
+- `ui/` – **design system components** (§5.8): `Button` (variants primary/secondary/glow/
+  ghost/danger, sizes sm/md/lg, `href` → Link; `buttonClass()`), `Card` (`card`/`panel`/`ink`/
+  `glow`, `interactive`; `cardClass()`), `Badge` (tones), `LevelBadge` (resistor colour code),
+  `StatusLed` (done/active/warning/off), `Field` + `inputClass`, `typography.ts` (`heading.*`,
+  `text.*`). Style guide: `/design` (`app/design/page.tsx`, development only – 404 in production).
 - `WelcomeBack.tsx` – signed-in home panel.
 - `SiteFooter.tsx` – shared footer (landing + info pages): Product / CirKit / Help & legal
   columns, only real links; exports `GITHUB_URL`, `ISSUES_URL`. `InfoPage.tsx` – layout for
@@ -303,6 +309,26 @@ battery 9 V, LED 2 V, lamp 100 Ω.
   Level 1: resistors, capacitors, leds, level-1-quiz. Level 2: series-circuits,
   parallel-circuits, string-lights, fix-the-circuit (12 lessons).
 
+### 5.8 Design system ("playful but credible", owner-approved 14 Oct 2026)
+- Made with the `frontend-design` skill after a critique found the site dated (Arial, generic
+  template look, made-up landing claims). Tokens live in `globals.css` `@theme`; **use token
+  classes, never raw hex**: `text-ink`/`text-ink-muted`, `bg-paper` (+ `.bg-grid` 20 px
+  engineering grid, same as the editor), `bg-surface`, `border-line`, `bg-signal` (buttons/links;
+  `#1A66E8`, a deeper brand blue so white text passes 5.1:1), `bg-glow` (Sunglow, always ink
+  text), `bg-carrot` (ink text) / `text-carrot-ink`, `success`, `danger`, `brand`/`celestial`
+  (large shapes/icons only). Contrast checked for every pairing (AA).
+- Type: `font-display` Unbounded for h1/h2 (tight tracking), `font-sans` Lexend for the rest
+  (designed for easier reading – a selling point for schools). `.tabular` for readings instead
+  of monospace. Scale in `ui/typography.ts`.
+- Principles: tactile (buttons/cards sit on a solid 2–3 px lip and press down), corners grow with
+  size (chip 6 / control 10 / card 14 / panel 22), electronics vocabulary as real structure
+  (resistor-colour-code level badges, LED status dots), one bold moment per page, sentence case,
+  no ALL-CAPS labels, no "→" in button text, motion only on load/interaction, reduced motion
+  respected, `:focus-visible` outline everywhere.
+- Gotcha: `next/font` variables must be on `<html>` (the `@theme` tokens are defined on `:root`);
+  on `<body>` the fonts silently fall back to system-ui.
+- Rollout: pages still use their old ad-hoc classes until restyled (landing first).
+
 ---
 
 ## 6. How the owner likes to work (follow this)
@@ -359,6 +385,10 @@ battery 9 V, LED 2 V, lamp 100 Ω.
   - `59f7f58` DC simulation + battery/LED direction fix (polarized, Flip direction, “+” mark).
   - `988a387` Current-flow animation + pulsing status dot. **Deployed** (master = 988a387).
   - 12 Oct: tests moved into the repo (`npm test`), this context file added.
+- **14 Oct 2026, Stage 7 website (with Claude), all deployed (master = `a04b4e9`):**
+  `3bffa54` shared navbar, toasts, 404/error pages · `a267821` profile & settings ·
+  `c2b0479` About/Privacy/Terms + footer · `89f329d` feedback form (+ `feedback` Firestore
+  rules, published) · `feb44e0` dashboard stats panel · `a04b4e9` "Up next" phone fix.
 - **13–14 Oct 2026 (with Claude):**
   - `abaffc2` Lessons: 12 lessons (Levels 0–2), `/learn/[lessonId]` viewer, quizzes, simulator-checked
     build challenges, dashboard from content files; handoff docs + tests committed. **Deployed.**
@@ -381,11 +411,17 @@ most of 4 (simulation first version), and Stage 5 first version (12 lessons, Lev
 verified live (config inlined, login redirect works, no console errors). Only open Stage 2
 item: starting a wire from an empty grid point (optional). See the Master Checklist.
 
+**Current focus (14 Oct 2026): visual redesign** of the website. Critique done; direction
+"playful but credible" approved; **design system built** (§5.8, not committed). Next: restyle
+the landing page with it (remove the made-up stats/claims, real live circuit in the hero), then
+dashboard, lessons, profile, rest. Known: `/play` overflows by ~20 px on phones (pre-existing).
+
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
    toasts, 404/error pages committed (`3bffa54`, not pushed); **profile page committed (`a267821`, owner tested it signed in – all works). About/Privacy/
    Terms pages + shared footer committed (`c2b0479`). Feedback form committed (`89f329d`). Stats
-   panel committed (`feb44e0`); "Up next" phone fix not committed. **Stage 7 is then complete** except the optional items
+   panel committed (`feb44e0`), "Up next" phone fix `a04b4e9`. **All of Stage 7 deployed
+   14 Oct 2026 (master = editor-wiring = `a04b4e9`).** **Stage 7 is then complete** except the optional items
    (Google sign-in, light/dark theme). Next (owner to choose): Stage 5 follow-ups /
    Stage 6 gamification (real streaks + level-up would feed the stats panel). Older notes: About/Contact/Terms/Privacy,
    feedback form, dashboard stats panel.
@@ -404,6 +440,33 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – **Design system** (owner installed `frontend-design`; direction "playful but
+  credible"): tokens in `globals.css` (`@theme`, `.bg-grid`, `.tabular`, focus ring, LED
+  animation; removed the Arial override and the starter dark-mode block), fonts Unbounded +
+  Lexend in `layout.tsx` (on `<html>` – see §5.8 gotcha), `components/ui/*` (Button, Card,
+  Badge, LevelBadge, StatusLed, Field, typography), style guide `/design` (dev only). Contrast
+  computed for all pairings (success darkened to `#127436`). Checked in the browser: fonts load,
+  style guide renders; no new sideways overflow on /, /about, /feedback, /dashboard, /profile
+  at 1366/375 px, editor toolbar still one line (TEMP fake user, restored). tsc/lint/tests pass.
+  Existing pages now render in Lexend but aren't restyled yet. Not committed.
+
+- 2026-10-14 – **Visual redesign started (owner: UI looks dated/placeholder).** Recommended
+  Anthropic's `frontend-design` plugin (owner to install via the card; not installed yet) +
+  the enabled Design plugin. Ran a design critique of landing, signed-in home, dashboard,
+  lesson, editor, kids page (TEMP fake user, restored). Key findings: landing has **made-up
+  claims** (50,000+ users, 1,000+ schools, 100+ lessons, 98% satisfaction, "Curriculum
+  aligned", "multi-user", learning paths "Advanced Components"/"Digital Logic"); hero art is a
+  placeholder box; whole site renders in **Arial** (globals.css `body { font-family: Arial }`
+  overrides the loaded Geist); white text on Carrot 2.2:1 / Celestial 2.7:1 / Sunglow 1.5:1
+  fails contrast; no shared button/card styles. Nothing changed in code yet.
+
+- 2026-10-14 – **Deployed Stage 7.** Committed the "Up next" fix (`a04b4e9`); tsc, 231 tests
+  and `npm run build` passed; fast-forwarded `master` to `a04b4e9` and pushed both branches.
+  Vercel: "Deployment has completed". Live checks: `/`, `/about`, `/privacy`, `/terms`,
+  `/feedback`, `/profile`, `/dashboard` 200, unknown path 404, new About title + footer
+  served, `/profile` logged out → login modal, no console errors. This doc update is not
+  committed yet.
 
 - 2026-10-14 – Committed the stats panel as `feb44e0`. Fixed the dashboard "Up next" banner on
   phones (title was cut to "Capa…"): title wraps up to 2 lines, "Continue"/"Start" label hidden

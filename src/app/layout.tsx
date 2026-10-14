@@ -1,15 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Lexend, Unbounded } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Design tokens in globals.css map these to font-display / font-sans
+const unbounded = Unbounded({
+  variable: "--font-unbounded",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const lexend = Lexend({
+  variable: "--font-lexend",
   subsets: ["latin"],
+  display: "swap",
 });
 
 // Public address of the site, used to make Open Graph / Twitter URLs absolute.
@@ -53,7 +56,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f172a",
+  themeColor: "#31393C",
 };
 
 import { AuthProvider } from "@/context/AuthContext";
@@ -65,10 +68,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    // Font variables go on <html>: the design tokens (globals.css @theme) are defined on :root
+    // and read them there
+    <html lang="en" className={`${unbounded.variable} ${lexend.variable}`}>
+      <body className="antialiased">
         <AuthProvider>
           <ToastProvider>{children}</ToastProvider>
         </AuthProvider>

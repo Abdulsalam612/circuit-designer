@@ -1,28 +1,98 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * CirKit design tokens ("playful but credible"). Use these instead of raw hex values:
+ * bg-paper, text-ink, bg-signal, bg-glow, font-display, rounded-chip/card/panel, shadow-key…
+ * Contrast (WCAG AA) was checked for each pairing noted below. The style guide at /design
+ * (development only) shows them all. Components live in src/components/ui/.
+ */
+@theme {
+  /* Text and outlines – Gunmetal. 11:1 on paper */
+  --color-ink: #31393c;
+  --color-ink-dark: #1d2326; /* lip under dark blocks */
+  --color-ink-muted: #5b666b; /* secondary text, 5.5:1 on paper */
+  --color-ink-faint: #8a959a; /* placeholders, disabled – not for body text */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Surfaces */
+  --color-paper: #f5f8fd; /* page background (with .bg-grid) */
+  --color-surface: #ffffff; /* cards, panels */
+  --color-line: #d9e1ec; /* borders and dividers */
+  --color-line-strong: #b8c4d4;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Action blue – a deeper Brand Blue so white text passes (5.1:1). Buttons, links */
+  --color-signal: #1a66e8;
+  --color-signal-hover: #1659d0;
+  --color-signal-dark: #1048a8; /* key-cap lip */
+  --color-signal-tint: #e8f0fe;
+
+  /* Brand colours, kept for large shapes, icons and illustrations (not small text) */
+  --color-brand: #2176ff;
+  --color-celestial: #33a1fd;
+
+  /* "LED lit" highlight – Sunglow, always with ink text (7.7:1) */
+  --color-glow: #fdca40;
+  --color-glow-hover: #ffd45c;
+  --color-glow-dark: #c99a14; /* its lip / border */
+  --color-glow-tint: #fff6d6;
+
+  /* Kids and attention – Carrot, with ink text (5.3:1); carrot-ink for orange text (6.1:1) */
+  --color-carrot: #f79824;
+  --color-carrot-dark: #c46f0c;
+  --color-carrot-ink: #9a4d00;
+  --color-carrot-tint: #fff0e0;
+
+  /* States */
+  --color-success: #127436; /* 5.2:1 on its tint, white text 5.9:1 */
+  --color-success-tint: #e7f6ec;
+  --color-danger: #c62828; /* white text 5.6:1 */
+  --color-danger-hover: #b02323;
+  --color-danger-dark: #8e1c1c;
+  --color-danger-tint: #fdecec;
+
+  /* Type: Unbounded for headings, Lexend (made for easier reading) for everything else */
+  --font-display: var(--font-unbounded), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-lexend), ui-sans-serif, system-ui, sans-serif;
+
+  /* Corners grow with the element: chip < control < card < panel */
+  --radius-chip: 6px;
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-panel: 22px;
+
+  /* Tactile lip under buttons and cards (like a key cap or a brick), not a soft blur */
+  --shadow-key: 0 2px 0 var(--color-line-strong);
+  --shadow-lift: 0 2px 0 var(--color-line-strong), 0 12px 24px -12px rgb(49 57 60 / 0.25);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Headings use the display face; sizes are set where they're used */
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+/* Engineering-grid paper, the same 20 px grid as the circuit editor */
+.bg-grid {
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(to right, rgb(33 118 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(33 118 255 / 0.06) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Readings and values line up (Lexend tabular figures instead of a monospace font) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* One visible keyboard focus style everywhere */
+:focus-visible {
+  outline: 3px solid var(--color-brand);
+  outline-offset: 2px;
 }
 
 /* Toasts and dialogs (shared across pages) */
@@ -33,6 +103,16 @@ body {
 .animate-pop-in {
   animation: pop-in 0.2s ease-out;
 }
+
+/* A lit LED breathes gently; used by <StatusLed state="active"> */
+@keyframes led-breathe {
+  0%, 100% { box-shadow: 0 0 0 2px var(--led-halo), 0 0 6px 1px var(--led-color); }
+  50% { box-shadow: 0 0 0 2px var(--led-halo), 0 0 12px 3px var(--led-color); }
+}
+.animate-led {
+  animation: led-breathe 2.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-pop-in { animation: none; }
+  .animate-pop-in, .animate-led { animation: none; }
 }
