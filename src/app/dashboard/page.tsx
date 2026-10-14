@@ -186,20 +186,22 @@ export default function DashboardPage() {
                 {upNext ? (
                   <Link
                     href={`/learn/${upNext.id}`}
-                    className="flex items-center justify-between gap-4 rounded-xl bg-[#31393C] text-white p-5 hover:bg-[#31393C]/90 transition-colors group"
+                    className="flex items-center justify-between gap-3 sm:gap-4 rounded-xl bg-[#31393C] text-white p-4 sm:p-5 hover:bg-[#31393C]/90 transition-colors group"
                   >
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="bg-[#FDCA40] p-3 rounded-lg shrink-0">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                      <div className="bg-[#FDCA40] p-2.5 sm:p-3 rounded-lg shrink-0">
                         <Play className="h-5 w-5 text-[#31393C]" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-white/70">{completedCount === 0 ? "Start here" : "Up next"} · Level {upNext.level}</p>
-                        <h3 className="text-lg font-semibold truncate">{upNext.title}</h3>
+                        {/* Wraps rather than cutting off: on phones the banner is narrow */}
+                        <h3 className="text-lg font-semibold leading-snug line-clamp-2 break-words">{upNext.title}</h3>
                       </div>
                     </div>
+                    {/* Just the arrow on phones; the whole banner is the link */}
                     <span className="flex items-center font-semibold text-[#FDCA40] shrink-0">
-                      {completedCount === 0 ? "Start" : "Continue"}
-                      <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                      <span className="hidden sm:inline mr-2">{completedCount === 0 ? "Start" : "Continue"}</span>
+                      <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </span>
                   </Link>
                 ) : (

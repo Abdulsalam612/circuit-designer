@@ -385,9 +385,8 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
    toasts, 404/error pages committed (`3bffa54`, not pushed); **profile page committed (`a267821`, owner tested it signed in – all works). About/Privacy/
    Terms pages + shared footer committed (`c2b0479`). Feedback form committed (`89f329d`). Stats
-   panel done, not committed. **Stage 7 is then complete** except the optional items
-   (Google sign-in, light/dark theme). Small known issue: on phones the dashboard's "Up next"
-   banner truncates the lesson title ("Capa…"). Next (owner to choose): Stage 5 follow-ups /
+   panel committed (`feb44e0`); "Up next" phone fix not committed. **Stage 7 is then complete** except the optional items
+   (Google sign-in, light/dark theme). Next (owner to choose): Stage 5 follow-ups /
    Stage 6 gamification (real streaks + level-up would feed the stats panel). Older notes: About/Contact/Terms/Privacy,
    feedback form, dashboard stats panel.
 2. Stage 5 follow-ups: Guides tab is still hard-coded placeholder cards in `dashboard/page.tsx`
@@ -405,6 +404,12 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed the stats panel as `feb44e0`. Fixed the dashboard "Up next" banner on
+  phones (title was cut to "Capa…"): title wraps up to 2 lines, "Continue"/"Start" label hidden
+  below `sm` (arrow only), tighter padding. `dashboard/page.tsx` only. Tested at 375 px with the
+  longest title (2 lines, fully shown, no sideways scroll) and 1366 px (unchanged: one line +
+  "Continue"), using TEMP fake user/progress (restored). Not committed.
 
 - 2026-10-14 – Committed the feedback form as `89f329d`. **Stage 7: dashboard stats panel** –
   `components/StatsPanel.tsx`, `learningStats` in `lib/lessons.ts` (+4 checks in
