@@ -96,7 +96,7 @@ const CircuitPart = ({
             y={-6}
             width={width + 12}
             height={height + 12}
-            stroke="#f59e0b"
+            stroke="#F79824"
             strokeWidth={2}
             dash={[5, 3]}
             cornerRadius={8}
@@ -109,7 +109,7 @@ const CircuitPart = ({
             y={-4}
             width={width + 8}
             height={height + 8}
-            stroke="#3498db"
+            stroke="#1A66E8"
             strokeWidth={2}
             cornerRadius={6}
           />
@@ -124,7 +124,8 @@ const CircuitPart = ({
         <Text
           text={label}
           fontSize={11}
-          fill="#4b5563"
+          fontFamily="Lexend, ui-sans-serif, sans-serif"
+          fill="#5B666B"
           listening={false}
           {...(vertical
             ? { x: height / 2 + 4, y: -6 }

@@ -51,18 +51,19 @@ const partBox = (c: CircuitComponent): Box => {
 // that grows with the current (gently, so tiny and huge currents both look sensible)
 const FLOW_NAME = "current-flow"
 const FLOW_ID_PREFIX = "flow-"
-const FLOW_COLOR = "#f59e0b"
+const FLOW_COLOR = "#F79824" // carrot, as in the landing hero
 const FLOW_DOT_SPACING = 14
 const FLOW_MIN_AMPS = 1e-6
 const flowSpeed = (amps: number) => Math.min(160, 25 + 30 * Math.log10(1 + amps * 1000))
 
-const WIRE_COLOR = "#1f2937"
-const SELECT_COLOR = "#3498db"
-const HOVER_COLOR = "#60a5fa"
+// Canvas colours match the design tokens in globals.css (ink, signal, celestial, paper…)
+const WIRE_COLOR = "#31393C"
+const SELECT_COLOR = "#1A66E8"
+const HOVER_COLOR = "#33A1FD"
 // A press on a wire only becomes a drag after moving this many screen pixels, so a plain
 // click still selects it
 const WIRE_DRAG_THRESHOLD = 4
-const INVALID_COLOR = "#ef4444"
+const INVALID_COLOR = "#C62828"
 
 interface CircuitCanvasProps {
   // The circuit is owned by the page (which keeps undo history and saves it)
@@ -77,10 +78,13 @@ interface CircuitCanvasProps {
   fitContainer?: boolean;
 }
 
+const zoomButton = "px-2.5 py-1 text-sm font-medium text-ink hover:bg-signal-tint transition-colors"
+
 const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation, fitContainer = false }) => {
   // Set initial dimensions to avoid hydration errors
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [isMounted, setIsMounted] = useState(false)
+  const [showHelp, setShowHelp] = useState(true)
   
   // State for stage position and scale (for pan and zoom)
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
@@ -224,7 +228,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       ghost.style.transform = `translate3d(${centreX - ghostWidth / 2}px, ${centreY - ghostHeight / 2}px, 0) rotate(${rotation}deg)`;
       ghost.style.opacity = overCanvas ? '1' : '0.5';
       // Red outline: this spot is taken and dropping here does nothing
-      ghost.style.outlineColor = blocked ? '#ef4444' : '#3498db';
+      ghost.style.outlineColor = blocked ? INVALID_COLOR : SELECT_COLOR;
       document.body.style.cursor = blocked ? 'not-allowed' : 'grabbing';
     };
 
@@ -252,7 +256,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
           pointerEvents: 'none',
           zIndex: '9999',
           willChange: 'transform',
-          outline: '2px dashed #3498db',
+          outline: `2px dashed ${SELECT_COLOR}`,
           outlineOffset: '4px',
           borderRadius: '2px',
           background: `url(${iconFor({ type: componentType })}) center / 100% 100% no-repeat`,
@@ -766,14 +770,14 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
     return (
       <Label x={component.x} y={component.y - halfHeight - 6} scaleX={1 / scale} scaleY={1 / scale} listening={false}>
         <Tag
-          fill="#1f2937"
-          opacity={0.92}
+          fill={WIRE_COLOR}
+          opacity={0.94}
           cornerRadius={6}
           pointerDirection="down"
           pointerWidth={10}
           pointerHeight={6}
         />
-        <Text text={lines.join("\n")} fontSize={12} lineHeight={1.4} padding={8} fill="white" fontFamily="ui-monospace, monospace" />
+        <Text text={lines.join("\n")} fontSize={12} lineHeight={1.4} padding={8} fill="white" fontFamily="Lexend, ui-sans-serif, sans-serif" />
       </Label>
     );
   };
@@ -975,7 +979,8 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
         ctx.moveTo(p, -GRID_EXTENT);
         ctx.lineTo(p, GRID_EXTENT);
       }
-      ctx.strokeStyle = major ? "#d1d5db" : "#eef0f3";
+      // The site's engineering-grid paper
+      ctx.strokeStyle = major ? "#cbd8ec" : "#e6edf8";
       // Keep lines 1 screen pixel wide at any zoom
       ctx.lineWidth = 1 / scale;
       ctx.stroke();
@@ -1002,7 +1007,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
 
   // Don't render anything until component is mounted on client
   if (!isMounted) {
-    return <div className="w-full h-full bg-gray-100 flex items-center justify-center text-black font-medium">Loading canvas...</div>
+    return <div className="flex h-full w-full items-center justify-center bg-paper text-ink-muted">Loading the board…</div>
   }
 
   return (
@@ -1024,10 +1029,10 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
         {/* Grid on its own non-interactive layer: it isn't redrawn while components move,
             and clicks on empty space go straight to the stage (which deselects) */}
         <Layer listening={false}>
-          <Rect width={GRID_EXTENT * 2} height={GRID_EXTENT * 2} x={-GRID_EXTENT} y={-GRID_EXTENT} fill="#f9f9f9" />
+          <Rect width={GRID_EXTENT * 2} height={GRID_EXTENT * 2} x={-GRID_EXTENT} y={-GRID_EXTENT} fill="#F5F8FD" />
           <Shape sceneFunc={drawGrid} perfectDrawEnabled={false} />
           {/* Center marker */}
-          <Circle x={0} y={0} radius={4} fill="#cbd5e1" />
+          <Circle x={0} y={0} radius={4} fill="#b8c4d4" />
         </Layer>
 
         <Layer ref={circuitLayerRef}>
@@ -1044,47 +1049,42 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       
       {/* Zoom controls portal */}
       {isMounted && createPortal(
-        <div className="flex items-center space-x-4">
-          <div className="text-sm font-medium text-black">Zoom: {Math.round(scale * 100)}%</div>
-          <div className="flex items-center space-x-1">
-            <button 
-              onClick={handleFitToScreen} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
-            >
-              Fit
-            </button>
-            <button 
-              onClick={handleResetZoom} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
-            >
-              Reset
-            </button>
-            <button 
-              onClick={() => setScale(s => Math.min(s * 1.2, 5))} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
-            >
-              +
-            </button>
-            <button 
-              onClick={() => setScale(s => Math.max(s / 1.2, 0.1))} 
-              className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 text-black font-medium rounded transition-colors"
-            >
-              -
-            </button>
+        <div className="flex items-center gap-1.5" role="group" aria-label="Zoom">
+          <div className="flex items-center rounded-control border border-line-strong bg-surface">
+            <button onClick={() => setScale(s => Math.max(s / 1.2, 0.1))} className={zoomButton} title="Zoom out" aria-label="Zoom out">−</button>
+            <span className="tabular w-14 border-x border-line text-center text-xs font-medium text-ink" aria-live="polite">{Math.round(scale * 100)}%</span>
+            <button onClick={() => setScale(s => Math.min(s * 1.2, 5))} className={zoomButton} title="Zoom in" aria-label="Zoom in">+</button>
           </div>
+          <button onClick={handleFitToScreen} className={`${zoomButton} rounded-control border border-line-strong bg-surface`} title="Fit the circuit on screen">Fit</button>
+          <button onClick={handleResetZoom} className={`${zoomButton} rounded-control border border-line-strong bg-surface`} title="Back to 100%">Reset</button>
         </div>,
         document.getElementById('zoom-controls-container') || document.body
       )}
       
-      {/* Instructions overlay */}
-      <div className="absolute bottom-3 left-3 bg-white/90 px-2 py-1.5 rounded shadow text-xs text-gray-700 pointer-events-none">
-        <p>Drag components from sidebar</p>
-        <p>Drag from a component&apos;s end to draw a wire</p>
-        <p>Drag a wire to move it · click a wire, then drag its dot to branch</p>
-        <p>Drag on empty space to box-select · Shift+click to add</p>
-        <p>R rotate · Delete remove · Esc deselect</p>
-        <p>Right-click + drag to pan · wheel to zoom</p>
-      </div>
+      {/* Shortcuts: open by default, can be folded away so it doesn't cover the board */}
+      {showHelp ? (
+        <div className="absolute bottom-3 left-3 max-w-xs rounded-card border border-line bg-surface/95 p-3 text-xs text-ink shadow-key backdrop-blur-sm">
+          <div className="mb-1.5 flex items-center justify-between gap-4">
+            <span className="font-semibold">How to build</span>
+            <button onClick={() => setShowHelp(false)} className="rounded-chip px-1.5 text-ink-muted hover:bg-ink/5 hover:text-ink" aria-label="Hide the shortcuts">Hide</button>
+          </div>
+          <ul className="space-y-0.5 text-ink-muted">
+            <li>Drag parts from the left onto the board</li>
+            <li>Drag from a part&apos;s end to draw a wire</li>
+            <li>Drag a wire to move it; click a wire, then drag its dot to branch</li>
+            <li>Drag on empty space to select several; Shift+click to add</li>
+            <li><kbd className="font-semibold text-ink">R</kbd> rotate, <kbd className="font-semibold text-ink">Delete</kbd> remove, <kbd className="font-semibold text-ink">Esc</kbd> deselect</li>
+            <li>Right-click and drag to pan, scroll to zoom</li>
+          </ul>
+        </div>
+      ) : (
+        <button
+          onClick={() => setShowHelp(true)}
+          className="absolute bottom-3 left-3 rounded-control border border-line bg-surface/95 px-2.5 py-1.5 text-xs font-medium text-ink-muted shadow-key hover:text-ink"
+        >
+          How to build
+        </button>
+      )}
     </div>
   );
 };

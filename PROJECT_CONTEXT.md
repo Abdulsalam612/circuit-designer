@@ -94,7 +94,7 @@ only `react` → would break at runtime).
 | Route | File | Notes |
 |---|---|---|
 | `/` | `page.tsx` | Landing page (sections in `components/landing/`, redesigned 14 Oct 2026) + login/signup/password-reset modals (Firebase). **Signed in:** shows `WelcomeBack` (recent circuits, New circuit, Continue learning) instead of the hero. Opens the login modal when visited as `/?login=1&next=/path`, the signup modal for `/?signup=1`. |
-| `/simulation` | `simulation/page.tsx` | **The circuit editor.** Owns the circuit state (undo history), saving, header toolbar, Properties panel, Simulation panel. Loads a circuit from `?id=`. Protected. |
+| `/simulation` | `simulation/page.tsx` | **The circuit editor** (frame redesigned 14 Oct 2026: token toolbar, glow Run button, StatusLed status strip, Properties aside; dead Settings button removed). Owns the circuit state (undo history), saving, header toolbar, Properties panel, Simulation panel. Loads a circuit from `?id=`. Protected. |
 | `/circuits` | `circuits/page.tsx` | "My Circuits" (redesigned 14 Oct 2026: grid of cards with a `CircuitThumbnail` of each circuit): open, rename, duplicate, delete. Back button → `/`. Protected. |
 | `/dashboard` | `dashboard/page.tsx` | "Your learning" (redesigned 14 Oct 2026): "Up next" ink card, `StatsPanel`, the course as one panel per level with `LessonPath` (lessons as LEDs on a wire). The placeholder Guides tab and dead Quick actions were removed. Protected. |
 | `/profile` | `profile/page.tsx` | **Profile & settings**: overview (avatar, name, email, join date, level/points/lessons), name + preset avatar (saved together), email (verified badge, send verification, change via `verifyBeforeUpdateEmail`), password change, delete account (password in a `ConfirmDialog`). Email/password/delete ask for the current password every time (re-auth). Own login guard (not `useRequireAuth`) so deleting lands on `/`, not the login box. Protected. |
@@ -426,10 +426,9 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 
 **Current focus (14 Oct 2026): visual redesign** of the website. Critique done; direction
 "playful but credible" approved; design system committed (`e0c8852`); **landing page
-redesigned (`7d0c63b`); **dashboard redesigned (`f6719b4`); **lesson pages (`7986cb6`); **profile, My Circuits,
-feedback + token sweep of shared components** (not committed). Old styles now left only in:
-auth modals (`app/page.tsx`), the editor (`simulation/page.tsx`, `PropertiesPanel`,
-`CircuitCanvas`, sidebar – also used by build challenges) and kids mode (`/play`, `/kidscircuit`). Known: `/play` overflows by ~20 px on phones (pre-existing).
+redesigned (`7d0c63b`); **dashboard redesigned (`f6719b4`); **lesson pages (`7986cb6`); profile/My Circuits/shared
+pieces (`9e61fc0`); **editor frame redesigned** (not committed). Old styles now left only in
+the login/signup/reset modals (`app/page.tsx`) and kids mode (`/play`, `/kidscircuit`). Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -455,6 +454,21 @@ auth modals (`app/page.tsx`), the editor (`simulation/page.tsx`, `PropertiesPane
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed profile/My Circuits/shared pieces (`9e61fc0`). **Editor redesign
+  (frame only – no editing logic changed)**: `simulation/page.tsx` toolbar (logo, My Circuits,
+  name in display font, save status, icon actions, Run = glow `Button`; dead Settings button
+  removed), status strip with `StatusLed` (off / active / warning), Properties `<aside>` with
+  tokenised simulation messages; `CircuitSidebar` → "Parts" bin of tactile tiles (keeps
+  `componentItem` + `data-component-type` for interact.js); `PropertiesPanel` on tokens
+  (tabular readings, shared input, segmented Open/Closed, secondary buttons); `CircuitCanvas`
+  colours from tokens (grid = site grid paper, wires ink, selection signal, flow carrot,
+  tooltip in Lexend), zoom as a segmented control, collapsible "How to build" card;
+  `CircuitPart` label font/colours. Also restyles the build-challenge workbench. Tested with the
+  editor login bypass (restored; diff vs pre-bypass copy = only the intended fix): sidebar drops,
+  import, Run (lamp lit, 7 flowing wires, status), select → readings, value edit 4k7 →
+  1.91 mA, invalid value + Esc, undo, switch Open → warning + orange LED, Stop, zoom in/out/
+  reset, help hide/show, wire drawing (L-wire). tsc/lint/tests pass. Not committed.
 
 - 2026-10-14 – Committed lesson pages (`7986cb6`). **Profile + My Circuits redesign**: My
   Circuits is a card grid with real circuit thumbnails (new `CircuitThumbnail`; `listCircuits`

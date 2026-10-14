@@ -11,6 +11,8 @@ interface CircuitSidebarProps {
   types?: ComponentType[];
 }
 
+// The parts bin. Each tile is dragged onto the board with interact.js, which finds tiles by
+// the `componentItem` class and `data-component-type` – keep both.
 const CircuitSidebar = ({ types = COMPONENT_TYPES }: CircuitSidebarProps) => {
   const components = types.map(type => ({
     type,
@@ -19,28 +21,24 @@ const CircuitSidebar = ({ types = COMPONENT_TYPES }: CircuitSidebarProps) => {
   }));
   return (
     <div className={styles.sidebar}>
-      <h3 className="text-black font-bold text-lg">Components</h3>
+      <h3 className="font-display text-base font-semibold tracking-[-0.01em] text-ink">Parts</h3>
+      <p className="mt-0.5 text-xs text-ink-muted">Drag a part onto the board</p>
       <div className={styles.componentList}>
         {components.map((component) => (
-          <div 
+          <div
             key={component.type}
             className={`${styles.componentItem} componentItem`}
             data-component-type={component.type}
           >
-            {/* Fallback to text if icon not available */}
-            {component.icon ? (
-              <div className={styles.imageWrapper}>
-                <Image 
-                  src={component.icon} 
-                  alt={component.label} 
-                  width={24} 
-                  height={24}
-                  style={{ objectFit: 'contain' }}
-                />
-              </div>
-            ) : (
-              <div className={styles.iconPlaceholder}>{component.label[0]}</div>
-            )}
+            <div className={styles.imageWrapper}>
+              <Image
+                src={component.icon}
+                alt=""
+                width={56}
+                height={22}
+                style={{ objectFit: 'contain' }}
+              />
+            </div>
             <span>{component.label}</span>
           </div>
         ))}

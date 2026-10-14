@@ -5,6 +5,12 @@ import { ArrowLeftRight, RotateCw } from "lucide-react";
 import type { CircuitComponent } from "@/types/circuit";
 import { COMPONENT_DEFS, formatValue, parseValue } from "@/lib/components";
 import { formatAmps, formatVolts, formatWatts, type PartReading } from "@/lib/simulation";
+import { buttonClass } from "@/components/ui/Button";
+import { inputClass } from "@/components/ui/Field";
+import StatusLed from "@/components/ui/StatusLed";
+
+// Small grey label above each property
+const LABEL = "mb-1.5 block text-xs font-medium text-ink-muted";
 
 interface PropertiesPanelProps {
   component: CircuitComponent | null;
@@ -52,14 +58,13 @@ const ValueInput = ({ value, unit, onCommit }: { value: number; unit: string; on
           if (e.key === "Enter") (e.target as HTMLInputElement).blur();
           if (e.key === "Escape") { setText(formatValue(value, unit)); setInvalid(false); }
         }}
-        className={`w-full rounded-md border px-3 py-2 font-mono text-sm text-gray-900 outline-none focus:ring-2 ${
-          invalid ? "border-red-400 focus:ring-red-200" : "border-gray-300 focus:ring-blue-200"
-        }`}
+        aria-invalid={invalid}
+        className={`${inputClass} tabular py-2 text-sm`}
       />
       {invalid ? (
-        <p className="mt-1 text-xs text-red-500">Enter a number, e.g. 4.7k or 10u</p>
+        <p className="mt-1.5 text-xs text-danger" role="alert">Enter a number, e.g. 4.7k or 10u</p>
       ) : (
-        <p className="mt-1 text-xs text-gray-400">Prefixes: p n µ(u) m k M G</p>
+        <p className="mt-1.5 text-xs text-ink-muted">Prefixes: p n µ(u) m k M G</p>
       )}
     </div>
   );
@@ -68,12 +73,11 @@ const ValueInput = ({ value, unit, onCommit }: { value: number; unit: string; on
 const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionCount = 0, onChange, onRotate, onFlip, reading }) => {
   if (!component) {
     return (
-      <div className="text-center text-gray-400 mt-8">
-        <div className="text-gray-300 mb-2">
-          <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-        </div>
-        <p className="text-sm">
-          {selectionCount > 1 ? `${selectionCount} items selected` : "Select a component to view properties"}
+      <div className="mt-6 rounded-card border border-dashed border-line-strong px-4 py-6 text-center">
+        <p className="text-sm text-ink-muted">
+          {selectionCount > 1
+            ? `${selectionCount} items selected. Press Delete to remove them, or drag to move them together.`
+            : "Click a part to change its value, rotate it or see its readings."}
         </p>
       </div>
     );
@@ -83,31 +87,34 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
   return (
     <div className="space-y-5">
       <div>
-        <span className="block text-xs text-gray-500">Type</span>
-        <span className="font-medium text-gray-900">{def.label}</span>
+        <span className={LABEL}>Part</span>
+        <span className="font-display text-lg font-semibold tracking-[-0.01em] text-ink">{def.label}</span>
       </div>
 
       {reading && component.type !== "ground" && (
-        <div className="rounded-lg bg-green-50 border border-green-200 p-3">
-          <span className="block text-xs font-semibold text-green-700 mb-2">Live readings</span>
-          <dl className="grid grid-cols-2 gap-y-1 text-sm">
-            <dt className="text-gray-500">Voltage</dt><dd className="font-mono text-gray-900">{formatVolts(reading.voltage)}</dd>
-            <dt className="text-gray-500">Current</dt><dd className="font-mono text-gray-900">{formatAmps(reading.current)}</dd>
-            <dt className="text-gray-500">Power</dt><dd className="font-mono text-gray-900">{formatWatts(reading.power)}</dd>
+        <div className={`rounded-card border p-3.5 ${reading.overloaded ? "border-danger/30 bg-danger-tint" : "border-signal/25 bg-signal-tint"}`}>
+          <span className="mb-2 flex items-center gap-2 text-xs font-semibold text-ink">
+            <StatusLed state={reading.overloaded ? "warning" : "active"} />
+            Live readings
+          </span>
+          <dl className="tabular grid grid-cols-2 gap-y-1 text-sm">
+            <dt className="text-ink-muted">Voltage</dt><dd className="font-medium text-ink">{formatVolts(reading.voltage)}</dd>
+            <dt className="text-ink-muted">Current</dt><dd className="font-medium text-ink">{formatAmps(reading.current)}</dd>
+            <dt className="text-ink-muted">Power</dt><dd className="font-medium text-ink">{formatWatts(reading.power)}</dd>
             {reading.brightness !== undefined && (
               <>
-                <dt className="text-gray-500">Brightness</dt>
-                <dd className="font-mono text-gray-900">{Math.round(reading.brightness * 100)}%</dd>
+                <dt className="text-ink-muted">Brightness</dt>
+                <dd className="font-medium text-ink">{Math.round(reading.brightness * 100)}%</dd>
               </>
             )}
           </dl>
-          {reading.overloaded && <p className="mt-2 text-xs font-semibold text-red-600">Too much current – this LED would burn out.</p>}
+          {reading.overloaded && <p className="mt-2 text-xs font-semibold text-danger">Too much current – this LED would burn out.</p>}
         </div>
       )}
 
       {def.value && component.value !== undefined && (
         <label className="block">
-          <span className="block text-xs text-gray-500 mb-1">{def.value.label}</span>
+          <span className={LABEL}>{def.value.label}</span>
           <ValueInput
             value={component.value}
             unit={def.value.unit}
@@ -118,14 +125,15 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
 
       {def.toggles && (
         <div>
-          <span className="block text-xs text-gray-500 mb-1">State</span>
-          <div className="inline-flex rounded-md border border-gray-300 overflow-hidden text-sm">
+          <span className={LABEL}>State</span>
+          <div className="inline-flex rounded-control border border-line-strong bg-paper p-0.5 text-sm" role="group" aria-label="Switch state">
             {[false, true].map(closed => (
               <button
                 key={String(closed)}
                 onClick={() => onChange?.({ closed })}
-                className={`px-3 py-1.5 ${
-                  !!component.closed === closed ? "bg-blue-500 text-white" : "bg-white text-gray-700 hover:bg-gray-50"
+                aria-pressed={!!component.closed === closed}
+                className={`rounded-[8px] px-3 py-1 transition-colors ${
+                  !!component.closed === closed ? "bg-surface font-medium text-ink shadow-key" : "text-ink-muted hover:text-ink"
                 }`}
               >
                 {closed ? "Closed" : "Open"}
@@ -136,13 +144,10 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
       )}
 
       <div>
-        <span className="block text-xs text-gray-500 mb-1">Rotation</span>
+        <span className={LABEL}>Rotation</span>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-gray-800">{component.rotation}&deg;</span>
-          <button
-            onClick={onRotate}
-            className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-          >
+          <span className="tabular w-10 text-ink">{component.rotation}&deg;</span>
+          <button onClick={onRotate} className={buttonClass("secondary", "sm")}>
             <RotateCw className="h-3.5 w-3.5" /> Rotate (R)
           </button>
         </div>
@@ -150,14 +155,11 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
 
       {def.polarized && (
         <div>
-          <span className="block text-xs text-gray-500 mb-1">Direction</span>
-          <button
-            onClick={onFlip}
-            className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-          >
+          <span className={LABEL}>Direction</span>
+          <button onClick={onFlip} className={buttonClass("secondary", "sm")}>
             <ArrowLeftRight className="h-3.5 w-3.5" /> Flip direction
           </button>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1.5 text-xs text-ink-muted">
             {component.type === "battery"
               ? "Swaps the + and − ends. The red + marks the positive end."
               : "Current only flows from the flat side of the triangle to the bar."}
@@ -166,8 +168,8 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
       )}
 
       <div>
-        <span className="block text-xs text-gray-500">Position</span>
-        <span className="font-mono text-gray-800">x: {Math.round(component.x)}, y: {Math.round(component.y)}</span>
+        <span className={LABEL}>Position</span>
+        <span className="tabular text-sm text-ink-muted">x {Math.round(component.x)}, y {Math.round(component.y)}</span>
       </div>
     </div>
   );
