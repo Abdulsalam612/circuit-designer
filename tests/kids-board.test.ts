@@ -5,6 +5,7 @@ import { isLayoutValid } from '../src/lib/wires';
 import { allGaps, boardToLayout, canPlace, checkGoals, kidsFeedback, partAt, pieceGaps, rotated, type Board } from '../src/lib/kids/board';
 import makeItGo from '../src/content/kids/missions/make-it-go';
 import faster from '../src/content/kids/missions/faster';
+import lightsOn from '../src/content/kids/missions/lights-on';
 import { CIRCUIT_MISSIONS } from '../src/content/kids';
 import type { Piece, PieceKind } from '../src/types/kids';
 
@@ -151,6 +152,41 @@ const solution = (): Piece[] => [
   // A switch beside the loop (not in it) controls nothing
   const aside = [...faster.start, piece('switch', 1, 4, 'h', { closed: true })];
   check('faster: a switch outside the loop does not count', !checkGoals(aside, faster.goals)[1].met);
+}
+
+// ---- "Lights on": two bulbs, in a row and side by side ----
+{
+  const loop = wires([[4, 0, 'v'], [4, 1, 'v'], [4, 2, 'v'], [0, 3, 'h'], [1, 3, 'h'], [2, 3, 'h'], [3, 3, 'h']]);
+  const sideBySide = [
+    piece('battery', 0, 1, 'v'), piece('lamp', 1, 0, 'h'), piece('lamp', 1, 1, 'h'),
+    ...wires([[0, 0, 'v'], [0, 0, 'h'], [3, 0, 'h'], [0, 1, 'h'], [3, 1, 'h']]), ...loop,
+  ];
+  check('lights: the side-by-side answer fits the board', sideBySide.every((p, i) => canPlace(sideBySide.slice(0, i), p, lightsOn.board)));
+  check('lights: side by side uses only the tray', lightsOn.tray.every(t => sideBySide.filter(p => p.kind === t.kind).length <= t.count));
+  const parallel = simulate(boardToLayout(sideBySide));
+  const bright = sideBySide.filter(p => p.kind === 'lamp').map(p => parallel.readings[p.id].brightness ?? 0);
+  check('lights: side by side, both bulbs are fully bright', bright.every(b => b > 0.95), bright.join());
+  check('lights: side by side meets every goal', checkGoals(sideBySide, lightsOn.goals).every(g => g.met));
+  check('lights: side by side gets the good news', kidsFeedback(sideBySide, parallel).tone === 'good');
+
+  const inARow = [
+    piece('battery', 0, 1, 'v'), piece('lamp', 0, 0, 'h'), piece('lamp', 2, 0, 'h'),
+    ...wires([[0, 0, 'v']]), ...loop,
+  ];
+  check('lights: the in-a-row build fits the board', inARow.every((p, i) => canPlace(inARow.slice(0, i), p, lightsOn.board)));
+  const series = simulate(boardToLayout(inARow));
+  const dim = inARow.filter(p => p.kind === 'lamp').map(p => series.readings[p.id].brightness ?? 0);
+  check('lights: in a row, both bulbs are dim', dim.every(b => b > 0.2 && b < 0.5), dim.join());
+  const rowGoals = checkGoals(inARow, lightsOn.goals);
+  check('lights: in a row, "both on" is met but not "both bright"', rowGoals[0].met && !rowGoals[1].met);
+  check('lights: in a row, kids are nudged to give each bulb its own path', kidsFeedback(inARow, series).text.includes('own path'));
+
+  const oneDark = sideBySide.filter(p => !(p.kind === 'wire' && p.at.c === 3 && p.at.r === 1));
+  const oneDarkResult = simulate(boardToLayout(oneDark));
+  check('lights: a bulb out of the loop stays dark', !checkGoals(oneDark, lightsOn.goals)[0].met);
+  check('lights: kids are told one bulb is still dark', kidsFeedback(oneDark, oneDarkResult).text.includes('still dark'));
+  check('lights: an empty loop talks about the bulb, not a motor',
+    kidsFeedback([piece('battery', 0, 1, 'v'), piece('lamp', 1, 0, 'h')], simulate(boardToLayout([piece('battery', 0, 1, 'v'), piece('lamp', 1, 0, 'h')]))).text.includes('the bulb'));
 }
 
 // ---- Content checks ----

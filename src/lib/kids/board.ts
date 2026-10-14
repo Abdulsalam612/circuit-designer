@@ -154,7 +154,7 @@ const goalMet = (pieces: Piece[], goal: CircuitGoal, result: SimulationResult): 
       });
     }
     case 'lamp-lit':
-      return of('lamp').some(r => (r.brightness ?? 0) >= (goal.minBrightness ?? 0.3));
+      return of('lamp').filter(r => (r.brightness ?? 0) >= (goal.minBrightness ?? 0.3)).length >= (goal.count ?? 1);
     case 'switch-controls':
       // Judged with the switch on and off, whichever way it's set now
       return pieces.some(sw => sw.kind === 'switch'
@@ -174,6 +174,13 @@ export const kidsFeedback = (pieces: Piece[], result: SimulationResult): { tone:
     return { tone: 'problem', text: 'Short circuit! The electricity is taking a shortcut straight back to the battery. That makes real batteries hot. Take a wire out.' };
   }
   if (isGoing(pieces, result)) {
+    const lamps = pieces.filter(p => p.kind === 'lamp').map(p => result.readings[p.id]?.brightness ?? 0);
+    if (lamps.some(b => b > 0.05) && lamps.some(b => b <= 0.05)) {
+      return { tone: 'problem', text: "One bulb is still dark: it isn’t part of a complete loop yet." };
+    }
+    if (lamps.length > 1 && Math.max(...lamps) < 0.6) {
+      return { tone: 'problem', text: "Your bulbs are on, but dim. Bulbs in a row share the battery’s push. Can you give each bulb its own path from one end of the battery to the other?" };
+    }
     return { tone: 'good', text: 'Electricity is flowing round your loop!' };
   }
   if (pieces.some(p => p.kind === 'switch' && !p.closed)) {
@@ -185,5 +192,6 @@ export const kidsFeedback = (pieces: Piece[], result: SimulationResult): { tone:
     isGoing(pieces, simulate(boardToLayout(pieces.map(p => (p.id === b.id ? { ...p, flipped: !p.flipped } : p))))))) {
     return { tone: 'problem', text: 'Your batteries are pushing against each other, so they cancel out. Turn one of them around so their + ends point the same way round the loop.' };
   }
-  return { tone: 'problem', text: 'Nothing is happening yet. Electricity needs a complete loop: out of the battery, through the motor, and back to the battery.' };
+  const through = pieces.some(p => p.kind === 'motor') ? 'the motor' : pieces.some(p => p.kind === 'lamp') ? 'the bulb' : 'your parts';
+  return { tone: 'problem', text: `Nothing is happening yet. Electricity needs a complete loop: out of the battery, through ${through}, and back to the battery.` };
 };

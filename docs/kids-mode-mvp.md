@@ -47,6 +47,9 @@ board becomes a real `CircuitLayout`. The kids' battery is 4.5 V, so one battery
 motor at half speed and two in series at full speed. **"Faster!"** (built) starts from the
 finished "Make it go" loop: take wires off, add a second battery (full speed) and a switch
 (start/stop). A battery facing the wrong way cancels the other out, and the feedback says so.
+**"Lights on"** (built): two headlight bulbs from one battery. In a row both glow dimly (each
+gets half the push, about a third as bright), so only "both on" is met and the feedback asks
+for "its own path"; side by side each bulb gets the full push and both shine.
 
 ### Part 2: a code mission ("Drive to the flag")
 
@@ -138,8 +141,8 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 
 1. **Engine** – motor + hub models, runner, tests (no UI). *Done.*
 2. **Workbench** – `/kids` with Build / Code / Play for "Drive to the flag", Blockly themed. *Done.*
-3. **Circuits first** – snap board + "Make it go" and "Faster!"; `/kids` split into Part 1 / Part 2. *Done.*
-4. **More missions** – Part 1: "Lights on", "Backwards"; Part 2's build step
+3. **Circuits first** – snap board + "Make it go", "Faster!" and "Lights on"; `/kids` split into Part 1 / Part 2. *Done.*
+4. **More missions** – Part 1: "Backwards"; Part 2's build step
    becomes the snap board with a hub port in place of the switch; stars saved to progress;
    retire `/play`, `/kidscircuit`.
 5. **Pitch build** – polish, a 60-second demo video (OpenMontage), teacher one-pager.

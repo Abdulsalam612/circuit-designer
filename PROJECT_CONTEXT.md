@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 61 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 76 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -199,9 +199,10 @@ only `react` → would break at runtime).
   covered), ends on the same stud connect; `canPlace`, `partAt` (a part centred on the tapped
   stud, across if it fits, else upright), `rotated`, `boardToLayout` (real layout; kids battery 4.5 V so one battery =
   half motor speed, two in series = full), `checkGoals` (`motor-spins` ± direction, `lamp-lit`,
-  `no-short` – needs a battery, `switch-controls` – judged with the switch on and off),
-  `kidsFeedback` (also "batteries pushing against each other"). Missions in `content/kids/`
-  (Part 1 `make-it-go`, `faster`; Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
+  `lamp-lit` takes a `count` of bulbs, `no-short` – needs a battery, `switch-controls` – judged with the switch on and off),
+  `kidsFeedback` (also "batteries pushing against each other", "one bulb is still dark",
+  "bulbs on but dim – give each its own path"; the open-loop message names the motor or bulb). Missions in `content/kids/`
+  (Part 1 `make-it-go`, `faster`, `lights-on`; Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
   hides parts (the port) from the editor's parts bin (`EDITOR_TYPES`); the motor is in the editor.
 - `lib/circuitStore.ts` – Firestore CRUD for circuits, `parseLayout` (validation), JSON
   import/export (`format: 'cirkit-circuit'`).
@@ -474,9 +475,10 @@ car from parts → code it with blocks → watch it drive; ages 8–11; simulati
 in phase 2; Blockly; motor + hub parts in the real solver). Clickable mock-up:
 https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. Milestone 1 (engine, `3f61892`) and **milestone 2 (the `/kids` workbench with Blockly) done**
 and **circuits first done**: snap board + Part 1 mission "Make it go", `/kids` split into
-Part 1 / Part 2 (committed `94f9ed5`). Then **"Faster!"** (second battery + switch), parts placed
-on studs, Rotate, tap-to-flick switch – **not committed**.
-Next: more Part 1 missions ("Lights on" bulbs, "Backwards");
+Part 1 / Part 2 (committed `94f9ed5`). **"Faster!"** (second battery + switch), parts placed
+on studs, Rotate, tap-to-flick switch (committed `877aaf6`). **"Lights on"** (two bulbs: in a row
+dim, side by side bright) – **not committed**.
+Next: Part 1 "Backwards";
 Part 2's Build step to become the snap board with a hub port in place of the switch; save
 stars to progress; retire `/play` and `/kidscircuit`.
 Open design question for the owner: "end of program stops everything" also switches the light
@@ -507,6 +509,13 @@ off immediately (so "light B on" just before the end is only a flash). Known: `/
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
 
+- 2026-10-14 – Committed "Faster!" (`877aaf6`). **"Lights on" mission**: two headlight bulbs from
+  one 4.5 V battery (lamp 30 Ω): in a row each ≈ 0.34 bright → goal "both on" met, "both bright"
+  (≥ 0.8) not, feedback "give each bulb its own path"; side by side each 1.0 → solved.
+  `lamp-lit` gains `count`; feedback for a dark bulb and dim bulbs; open-loop text names the
+  part. Board tests 61 → 76. Browser-tested at 1194×834: built in a row (real tap on a bulb) →
+  dim glow + nudge; moved the second bulb to its own row + 4 wires → both bright, 3 stars,
+  "Next: Drive to the flag"; 375 px no overflow; no console errors after reload.
 - 2026-10-14 – Committed kids milestone 2 + circuits first (`94f9ed5`). **"Faster!" mission +
   board fixes** (owner: gaps overlapped, and tapping one gap put a battery on two): wire targets
   are slim non-overlapping gap tiles; part targets are studs (`partAt`, part centred on the

@@ -84,7 +84,8 @@ export interface Piece {
 // What the simulator must show for the mission to be done
 export type CircuitGoal =
   | { kind: 'motor-spins'; text: string; direction?: 'forwards' | 'backwards'; minSpeed?: number }
-  | { kind: 'lamp-lit'; text: string; minBrightness?: number }
+  // At least `count` bulbs (default 1) shine at `minBrightness` or more
+  | { kind: 'lamp-lit'; text: string; minBrightness?: number; count?: number }
   | { kind: 'no-short'; text: string }
   // A switch in the loop really controls it: on, the motor runs; off, it stops
   | { kind: 'switch-controls'; text: string };
