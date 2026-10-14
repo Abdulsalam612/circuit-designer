@@ -116,3 +116,14 @@ h1, h2, h3 {
 @media (prefers-reduced-motion: reduce) {
   .animate-pop-in, .animate-led { animation: none; }
 }
+
+/* Current flowing along a wire in the landing hero (dots, like the editor) */
+@keyframes hero-flow {
+  to { stroke-dashoffset: -16; }
+}
+.hero-flow {
+  animation: hero-flow 0.5s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-flow { animation: none; }
+}

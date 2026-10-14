@@ -3,8 +3,10 @@
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import type { User } from "firebase/auth"
-import { ArrowRight, BookOpen, CircuitBoard, FolderOpen, Loader2, Plus } from "lucide-react"
+import { BookOpen, CircuitBoard, FolderOpen, Loader2, Plus } from "lucide-react"
 import { listCircuits, type CircuitSummary } from "@/lib/circuitStore"
+import Card, { cardClass } from "@/components/ui/Card"
+import { heading, text } from "@/components/ui/typography"
 
 // How many recent circuits to show on the home page
 const RECENT_COUNT = 3
@@ -40,99 +42,85 @@ export default function WelcomeBack({ user }: { user: User }) {
   const [latest, ...others] = recent
 
   return (
-    <section className="py-16 bg-gradient-to-br from-[#33A1FD]/10 to-[#FDCA40]/5">
-      <div className="container mx-auto px-6">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-4xl lg:text-5xl font-bold text-[#31393C] mb-2">
-            Welcome back{firstName ? `, ${firstName}` : ""}
-          </h1>
-          <p className="text-lg text-gray-600 mb-10">
-            {circuits && circuits.length > 0 ? "Start where you left off." : "Ready to build something?"}
-          </p>
+    <section className="bg-grid border-b border-line">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+        <h1 className={heading.xl}>Welcome back{firstName ? `, ${firstName}` : ""}</h1>
+        <p className={`${text.lead} mt-3`}>
+          {circuits && circuits.length > 0 ? "Pick up where you left off." : "Ready to build something?"}
+        </p>
 
-          <div className="grid lg:grid-cols-3 gap-6">
-            {/* Circuits */}
-            <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-xl font-semibold text-[#31393C]">Your circuits</h2>
-                {circuits && circuits.length > 0 && (
-                  <Link href="/circuits" className="flex items-center text-sm font-medium text-[#2176FF] hover:underline">
-                    <FolderOpen className="h-4 w-4 mr-1" />
-                    {circuits.length > RECENT_COUNT ? `See all ${circuits.length}` : "My Circuits"}
-                  </Link>
-                )}
-              </div>
-
-              {circuits === null ? (
-                <div className="flex items-center text-gray-500 py-10 justify-center">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading your circuits…
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {latest && (
-                    <Link
-                      href={`/simulation?id=${latest.id}`}
-                      className="flex items-center gap-4 rounded-xl border-2 border-[#2176FF]/30 bg-[#2176FF]/5 p-4 hover:border-[#2176FF] transition-colors group"
-                    >
-                      <div className="bg-[#2176FF] p-3 rounded-lg">
-                        <CircuitBoard className="h-6 w-6 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-[#2176FF]">Continue</p>
-                        <p className="font-semibold text-[#31393C] truncate">{latest.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {latest.componentCount} component{latest.componentCount === 1 ? "" : "s"} · edited {timeAgo(latest.updatedAt)}
-                        </p>
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-[#2176FF] group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                  )}
-
-                  {others.map(circuit => (
-                    <Link
-                      key={circuit.id}
-                      href={`/simulation?id=${circuit.id}`}
-                      className="flex items-center gap-4 rounded-xl border border-gray-200 p-3 hover:border-[#33A1FD] hover:bg-gray-50 transition-colors"
-                    >
-                      <CircuitBoard className="h-5 w-5 text-[#33A1FD] ml-1" />
-                      <span className="flex-1 min-w-0 font-medium text-[#31393C] truncate">{circuit.name}</span>
-                      <span className="text-sm text-gray-500 shrink-0">{timeAgo(circuit.updatedAt)}</span>
-                    </Link>
-                  ))}
-
-                  {circuits.length === 0 && (
-                    <p className="text-gray-500 pb-2">You haven&apos;t saved any circuits yet.</p>
-                  )}
-
-                  <Link
-                    href="/simulation"
-                    className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 p-4 font-semibold text-gray-600 hover:border-[#2176FF] hover:text-[#2176FF] transition-colors"
-                  >
-                    <Plus className="h-5 w-5" />
-                    New circuit
-                  </Link>
-                </div>
+        <div className="mt-10 grid gap-5 lg:grid-cols-3">
+          {/* Circuits */}
+          <Card tone="panel" className="p-5 sm:p-6 lg:col-span-2">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h2 className={heading.md}>Your circuits</h2>
+              {circuits && circuits.length > 0 && (
+                <Link href="/circuits" className="inline-flex items-center gap-1.5 text-sm font-medium text-signal hover:underline">
+                  <FolderOpen className="h-4 w-4" />
+                  {circuits.length > RECENT_COUNT ? `See all ${circuits.length}` : "My Circuits"}
+                </Link>
               )}
             </div>
 
-            {/* Learning */}
-            <Link
-              href="/dashboard"
-              className="bg-[#31393C] text-white rounded-2xl shadow-lg p-6 flex flex-col justify-between hover:bg-[#31393C]/90 transition-colors group"
-            >
-              <div>
-                <div className="bg-[#FDCA40] p-3 rounded-lg inline-block mb-4">
-                  <BookOpen className="h-6 w-6 text-[#31393C]" />
-                </div>
-                <h2 className="text-xl font-semibold mb-2">Continue learning</h2>
-                <p className="text-white/70">Lessons and guides that take you from the basics to building real circuits.</p>
+            {circuits === null ? (
+              <div className="flex items-center justify-center py-10 text-ink-muted">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading your circuits…
               </div>
-              <span className="mt-6 flex items-center font-semibold text-[#FDCA40]">
-                Go to lessons
-                <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            ) : (
+              <div className="space-y-3">
+                {latest && (
+                  <Link href={`/simulation?id=${latest.id}`} className={cardClass("card", true, "flex items-center gap-4 p-4")}>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control bg-signal text-white">
+                      <CircuitBoard className="h-6 w-6" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-ink">{latest.name}</span>
+                      <span className="block text-sm text-ink-muted">
+                        {latest.componentCount} part{latest.componentCount === 1 ? "" : "s"}, edited {timeAgo(latest.updatedAt)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-sm font-medium text-signal">Open</span>
+                  </Link>
+                )}
+
+                {others.map(circuit => (
+                  <Link
+                    key={circuit.id}
+                    href={`/simulation?id=${circuit.id}`}
+                    className="flex items-center gap-4 rounded-control border border-line px-4 py-3 transition-colors hover:border-signal/40 hover:bg-signal-tint"
+                  >
+                    <CircuitBoard className="h-5 w-5 shrink-0 text-brand" />
+                    <span className="min-w-0 flex-1 truncate font-medium text-ink">{circuit.name}</span>
+                    <span className="shrink-0 text-sm text-ink-muted">{timeAgo(circuit.updatedAt)}</span>
+                  </Link>
+                ))}
+
+                {circuits.length === 0 && (
+                  <p className="pb-1 text-ink-muted">Circuits you save show up here, so you can carry on later.</p>
+                )}
+
+                <Link
+                  href="/simulation"
+                  className="flex items-center justify-center gap-2 rounded-control border-2 border-dashed border-line-strong p-4 font-medium text-ink-muted transition-colors hover:border-signal hover:text-signal"
+                >
+                  <Plus className="h-5 w-5" />
+                  New circuit
+                </Link>
+              </div>
+            )}
+          </Card>
+
+          {/* Learning */}
+          <Link href="/dashboard" className={cardClass("ink", true, "flex flex-col justify-between p-6")}>
+            <span>
+              <span className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-control bg-glow text-ink">
+                <BookOpen className="h-6 w-6" />
               </span>
-            </Link>
-          </div>
+              <span className="block text-lg font-semibold">Continue learning</span>
+              <span className="mt-2 block text-white/75">Pick up the course where you stopped, one lesson at a time.</span>
+            </span>
+            <span className="mt-6 font-medium text-glow">Go to lessons</span>
+          </Link>
         </div>
       </div>
     </section>

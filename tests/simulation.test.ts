@@ -1,5 +1,7 @@
 // Checks the DC solver against circuits worked out by hand. Run with: npm test
 import { simulate } from '../src/lib/simulation';
+import { heroLayout } from '../src/components/landing/heroCircuit';
+import { isLayoutValid } from '../src/lib/wires';
 import type { CircuitComponent, ComponentType } from '../src/types/circuit';
 
 type Extra = Partial<Pick<CircuitComponent, 'rotation' | 'closed'>>;
@@ -172,4 +174,20 @@ const topRow = (types: [ComponentType, number?, Extra?][]) => types.map(([t, v, 
   const r = simulate({ components: comps, wires: ws });
   check('open switch: still wires', Object.values(r.wireCurrents).every(a => a === 0), JSON.stringify(r.wireCurrents));
 }
+// Landing page hero circuit: what visitors see must match what the simulator says
+{
+  const run = (closed: boolean, ohms: number) => simulate(heroLayout(closed, ohms));
+  const l = heroLayout(true, 330);
+  check('hero: valid layout', isLayoutValid(l.components, l.wires));
+  const safe = run(true, 330);
+  check('hero 330 Ω: LED lit, ~20 mA, no warnings', near(safe.readings.led.current, 0.0206, 0.0005)
+    && (safe.readings.led.brightness ?? 0) > 0.9 && safe.warnings.length === 0, JSON.stringify(safe.warnings));
+  const dim = run(true, 1000);
+  check('hero 1 kΩ: LED dimmer', (dim.readings.led.brightness ?? 0) > 0.1 && (dim.readings.led.brightness ?? 0) < 0.6 && dim.warnings.length === 0);
+  const hot = run(true, 100);
+  check('hero 100 Ω: LED overloaded', hot.warnings.some(w => w.kind === 'led-overload'));
+  const off = run(false, 330);
+  check('hero open switch: LED off', (off.readings.led.brightness ?? 0) === 0 && Object.values(off.wireCurrents).every(a => a === 0));
+}
+
 console.log(fails === 0 ? `all ${passes} solver checks passed` : `${fails} failed, ${passes} passed`);

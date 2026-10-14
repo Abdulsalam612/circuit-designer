@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 36 solver checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -93,7 +93,7 @@ only `react` → would break at runtime).
 ### Pages (`src/app/`)
 | Route | File | Notes |
 |---|---|---|
-| `/` | `page.tsx` | Landing page + login/signup/password-reset modals (Firebase). **Signed in:** shows `WelcomeBack` (recent circuits, New circuit, Continue learning) instead of the hero. Opens the login modal when visited as `/?login=1&next=/path`, the signup modal for `/?signup=1`. |
+| `/` | `page.tsx` | Landing page (sections in `components/landing/`, redesigned 14 Oct 2026) + login/signup/password-reset modals (Firebase). **Signed in:** shows `WelcomeBack` (recent circuits, New circuit, Continue learning) instead of the hero. Opens the login modal when visited as `/?login=1&next=/path`, the signup modal for `/?signup=1`. |
 | `/simulation` | `simulation/page.tsx` | **The circuit editor.** Owns the circuit state (undo history), saving, header toolbar, Properties panel, Simulation panel. Loads a circuit from `?id=`. Protected. |
 | `/circuits` | `circuits/page.tsx` | "My Circuits": open, rename, duplicate, delete. Back button → `/`. Protected. |
 | `/dashboard` | `dashboard/page.tsx` | Learning dashboard: stats, **"Up next"** banner, lessons grouped by level (from `src/content/lessons`), Guides tab (**still placeholder cards hard-coded in the page**). Protected. |
@@ -122,7 +122,12 @@ only `react` → would break at runtime).
   `glow`, `interactive`; `cardClass()`), `Badge` (tones), `LevelBadge` (resistor colour code),
   `StatusLed` (done/active/warning/off), `Field` + `inputClass`, `typography.ts` (`heading.*`,
   `text.*`). Style guide: `/design` (`app/design/page.tsx`, development only – 404 in production).
-- `WelcomeBack.tsx` – signed-in home panel.
+- `landing/` – home page: `LandingSections.tsx` (`Hero`, `HowItWorks`, `Course`, `ForSchools`,
+  `FinalCallToAction`; **only true claims** – counts come from the lesson files, unbuilt
+  features listed as "In development"), `LiveCircuit.tsx` (hero: a real circuit solved by
+  `simulate()`, editor icons + hand-drawn switch, current dots, switch/resistor controls, live
+  readout), `heroCircuit.ts` (its layout; checked in `tests/simulation.test.ts`).
+- `WelcomeBack.tsx` – signed-in home panel (restyled with the design system).
 - `SiteFooter.tsx` – shared footer (landing + info pages): Product / CirKit / Help & legal
   columns, only real links; exports `GITHUB_URL`, `ISSUES_URL`. `InfoPage.tsx` – layout for
   text pages (header, title band, plain h2/p/ul styled via `[&_h2]:` selectors, footer).
@@ -412,9 +417,9 @@ verified live (config inlined, login redirect works, no console errors). Only op
 item: starting a wire from an empty grid point (optional). See the Master Checklist.
 
 **Current focus (14 Oct 2026): visual redesign** of the website. Critique done; direction
-"playful but credible" approved; **design system built** (§5.8, not committed). Next: restyle
-the landing page with it (remove the made-up stats/claims, real live circuit in the hero), then
-dashboard, lessons, profile, rest. Known: `/play` overflows by ~20 px on phones (pre-existing).
+"playful but credible" approved; design system committed (`e0c8852`); **landing page
+redesigned** (not committed). Next: dashboard, lessons, profile, My Circuits, editor chrome,
+auth modals, kids mode, footer. Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -440,6 +445,17 @@ dashboard, lessons, profile, rest. Known: `/play` overflows by ~20 px on phones 
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed the design system (`e0c8852`). **Landing page redesign**: new
+  `components/landing/` (Hero with live simulated circuit, How it works on a "wire", Course
+  from the real lesson data with resistor-code level badges, For teachers and schools – ready
+  now vs in development, final CTA); removed the made-up stats/claims, old hero art,
+  scroll-reveal code and styled-jsx (page.tsx 1044 → 510 lines); header links "How it works" /
+  "For schools"; modals use the shared `animate-pop-in`; `WelcomeBack` restyled; hero heading
+  size tuned. +5 solver checks for the hero circuit (lit 20.6 mA / dim 1 kΩ / overload 100 Ω /
+  open). Browser-tested at 1366 and 375 px: switch by mouse and keyboard, toggle button,
+  resistor choices, readout, overload outline, no sideways scroll, login/signup modals, signed-in
+  home (TEMP fake user, restored). tsc/lint/tests pass. Not committed.
 
 - 2026-10-14 – **Design system** (owner installed `frontend-design`; direction "playful but
   credible"): tokens in `globals.css` (`@theme`, `.bg-grid`, `.tabular`, focus ring, LED

@@ -4,7 +4,7 @@
 
 export const heading = {
   // Hero only – one per page
-  hero: "font-display text-[2.5rem] leading-[1.05] sm:text-6xl font-semibold tracking-[-0.03em] text-ink",
+  hero: "font-display text-[2.5rem] leading-[1.05] sm:text-5xl xl:text-6xl font-semibold tracking-[-0.03em] text-ink",
   // Page titles
   xl: "font-display text-3xl sm:text-4xl leading-[1.1] font-semibold tracking-[-0.02em] text-ink",
   // Section titles
