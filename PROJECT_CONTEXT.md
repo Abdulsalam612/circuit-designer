@@ -398,6 +398,10 @@ battery 9 V, LED 2 V, lamp 100 Ω.
   - `59f7f58` DC simulation + battery/LED direction fix (polarized, Flip direction, “+” mark).
   - `988a387` Current-flow animation + pulsing status dot. **Deployed** (master = 988a387).
   - 12 Oct: tests moved into the repo (`npm test`), this context file added.
+- **14 Oct 2026, website redesign "playful but credible" (with Claude), deployed (master =
+  `c67f018`):** `e0c8852` design system · `7d0c63b` landing (live circuit) · `f6719b4`
+  dashboard · `7986cb6` lessons · `9e61fc0` profile/My Circuits/shared · `a416184` editor ·
+  `c67f018` sign-in dialogs. Kids mode not yet redesigned.
 - **14 Oct 2026, Stage 7 website (with Claude), all deployed (master = `a04b4e9`):**
   `3bffa54` shared navbar, toasts, 404/error pages · `a267821` profile & settings ·
   `c2b0479` About/Privacy/Terms + footer · `89f329d` feedback form (+ `feedback` Firestore
@@ -429,7 +433,12 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 redesigned (`7d0c63b`); **dashboard redesigned (`f6719b4`); **lesson pages (`7986cb6`); profile/My Circuits/shared
 pieces (`9e61fc0`); editor frame (`a416184`); sign-in dialogs redesigned. **Whole website
 redesign deployed 14 Oct 2026** (see §9). Old styles now left only in kids mode (`/play`,
-`/kidscircuit`) – next redesign step. Known: `/play` overflows by ~20 px on phones (pre-existing).
+`/kidscircuit`).
+
+**Next: CirKit Kids MVP** – design agreed 14 Oct 2026, see **`docs/kids-mode-mvp.md`** (build a
+car from parts → code it with blocks → watch it drive; ages 8–11; simulation first, micro:bit
+in phase 2; Blockly; motor + hub parts in the real solver). Clickable mock-up:
+https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. Start with milestone 1 (engine + tests). Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -455,6 +464,21 @@ redesign deployed 14 Oct 2026** (see §9). Old styles now left only in kids mode
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – **Kids mode design** (no code): brainstormed with the owner (LEGO Education
+  style build → code → see it move). Wrote `docs/kids-mode-mvp.md` (audience 8–11, MVP scope,
+  engine plan: motor/hub parts + block program runner over `simulate()`, Blockly, missions as
+  content, milestones, pitch notes) and a clickable 2-screen tablet mock-up (Design canvas
+  artifact, link above: workbench with Build/Code/Play where the block program really drives
+  the car, and mission select). Decisions taken by me as defaults (owner can change): ages 8–11,
+  car as the first scene, simulation-only MVP. Not committed.
+
+- 2026-10-14 – **Deployed the website redesign.** Committed the sign-in dialogs (`c67f018`);
+  tsc, tests and `npm run build` passed; fast-forwarded `master` to `c67f018`, pushed both
+  branches; Vercel "Deployment has completed". Live checks: all main pages 200, `/design` 404
+  (dev only), unknown path 404; in the browser the live home shows the new hero (Unbounded +
+  Lexend, live circuit at 20.6 mA), no made-up stats, no console errors. This note isn't
+  committed yet.
 
 - 2026-10-14 – Committed the editor (`a416184`). **Sign-in dialogs redesign** in `app/page.tsx`:
   login/signup/reset rebuilt on a shared `AuthDialog` (role=dialog, aria-modal, labelled title,
