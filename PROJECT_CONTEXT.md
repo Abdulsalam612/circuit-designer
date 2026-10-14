@@ -33,10 +33,10 @@ The **Master Checklist** is the source of truth for progress: Stages 0–10, `- 
 `- [ ] ` open. **Tick items there when you finish them** (the owner asked for this).
 
 The parent folder `E:\Desketop\Circuit Designer\` also contains `.claude/launch.json` (dev
-server config for Claude Code's preview) – not part of the repo. `circuitjs1/` inside the repo
-is a git *gitlink* (a nested clone of Falstad's CircuitJS, Java/GWT) and `public/circuitjs/`
-is a compiled copy – **both are unused**; we chose our own solver (see §5.6). They can be
-deleted (open Stage 1 item).
+server config for Claude Code's preview) – not part of the repo; the repo also has its own
+uncommitted `.claude/launch.json` (preview `cirkit-dev` → `npm run dev`, port 3000). The unused
+CircuitJS copies (`circuitjs1/`, `public/circuitjs/`) were deleted on 13 Oct 2026 – we use our
+own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever needed.
 
 ---
 
@@ -63,9 +63,11 @@ npm run build        # production build – run before pushing to master
   server before building**, restart after.
 - Remaining `npm audit` warnings: `@grpc/grpc-js` (via Firebase – needs Firebase 12 major
   upgrade) and `postcss` (bundled in Next, build-time only). Vercel doesn't block on these.
-- Firebase web config is hard-coded in `src/firebase.ts` (it isn't secret). Moving it to
-  `.env.local` is an open item – **if you do, add the same `NEXT_PUBLIC_*` vars in the Vercel
-  dashboard first or the live site breaks.**
+- **Firebase web config comes from env vars** `NEXT_PUBLIC_FIREBASE_*` (list in `.env.example`;
+  real values in the untracked `.env.local`). `src/firebase.ts` throws a clear error if any is
+  missing. **The same 6 vars must exist in Vercel (Project → Settings → Environment
+  Variables, Production + Preview) before any deploy of this code, or the live site breaks.**
+  The values aren't secret (they ship to the browser).
 - Firestore security rules are in `firestore.rules` and **are published** (owner did it):
   each user can only read/write `users/{uid}` and `users/{uid}/circuits/*`.
 
@@ -97,8 +99,7 @@ only `react` → would break at runtime).
 | `/play`, `/kidscircuit` | | Kids mode landing + an emoji grid builder (separate, not connected to the simulator yet). |
 
 ### Editor components (`src/components/`)
-- `KonvaTestCanvas.tsx` (~900 lines; name is historical – renaming to `CircuitCanvas` is an
-  open item). The whole interactive canvas: grid, pan (right-drag) / zoom (wheel), sidebar
+- `CircuitCanvas.tsx` (~900 lines; was `KonvaTestCanvas` until 13 Oct 2026). The whole interactive canvas: grid, pan (right-drag) / zoom (wheel), sidebar
   drop with snapping preview ("ghost"), selection (click, Shift+click, box-select), group
   drag with live wire rerouting, wire drawing, keyboard (R rotate, Delete, Esc), connection
   markers, simulation visuals (glow, warning outlines, hover tooltip, **current-flow
@@ -147,7 +148,8 @@ switch, capacitor/inductor at DC, series batteries, ground, parallel lamps, two 
 battery, wire currents…), `units.test.ts` (26 parse/format checks) and `lessons.test.ts` (151:
 content validity – unique ids, quiz answers in range, challenge start layouts valid and not
 already solved – unlock rules, and each challenge solved/failed by sample circuits). Run
-`npm test`. **Add a case whenever you change the solver or add a challenge.**
+`npm test`, plus `wires.test.ts` (14: wire moves, stretching, refusals, branch points).
+**Add a case whenever you change the solver, wire logic or add a challenge.**
 
 ---
 
@@ -175,6 +177,15 @@ already solved – unlock rules, and each challenge solved/failed by sample circ
 - Drawing: drag from a lead end or wire end; diagonal drags become an L.
   Wires may not cross a part body or run along another wire (`canAddWires`).
 - Markers: hollow circle = unconnected end, filled dot = junction of 3+.
+- **Wire editing (owner's design, 13 Oct 2026):** hover a wire → highlighted (lighter blue,
+  3 px) and the cursor shows the drag direction. **Drag a wire** → it moves sideways in grid
+  steps (`moveWire` = `planMove` with just that wire moving; along-axis movement ignored);
+  attached wires bend/stretch and lead ends get a stub wire, so connections never break;
+  refused spots keep the last valid one; one undo step. **Click a wire** → it's selected and a
+  small white dot appears at the nearest grid point (`nearestPointOnWire`); **drag from the
+  dot** → draws a branch wire, and the clicked wire is split there (T-junction). A press only
+  becomes a drag after 4 screen px, so clicks still select. Starting a wire from an empty
+  grid point is not implemented (plain drag on empty space = box select).
 
 ### 5.3 Moving parts: wires follow (`planMove` in `wires.ts`)
 - Wire ends attached to moving parts follow. A wire that's no longer straight bends into an
@@ -314,30 +325,59 @@ battery 9 V, LED 2 V, lamp 100 Ω.
 
 **Done:** Stages 0, 2 (editor), 3 (save/load), most of 4 (simulation first version), and
 Stage 5 first version (12 lessons, Levels 0–2, viewer, quizzes, simulator-checked challenges) –
-**on `editor-wiring`, not committed yet**. See the Master Checklist for the full picture.
+committed `abaffc2` and **deployed** (master = editor-wiring = abaffc2). See the Master Checklist for the full picture.
+
+**Stage 1 finished 13 Oct 2026 (not committed yet).** Before deploying it, the owner must add
+the 6 `NEXT_PUBLIC_FIREBASE_*` vars in Vercel (see §2).
+
+**Stage 2 wiring finished 13 Oct 2026** (hover highlight, drag-to-move wires, branch from
+mid-wire) – not committed yet, together with Stage 1.
 
 **Suggested next steps (in order):**
-1. Owner to try the lessons signed in (first real points write to Firestore), then commit +
-   deploy. Possible follow-ups: Guides tab is still hard-coded placeholders (turn guides into
+1. Owner to try the lessons signed in on the live site (first real points write to
+   Firestore). Possible follow-ups: Guides tab is still hard-coded placeholders (turn guides into
    content too, or drop the tab); level-up from XP (`level` field never changes, card says
    "50 pts to next level"); remove `totalLessons` from signup; more levels.
 2. **Hook kids mode** (`/kidscircuit`) to the real simulator, or rebuild it on the editor with
    a simplified parts set.
 3. Simulation extras: capacitor/inductor transients (time stepping), wire hover highlight,
    starting a wire from an empty grid point or mid-wire, voltage colouring on wires.
-4. Stage 1 leftovers: rename `KonvaTestCanvas` → `CircuitCanvas`; delete unused
-   `circuitjs1/` + `public/circuitjs/`; real README; Firebase config → `.env.local` (+ Vercel
-   env vars); replace the `<Head>` in `layout.tsx` with `metadata`/`viewport` exports;
-   replace `yourdomain.com` Open Graph URLs.
-5. Website (Stage 7): profile/settings page, toasts instead of `alert()`, 404 page,
+4. Website (Stage 7): profile/settings page, toasts instead of `alert()`, 404 page,
    mobile menu.
-6. Pitch prep (Stage 8): short demo video (build → simulate → lesson).
+5. Pitch prep (Stage 8): short demo video (build → simulate → lesson).
 
 ---
 
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – **Launch/demo video made with OpenMontage** (separate folder
+  `E:\Desketop\Circuit Designer\OpenMontage`, AGPL, not part of this repo). Project
+  `projects/cirkit-learn-by-building`: hybrid pipeline, real Playwright captures of the local
+  dev server + hand-authored HyperFrames graphics, Piper voice en_GB-alan-medium, Pixabay music
+  'Playful'. Final: `renders/export/cirkit-learn-by-building-1080p.mp4` (78.6s, 1080p30) +
+  SRT, thumbnails, YouTube/LinkedIn copy. Captures used the TEMP login bypass + fake progress
+  (backed up and restored, verified each time; no Firebase writes). Publish stage awaiting the
+  owner's approval; nothing uploaded. Re-run: `capture/capture-all.ts` (needs the bypass),
+  `projects/_scripts/cirkit_*.py`, `hyperframes/build_composition.py`.
+
+- 2026-10-13 – **Stage 2 wiring**: wire hover highlight, drag a wire sideways to move it
+  (connections stretch), click a wire → dot → drag to branch (T-junction). `lib/wires.ts`
+  (`moveWire`, `nearestPointOnWire`), `components/CircuitCanvas.tsx`, new
+  `tests/wires.test.ts` (14 checks, in `npm test`). Browser-tested in the editor with the
+  bypass (restored): hover, move + stubs, branch + junction dot, lamp still lit, undo one step
+  each, drag into a part refused. Only open Stage 2 item: start a wire from an empty grid point
+  (owner's design didn't include it). Not committed (Stage 1 also still uncommitted).
+
+- 2026-10-13 – **Stage 1 finished**: deleted `circuitjs1/` (gitlink + folder) and
+  `public/circuitjs/` + unused template SVGs; renamed `KonvaTestCanvas` → `CircuitCanvas`
+  (`git mv`); `layout.tsx` uses `metadata` (`metadataBase` = Vercel URL, siteName CirKit) +
+  `viewport` exports instead of `<Head>`; generated share image `app/opengraph-image.tsx`
+  (+ `twitter-image.tsx`); Firebase config → env vars (`.env.local`, `.env.example`,
+  `.gitignore` allows the example); real README. Tests/tsc/lint/build pass; checked built meta
+  tags + OG PNG, editor drag-drop with bypass (restored). **Not committed; Vercel env vars not
+  set yet** (needed before deploying).
 
 - 2026-10-13 – **Lessons (Stage 5)**: replaced the hard-coded placeholder lessons in the
   dashboard with a content system – `src/types/lesson.ts`, `src/content/lessons/*` (12 lessons,
@@ -347,7 +387,11 @@ Stage 5 first version (12 lessons, Levels 0–2, viewer, quizzes, simulator-chec
   `types` prop, `SimulationResult.pinNodes`. `tests/lessons.test.ts` (151 checks) added to
   `npm test`. Browser-tested with the auth bypass (restored): dashboard, read/quiz/challenge
   steps, live goals, finish → next lesson, redirect when logged out. **Not tested: saving
-  points to Firestore while signed in** (needs the owner's account). Not committed.
+  points to Firestore while signed in** (needs the owner's account). Committed `abaffc2`
+  (with the handoff docs + tests), pushed `editor-wiring` (first push of that branch) and
+  `master`; Vercel deploy succeeded, live `/learn/*` checked 200. Gotcha: the live alias kept
+  serving the old build for ~1 min after GitHub showed "Deployment has completed".
+  `.claude/launch.json` left uncommitted on purpose (local preview config).
 
 - 2026-10-13 – Catch-up session: ticked "Current-flow animation" in the Master Checklist (was
   done in `988a387` but unticked), refreshed its header. Added `.claude/launch.json` inside the

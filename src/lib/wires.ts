@@ -277,6 +277,33 @@ export const planMove = (
   return options.reduce((best, o) => (totalLength(o) < totalLength(best) ? o : best));
 };
 
+// Drags one wire sideways (across its own direction) by `offset`. Whatever its ends were
+// attached to stays put and is stretched to it: attached wires bend or lengthen, and a
+// lead end gets a new wire up to it. Movement along the wire is ignored (it would only
+// slide over its own connections). Returns null if there's no valid layout.
+export const moveWire = (
+  components: CircuitComponent[],
+  wires: Wire[],
+  wireId: string,
+  offset: Point,
+): Wire[] | null => {
+  const w = wires.find(x => x.id === wireId);
+  if (!w) return null;
+  const horizontal = w.y1 === w.y2;
+  const delta = horizontal ? { x: 0, y: offset.y } : { x: offset.x, y: 0 };
+  if (delta.x === 0 && delta.y === 0) return wires;
+  return planMove(components, wires, components, new Set([wireId]), delta);
+};
+
+// The grid point on a wire closest to p (where a branch would start)
+export const nearestPointOnWire = (w: WireSegment, p: Point): Point => {
+  const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, Math.min(a, b)), Math.max(a, b));
+  const snap = (v: number) => Math.round(v / GRID_SIZE) * GRID_SIZE;
+  return w.y1 === w.y2
+    ? { x: clamp(snap(p.x), w.x1, w.x2), y: w.y1 }
+    : { x: w.x1, y: clamp(snap(p.y), w.y1, w.y2) };
+};
+
 const totalLength = (ws: WireSegment[]) =>
   ws.reduce((sum, w) => sum + Math.abs(w.x2 - w.x1) + Math.abs(w.y2 - w.y1), 0);
 

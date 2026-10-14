@@ -18,6 +18,8 @@ import {
   getWireOccupiedPoints,
   normalizeWires,
   planMove,
+  moveWire,
+  nearestPointOnWire,
 } from "@/lib/wires"
 import { createPortal } from "react-dom"
 import type { ComponentType, CircuitComponent, CircuitLayout, Wire } from "@/types/circuit"
@@ -56,6 +58,10 @@ const flowSpeed = (amps: number) => Math.min(160, 25 + 30 * Math.log10(1 + amps 
 
 const WIRE_COLOR = "#1f2937"
 const SELECT_COLOR = "#3498db"
+const HOVER_COLOR = "#60a5fa"
+// A press on a wire only becomes a drag after moving this many screen pixels, so a plain
+// click still selects it
+const WIRE_DRAG_THRESHOLD = 4
 const INVALID_COLOR = "#ef4444"
 
 interface CircuitCanvasProps {
@@ -106,6 +112,16 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
   const [marquee, setMarquee] = useState<{ start: Point; end: Point; additive: boolean } | null>(null)
   // Set after a box selection so the click that ends it doesn't clear the selection
   const suppressNextClick = useRef(false)
+  // Wire under the mouse, drawn highlighted
+  const [hoveredWireId, setHoveredWireId] = useState<string | null>(null)
+  // Where a selected wire was clicked: a small handle there starts a branch wire
+  const [branch, setBranch] = useState<{ wireId: string; point: Point } | null>(null)
+  // Dragging a wire sideways: which wire, where the press started, the current (valid)
+  // offset and the wires as they'd be after the move
+  const wireDragRef = useRef<{ id: string; start: Point; offset: Point; moved: boolean; preview: Wire[] | null } | null>(null)
+  const [isDraggingWire, setIsDraggingWire] = useState(false)
+  // Set after a wire drag so the click that ends it doesn't count as a click on the wire
+  const suppressWireClick = useRef(false)
 
   // Moving the selection: where the dragged part started, what's moving, and the
   // layout as it would be at the current (valid) drag offset
@@ -547,10 +563,83 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
         commitLayout(components, [...wires, ...added]);
       }
       setWireDraft(null);
+      setBranch(null);
     };
     window.addEventListener('mouseup', handleMouseUp);
     return () => window.removeEventListener('mouseup', handleMouseUp);
   }, [wireDraft, components, wires]);
+
+  // Dragging a wire: it moves sideways in whole grid steps, and whatever its ends were
+  // attached to stretches to follow (see moveWire). If a spot doesn't fit, the wire stays
+  // at the last one that did.
+  useEffect(() => {
+    if (!isDraggingWire) return;
+    const pointerAt = (e: MouseEvent) => {
+      const stage = stageRef.current;
+      if (!stage) return null;
+      stage.setPointersPositions(e);
+      return stage.getRelativePointerPosition();
+    };
+    const handleMove = (e: MouseEvent) => {
+      const drag = wireDragRef.current;
+      const pos = pointerAt(e);
+      if (!drag || !pos) return;
+      const raw = { x: pos.x - drag.start.x, y: pos.y - drag.start.y };
+      if (!drag.moved && Math.hypot(raw.x, raw.y) * scale < WIRE_DRAG_THRESHOLD) return;
+      drag.moved = true;
+      const offset = { x: snapToGrid(raw.x), y: snapToGrid(raw.y) };
+      if (offset.x === drag.offset.x && offset.y === drag.offset.y) return;
+      const next = moveWire(components, wires, drag.id, offset);
+      if (!next) return;
+      drag.offset = offset;
+      drag.preview = next === wires ? null : next;
+      setMovePreview(drag.preview ? { components, wires: drag.preview } : null);
+    };
+    const handleUp = () => {
+      const drag = wireDragRef.current;
+      if (drag?.moved) {
+        suppressWireClick.current = true;
+        if (drag.preview) commitLayout(components, drag.preview);
+      }
+      wireDragRef.current = null;
+      setIsDraggingWire(false);
+      setMovePreview(null);
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [isDraggingWire, components, wires, scale]);
+
+  const handleWireMouseDown = (w: Wire, e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.evt.button !== 0 || e.evt.shiftKey) return;
+    e.cancelBubble = true;
+    suppressWireClick.current = false;
+    const pos = stageRef.current?.getRelativePointerPosition();
+    if (!pos) return;
+    wireDragRef.current = { id: w.id, start: pos, offset: { x: 0, y: 0 }, moved: false, preview: null };
+    setIsDraggingWire(true);
+  };
+
+  // Clicking a wire selects it and puts a branch handle at the nearest grid point;
+  // Shift+click adds it to / removes it from the selection as usual
+  const handleWireClick = (w: Wire, e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (suppressWireClick.current) {
+      suppressWireClick.current = false;
+      return;
+    }
+    if (e.evt.shiftKey) {
+      handleSelect(w.id, e);
+      setBranch(null);
+      return;
+    }
+    const pos = stageRef.current?.getRelativePointerPosition();
+    if (!pos) return;
+    setSelectedIds(new Set([w.id]));
+    setBranch({ wireId: w.id, point: nearestPointOnWire(w, pos) });
+  };
 
   // Finish a box selection: select every component and wire the box touches
   useEffect(() => {
@@ -738,19 +827,62 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       ))
   }
 
-  const renderWires = () => viewWires.map(w => (
-    <Line
-      key={w.id}
-      id={w.id}
-      name={WIRE_NAME}
-      points={[w.x1, w.y1, w.x2, w.y2]}
-      stroke={selectedIds.has(w.id) ? SELECT_COLOR : WIRE_COLOR}
-      strokeWidth={2}
-      lineCap="round"
-      hitStrokeWidth={10}
-      onClick={(e) => handleSelect(w.id, e)}
-    />
-  ));
+  // Hovering a wire highlights it and shows which way it can be dragged
+  const busy = !!wireDraft || isDraggingWire || !!movePreview
+  const renderWires = () => viewWires.map(w => {
+    const hovered = hoveredWireId === w.id && !busy
+    return (
+      <Line
+        key={w.id}
+        id={w.id}
+        name={WIRE_NAME}
+        points={[w.x1, w.y1, w.x2, w.y2]}
+        stroke={selectedIds.has(w.id) ? SELECT_COLOR : hovered ? HOVER_COLOR : WIRE_COLOR}
+        strokeWidth={hovered ? 3 : 2}
+        lineCap="round"
+        hitStrokeWidth={10}
+        onMouseDown={(e) => handleWireMouseDown(w, e)}
+        onClick={(e) => handleWireClick(w, e)}
+        onMouseEnter={() => {
+          setHoveredWireId(w.id)
+          if (!wireDraft && !isDraggingWire) document.body.style.cursor = w.y1 === w.y2 ? 'ns-resize' : 'ew-resize'
+        }}
+        onMouseLeave={() => {
+          setHoveredWireId(prev => (prev === w.id ? null : prev))
+          if (!wireDraft && !isDraggingWire) document.body.style.cursor = 'default'
+        }}
+      />
+    )
+  });
+
+  // The branch handle on a clicked wire: drag from it to draw a new wire that joins
+  // the clicked one there (it is split into a T-junction when the new wire is added)
+  const renderBranchHandle = () => {
+    if (!branch || busy || selectedIds.size !== 1 || !selectedIds.has(branch.wireId)) return null
+    const w = viewWires.find(x => x.id === branch.wireId)
+    const { point } = branch
+    // Hide it if the wire has since changed and no longer passes through the point
+    if (!w || pointKey(nearestPointOnWire(w, point)) !== pointKey(point)) return null
+    return (
+      <>
+        <Circle x={point.x} y={point.y} radius={5} fill="white" stroke={SELECT_COLOR} strokeWidth={2} listening={false} />
+        <Circle
+          x={point.x}
+          y={point.y}
+          radius={9}
+          fill="rgba(0,0,0,0)"
+          name={PIN_HANDLE_NAME}
+          onMouseEnter={() => { document.body.style.cursor = 'crosshair' }}
+          onMouseLeave={() => { if (!wireDraft) document.body.style.cursor = 'default' }}
+          onMouseDown={(e) => {
+            if (e.evt.button !== 0) return
+            e.cancelBubble = true
+            setWireDraft({ start: point, end: point })
+          }}
+        />
+      </>
+    )
+  }
 
   const renderMarquee = () => {
     if (!marquee) return null;
@@ -903,6 +1035,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
           {renderFlow()}
           {renderComponents()}
           {renderConnectionPoints()}
+          {renderBranchHandle()}
           {renderWireDraft()}
           {renderMarquee()}
           {renderReadingTooltip()}
@@ -947,6 +1080,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       <div className="absolute bottom-3 left-3 bg-white/90 px-2 py-1.5 rounded shadow text-xs text-gray-700 pointer-events-none">
         <p>Drag components from sidebar</p>
         <p>Drag from a component&apos;s end to draw a wire</p>
+        <p>Drag a wire to move it · click a wire, then drag its dot to branch</p>
         <p>Drag on empty space to box-select · Shift+click to add</p>
         <p>R rotate · Delete remove · Esc deselect</p>
         <p>Right-click + drag to pan · wheel to zoom</p>

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx tests/simulation.test.ts && tsx tests/units.test.ts && tsx tests/lessons.test.ts"
+    "test": "tsx tests/simulation.test.ts && tsx tests/units.test.ts && tsx tests/lessons.test.ts && tsx tests/wires.test.ts"
   },
   "dependencies": {
     "firebase": "^11.9.0",
