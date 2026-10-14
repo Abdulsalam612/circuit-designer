@@ -30,7 +30,8 @@ const COLUMNS: { title: string; colour: string; links: { href: string; label: st
     title: "Help & legal",
     colour: "text-[#F79824]",
     links: [
-      { href: ISSUES_URL, label: "Report a problem", external: true },
+      { href: "/feedback?type=bug", label: "Report a problem" },
+      { href: "/feedback", label: "Send feedback" },
       { href: `mailto:${CONTACT_EMAIL}`, label: "Contact", external: true },
       { href: "/privacy", label: "Privacy Policy" },
       { href: "/terms", label: "Terms of Use" },

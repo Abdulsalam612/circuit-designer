@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { signOut } from "firebase/auth"
-import { BookOpen, ChevronDown, CircuitBoard, FolderOpen, LogOut, Menu, UserRound, X, Zap } from "lucide-react"
+import { BookOpen, ChevronDown, CircuitBoard, FolderOpen, LogOut, Menu, MessageSquare, UserRound, X, Zap } from "lucide-react"
 import { auth } from "@/firebase"
 import { useAuth } from "@/context/AuthContext"
 import { useToast } from "@/context/ToastContext"
@@ -151,6 +151,7 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
                   <AccountLink href="/dashboard" icon={BookOpen} label="Learning dashboard" />
                   <AccountLink href="/circuits" icon={FolderOpen} label="My Circuits" />
                   <AccountLink href="/simulation" icon={Zap} label="New circuit" />
+                  <AccountLink href="/feedback" icon={MessageSquare} label="Send feedback" />
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button
                       role="menuitem"

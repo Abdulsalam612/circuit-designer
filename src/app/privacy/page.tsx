@@ -44,11 +44,18 @@ export default function PrivacyPage() {
         Our legal reason for this is that it&apos;s needed to provide the service you signed up for.
       </p>
 
+      <h3>If you send feedback</h3>
+      <p>
+        We store your message, the type you picked and, only if you give them: your email address (so we can reply),
+        your account if you&apos;re signed in, and for bug reports the page you were on and your browser version.
+        We use this only to read, answer and fix what you tell us, and delete it once it&apos;s no longer needed.
+      </p>
+
       <h2>Who else handles it</h2>
       <p>CirKit uses two services to run. They process data for us under their own privacy terms:</p>
       <ul>
         <li>
-          <strong>Google Firebase</strong> stores your account, profile and circuits, and sends account emails
+          <strong>Google Firebase</strong> stores your account, profile, circuits and any feedback you send, and sends account emails
           (verification and password reset). <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener noreferrer">Firebase privacy information</a>.
         </li>
         <li>

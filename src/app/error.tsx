@@ -2,12 +2,14 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { Home, RotateCcw } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Bug, Home, RotateCcw } from "lucide-react"
 import StatusPage, { primaryButton, secondaryButton } from "@/components/StatusPage"
 
 // Shown when a page crashes while rendering. The site header (layout) still works, so the
 // user can try again or go somewhere else instead of seeing a blank screen.
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const pathname = usePathname()
   useEffect(() => {
     // Keep the details for debugging; the page itself stays friendly
     console.error(error)
@@ -32,6 +34,9 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
       </button>
       <Link href="/" className={secondaryButton}>
         <Home className="h-4 w-4" /> Go home
+      </Link>
+      <Link href={`/feedback?type=bug&from=${encodeURIComponent(pathname)}`} className={secondaryButton}>
+        <Bug className="h-4 w-4" /> Report this problem
       </Link>
     </StatusPage>
   )

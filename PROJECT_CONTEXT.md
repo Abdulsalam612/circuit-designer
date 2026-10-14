@@ -98,6 +98,7 @@ only `react` → would break at runtime).
 | `/dashboard` | `dashboard/page.tsx` | Learning dashboard: stats, **"Up next"** banner, lessons grouped by level (from `src/content/lessons`), Guides tab (**still placeholder cards hard-coded in the page**). Protected. |
 | `/profile` | `profile/page.tsx` | **Profile & settings**: overview (avatar, name, email, join date, level/points/lessons), name + preset avatar (saved together), email (verified badge, send verification, change via `verifyBeforeUpdateEmail`), password change, delete account (password in a `ConfirmDialog`). Email/password/delete ask for the current password every time (re-auth). Own login guard (not `useRequireAuth`) so deleting lands on `/`, not the login box. Protected. |
 | `/about`, `/privacy`, `/terms` | `about/`, `privacy/`, `terms/page.tsx` | Server components with `metadata` titles, laid out by `InfoPage`. **Privacy must stay true to the code** (no analytics/tracking cookies; Firebase + Vercel are the only processors; self-service delete) – update it if that changes. Owner is **UK-based**; contact email `abdulsalam.sami01@gmail.com` (`CONTACT_EMAIL` in `SiteFooter.tsx`); Terms governed by England & Wales law; Privacy has controller, lawful basis, UK GDPR rights + ICO. Not lawyer-reviewed. |
+| `/feedback` | `feedback/page.tsx` | Public feedback form: type (bug/idea/question/other, `?type=`), message (≤2000), optional email (prefilled when signed in), bug reports can include browser + page (`?from=`, same-site paths only; the error page links here). Honeypot field. Saves to Firestore `feedback` via `lib/feedback.ts`; `feedback` rules **published by the owner 14 Oct 2026** (real send confirmed). Owner reads feedback in the Firebase console. |
 | `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer**: steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
 | (404) | `not-found.tsx` | "Open circuit!" page (broken-wire picture, Home/Lessons/Editor). Real 404 status, tab title via React 19 `<title>`. |
 | (crash) | `error.tsx`, `global-error.tsx` | `error.tsx`: "Short circuit!" with Try again (`reset`) / Go home, inside the normal layout. `global-error.tsx`: self-contained fallback if the root layout itself crashes (production only; dev shows Next's overlay). |
@@ -379,7 +380,8 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
    toasts, 404/error pages committed (`3bffa54`, not pushed); **profile page committed (`a267821`, owner tested it signed in – all works). About/Privacy/
-   Terms pages + shared footer committed (see log). Next: About/Contact/Terms/Privacy,
+   Terms pages + shared footer committed (`c2b0479`). Feedback form done and working live against
+   Firestore (rules published), not committed. Next: About/Contact/Terms/Privacy,
    feedback form, dashboard stats panel.
 2. Stage 5 follow-ups: Guides tab is still hard-coded placeholder cards in `dashboard/page.tsx`
    (turn guides into content like lessons, or drop the tab); level-up from XP (`level` never
@@ -396,6 +398,20 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Owner published the new `firestore.rules`. Sent one real message from the
+  local `/feedback` (type "other", signed out, no email, text starts "TEST from Claude…") –
+  Firestore accepted it. It's in the `feedback` collection; owner can delete it.
+
+- 2026-10-14 – Committed About/Privacy/Terms as `c2b0479`. **Stage 7: feedback form** –
+  `app/feedback/page.tsx`, `lib/feedback.ts`, `firestore.rules` (`feedback/{id}`: create-only
+  for anyone, field/size/type/timestamp/uid checks; no reads). Links: footer "Report a problem"
+  + "Send feedback", account menu, error page "Report this problem" (`?type=bug&from=`), About;
+  Privacy gains "If you send feedback". Tested: a real send is refused with permission-denied
+  (rules not yet published → nothing written) and the form shows the email fallback; then with
+  a TEMP stubbed send + fake user (backed up/restored, no "TEMP" left): payloads match the rules,
+  details toggle, honeypot, prefill, bad `?type`/`?from` ignored, 375 px. Build passes. **Owner
+  must publish `firestore.rules`**, then send one real message to confirm. Not committed.
 
 - 2026-10-14 – Owner: based in the UK, contact email abdulsalam.sami01@gmail.com. Added to
   footer ("Contact" mailto), About, Privacy ("Who we are" controller, lawful basis, UK GDPR

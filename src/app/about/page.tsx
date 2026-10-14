@@ -64,8 +64,9 @@ export default function AboutPage() {
 
       <h2>Get in touch</h2>
       <p>
-        Questions, ideas or school enquiries: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Found a bug?{" "}
-        <a href={ISSUES_URL} target="_blank" rel="noopener noreferrer">Open an issue on GitHub</a>. For how we handle
+        Found a bug or have an idea? <Link href="/feedback">Send us feedback</Link>. For questions or school
+        enquiries, email <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. Developers can also{" "}
+        <a href={ISSUES_URL} target="_blank" rel="noopener noreferrer">open an issue on GitHub</a>. For how we handle
         your data, see the <Link href="/privacy">Privacy Policy</Link>.
       </p>
     </InfoPage>
