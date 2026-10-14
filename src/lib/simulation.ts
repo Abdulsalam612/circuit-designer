@@ -31,12 +31,16 @@ export const LED_MAX_SAFE_AMPS = 0.03;   // ~20 mA typical, 30 mA absolute max
 const LED_FULL_BRIGHT_AMPS = 0.02;
 const LAMP_FULL_BRIGHT_WATTS = 0.5;
 const NO_CURRENT_AMPS = 1e-6;
+// A motor runs at full speed at this voltage; speed is proportional to the voltage across it
+// (a small DC motor's speed tracks its voltage), and negative when it runs backwards
+export const MOTOR_RATED_VOLTS = 9;
 
 export interface PartReading {
   voltage: number;     // across the part, first end minus second end
   current: number;     // through the part, first end to second end (battery: current it delivers)
   power: number;       // watts used (or supplied, for a battery)
   brightness?: number; // 0..1 for lamps and LEDs
+  speed?: number;      // -1..1 for motors: fraction of full speed, negative = backwards
   overloaded?: boolean;
 }
 
@@ -187,12 +191,14 @@ export const simulate = (layout: CircuitLayout): SimulationResult => {
       switch (c.type) {
         case 'resistor':
         case 'lamp':
+        case 'motor':
           conductance(a, b, 1 / Math.max(c.value ?? 1, 1e-6));
           break;
         case 'battery':
           source(a, b, c.value ?? 0, 1 / BATTERY_INTERNAL_OHMS);
           break;
         case 'switch':
+        case 'port':
           if (c.closed) conductance(a, b, 1 / WIRE_LIKE_OHMS);
           break;
         case 'inductor':
@@ -247,12 +253,14 @@ export const simulate = (layout: CircuitLayout): SimulationResult => {
     switch (c.type) {
       case 'resistor':
       case 'lamp':
+      case 'motor':
         current = vd / Math.max(c.value ?? 1, 1e-6);
         break;
       case 'battery':
         current = ((c.value ?? 0) - vd) / BATTERY_INTERNAL_OHMS;
         break;
       case 'switch':
+      case 'port':
         current = c.closed ? vd / WIRE_LIKE_OHMS : 0;
         break;
       case 'inductor':
@@ -271,6 +279,8 @@ export const simulate = (layout: CircuitLayout): SimulationResult => {
       reading.overloaded = current > LED_MAX_SAFE_AMPS;
     } else if (c.type === 'lamp') {
       reading.brightness = Math.min(1, reading.power / LAMP_FULL_BRIGHT_WATTS);
+    } else if (c.type === 'motor') {
+      reading.speed = Math.max(-1, Math.min(1, reading.voltage / MOTOR_RATED_VOLTS));
     }
     readings[c.id] = reading;
   }

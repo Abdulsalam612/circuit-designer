@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 37 kids checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -168,7 +168,17 @@ only `react` → would break at runtime).
   `getConnectionPoints`, `splitWiresAtConnections`, `mergeWires`, `normalizeWires`,
   `isLayoutValid`, **`planMove`** (rerouting when parts move/rotate), `makeId`.
 - `lib/editing.ts` – `rotateComponent`, `flipComponent`.
-- `lib/simulation.ts` – **DC solver**, readings, warnings, per-wire currents, formatters.
+- `lib/simulation.ts` – **DC solver**, readings, warnings, per-wire currents, formatters. Also
+  models `motor` (resistance; `reading.speed` = V / `MOTOR_RATED_VOLTS` (9 V), −1..1, negative =
+  backwards) and `port` (a CirKit Kids hub output: a switch the program controls).
+- `lib/kids/` – **CirKit Kids engine** (no UI yet): `program.ts` (block programs as data,
+  `flatten` unrolls `repeat` (capped at `MAX_STEPS`), `startRun` / `advance` tick runner: instant
+  blocks run at once, Wait holds, end of program = all ports off), `hub.ts` (`driveHub`: ports
+  driven by **PWM**, exact duty-weighted average over on/off combinations via `simulate()`),
+  `mission.ts` (`buildLayout` leaves out unplaced parts, `runMission` / `stepMission`: motor speed
+  × 40 cm/s moves the car; outcomes success/short/long/wall/still/timeout). Types in
+  `types/kids.ts`; missions in `content/kids/` (mission 1 `drive-to-the-flag`). `ComponentDef.kidsOnly`
+  hides parts (the port) from the editor's parts bin (`EDITOR_TYPES`); the motor is in the editor.
 - `lib/circuitStore.ts` – Firestore CRUD for circuits, `parseLayout` (validation), JSON
   import/export (`format: 'cirkit-circuit'`).
 - `hooks/useCircuitHistory.ts` – undo/redo (100 steps) around the layout.
@@ -438,7 +448,8 @@ redesign deployed 14 Oct 2026** (see §9). Old styles now left only in kids mode
 **Next: CirKit Kids MVP** – design agreed 14 Oct 2026, see **`docs/kids-mode-mvp.md`** (build a
 car from parts → code it with blocks → watch it drive; ages 8–11; simulation first, micro:bit
 in phase 2; Blockly; motor + hub parts in the real solver). Clickable mock-up:
-https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. Start with milestone 1 (engine + tests). Known: `/play` overflows by ~20 px on phones (pre-existing).
+https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. **Milestone 1 (engine + tests) done** (see §9); next milestone 2: the `/kids` workbench UI
+(Build / Code / Play) on top of `lib/kids`, with Blockly. Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -464,6 +475,18 @@ https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. Start with milestone 1 (engin
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed the kids design doc (`75b28d7`). **Kids milestone 1 – engine**: new
+  `motor` and `port` component types (catalog, icons `public/icons/motor.svg` / `port.svg`,
+  solver models, `reading.speed`); `lib/kids/program.ts`, `hub.ts`, `mission.ts`,
+  `types/kids.ts`, `content/kids/` (mission 1 with a 9 V battery feeding ports A (motor) and B
+  (lamp headlight)); `tests/kids.test.ts` (37 checks, in `npm test`): motor physics (V/R, half
+  voltage = half speed, reversed = backwards, capped), PWM (50% = half speed, two ports
+  independent), runner (waits, end stops all, repeat unroll + cap, beeps), mission (start
+  program 39.9 cm short; wait 4 s = 79.8 cm success; 4.5 s long; 9 s wall; wrong port / no motor
+  / no battery = still). Motor added to the editor (Speed in Properties + hover). Browser-checked
+  the editor with the login bypass (restored): Motor in the parts bin, no hub port, battery +
+  motor runs at 100%. tsc/lint/273 tests pass. Not committed.
 
 - 2026-10-14 – **Kids mode design** (no code): brainstormed with the owner (LEGO Education
   style build → code → see it move). Wrote `docs/kids-mode-mvp.md` (audience 8–11, MVP scope,

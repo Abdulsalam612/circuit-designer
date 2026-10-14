@@ -6,7 +6,11 @@ export type ComponentType =
   | 'switch'
   | 'led'
   | 'lamp'
-  | 'ground';
+  | 'ground'
+  // A DC motor: spins faster the more voltage it gets, backwards if reversed
+  | 'motor'
+  // One output of a CirKit Kids hub: a switch that the child's block program turns on and off
+  | 'port';
 
 // A component placed on the editor canvas
 export interface CircuitComponent {
@@ -21,6 +25,8 @@ export interface CircuitComponent {
   value?: number;
   // Switches only: whether the switch is closed (conducting)
   closed?: boolean;
+  // Hub ports only: the port's name ('A', 'B'…) that blocks refer to
+  port?: string;
 }
 
 // A straight wire between two grid points (always horizontal or vertical).

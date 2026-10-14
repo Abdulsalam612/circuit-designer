@@ -107,6 +107,14 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
                 <dd className="font-medium text-ink">{Math.round(reading.brightness * 100)}%</dd>
               </>
             )}
+            {reading.speed !== undefined && (
+              <>
+                <dt className="text-ink-muted">Speed</dt>
+                <dd className="font-medium text-ink">
+                  {Math.round(Math.abs(reading.speed) * 100)}%{reading.speed < -0.005 ? " backwards" : ""}
+                </dd>
+              </>
+            )}
           </dl>
           {reading.overloaded && <p className="mt-2 text-xs font-semibold text-danger">Too much current – this LED would burn out.</p>}
         </div>

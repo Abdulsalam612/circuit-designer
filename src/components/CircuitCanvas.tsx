@@ -766,6 +766,9 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       `Current: ${formatAmps(reading.current)}`,
       `Power: ${formatWatts(reading.power)}`,
     ];
+    if (reading.speed !== undefined) {
+      lines.push(`Speed: ${Math.round(Math.abs(reading.speed) * 100)}%${reading.speed < -0.005 ? ' (backwards)' : ''}`);
+    }
     if (reading.overloaded) lines.push('Overloaded!');
     return (
       <Label x={component.x} y={component.y - halfHeight - 6} scaleX={1 / scale} scaleY={1 / scale} listening={false}>

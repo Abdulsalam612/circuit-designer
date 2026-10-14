@@ -15,6 +15,8 @@ export interface ComponentDef {
   // The two ends aren't interchangeable. The first end (left when unrotated) is the
   // battery's + terminal and the LED's anode (+); the second is - / cathode.
   polarized?: boolean;
+  // Not offered in the circuit editor's parts bin (used by CirKit Kids builds only)
+  kidsOnly?: boolean;
 }
 
 export const COMPONENT_DEFS: Record<ComponentType, ComponentDef> = {
@@ -27,9 +29,15 @@ export const COMPONENT_DEFS: Record<ComponentType, ComponentDef> = {
   lamp: { label: 'Lamp', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Resistance', unit: 'Ω', default: 100 } },
   // Points down by default, with its single lead end at the top
   ground: { label: 'Ground', cells: 2, pins: 1, defaultRotation: 90 },
+  // Modelled as its winding resistance; speed follows the voltage (see simulation.ts)
+  motor: { label: 'Motor', cells: 4, pins: 2, defaultRotation: 0, value: { label: 'Resistance', unit: 'Ω', default: 20 } },
+  port: { label: 'Hub port', cells: 4, pins: 2, defaultRotation: 0, toggles: true, kidsOnly: true },
 };
 
 export const COMPONENT_TYPES = Object.keys(COMPONENT_DEFS) as ComponentType[];
+
+// What the circuit editor's parts bin offers
+export const EDITOR_TYPES = COMPONENT_TYPES.filter(type => !COMPONENT_DEFS[type].kidsOnly);
 
 export const iconFor = (c: Pick<CircuitComponent, 'type' | 'closed'>) =>
   c.type === 'switch' && c.closed ? '/icons/switch-closed.svg' : `/icons/${c.type}.svg`;

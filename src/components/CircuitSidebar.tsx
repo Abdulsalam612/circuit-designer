@@ -3,17 +3,17 @@
 import React from 'react';
 import Image from 'next/image';
 import styles from './CircuitSidebar.module.css';
-import { COMPONENT_DEFS, COMPONENT_TYPES, iconFor } from '@/lib/components';
+import { COMPONENT_DEFS, EDITOR_TYPES, iconFor } from '@/lib/components';
 import type { ComponentType } from '@/types/circuit';
 
 interface CircuitSidebarProps {
-  // Which parts to offer (lesson challenges limit them); all of them by default
+  // Which parts to offer (lesson challenges limit them); all editor parts by default
   types?: ComponentType[];
 }
 
 // The parts bin. Each tile is dragged onto the board with interact.js, which finds tiles by
 // the `componentItem` class and `data-component-type` – keep both.
-const CircuitSidebar = ({ types = COMPONENT_TYPES }: CircuitSidebarProps) => {
+const CircuitSidebar = ({ types = EDITOR_TYPES }: CircuitSidebarProps) => {
   const components = types.map(type => ({
     type,
     label: COMPONENT_DEFS[type].label,
