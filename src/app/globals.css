@@ -64,15 +64,25 @@
   --shadow-lift: 0 2px 0 var(--color-line-strong), 0 12px 24px -12px rgb(49 57 60 / 0.25);
 }
 
-body {
-  background: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-}
+/* Base styles go in the base layer so Tailwind utilities (e.g. `truncate`) can override them;
+   unlayered CSS would beat every utility */
+@layer base {
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
 
-/* Headings use the display face; sizes are set where they're used */
-h1, h2, h3 {
-  text-wrap: balance;
+  /* Sizes are set where headings are used */
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  /* One visible keyboard focus style everywhere */
+  :focus-visible {
+    outline: 3px solid var(--color-brand);
+    outline-offset: 2px;
+  }
 }
 
 /* Engineering-grid paper, the same 20 px grid as the circuit editor */
@@ -87,12 +97,6 @@ h1, h2, h3 {
 /* Readings and values line up (Lexend tabular figures instead of a monospace font) */
 .tabular {
   font-variant-numeric: tabular-nums;
-}
-
-/* One visible keyboard focus style everywhere */
-:focus-visible {
-  outline: 3px solid var(--color-brand);
-  outline-offset: 2px;
 }
 
 /* Toasts and dialogs (shared across pages) */

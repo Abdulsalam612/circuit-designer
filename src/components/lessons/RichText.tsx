@@ -5,7 +5,7 @@ const RichText = ({ text }: { text: string }) => (
   <>
     {text.split(/(\*\*[^*]+\*\*)/g).map((piece, i) =>
       piece.startsWith("**") && piece.endsWith("**")
-        ? <strong key={i} className="font-semibold text-gray-900">{piece.slice(2, -2)}</strong>
+        ? <strong key={i} className="font-semibold text-ink">{piece.slice(2, -2)}</strong>
         : <React.Fragment key={i}>{piece}</React.Fragment>
     )}
   </>

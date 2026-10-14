@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import dynamic from "next/dynamic"
-import { CheckCircle2, Circle, Lightbulb, Pause, Play, RotateCcw, Undo2, Redo2, PartyPopper } from "lucide-react"
+import { Lightbulb, Pause, Play, RotateCcw, Undo2, Redo2, PartyPopper } from "lucide-react"
 import type { ChallengeStep } from "@/types/lesson"
 import type { CircuitComponent } from "@/types/circuit"
 import { useCircuitHistory, EMPTY_LAYOUT } from "@/hooks/useCircuitHistory"
@@ -11,10 +11,12 @@ import { simulate } from "@/lib/simulation"
 import { flipComponent, rotateComponent } from "@/lib/editing"
 import PropertiesPanel from "../PropertiesPanel"
 import RichText from "./RichText"
+import Button from "@/components/ui/Button"
+import StatusLed from "@/components/ui/StatusLed"
 
 const CircuitCanvas = dynamic(() => import("../CircuitCanvas"), {
   ssr: false,
-  loading: () => <div className="flex items-center justify-center h-full w-full text-gray-500">Loading canvas...</div>,
+  loading: () => <div className="flex h-full w-full items-center justify-center text-ink-muted">Loading the workbench…</div>,
 })
 const CircuitSidebar = dynamic(() => import("../CircuitSidebar"), { ssr: false })
 
@@ -24,7 +26,7 @@ interface ChallengeStepViewProps {
   onPassed: () => void;
 }
 
-const iconButton = "p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+const iconButton = "rounded-control p-2 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-40"
 
 // A small version of the editor with a goal checklist. Goals are checked by the
 // simulator when the learner asks, and kept up to date after that.
@@ -86,31 +88,29 @@ const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
 
   return (
     <div className="space-y-4">
-      <p className="text-gray-700 leading-relaxed"><RichText text={step.instructions} /></p>
+      <p className="max-w-[68ch] text-[17px] leading-relaxed text-ink sm:text-lg"><RichText text={step.instructions} /></p>
 
-      <div className="flex flex-col lg:flex-row rounded-xl border border-gray-200 bg-white overflow-hidden lg:h-[600px]">
+      <div className="flex flex-col overflow-hidden rounded-panel border border-line bg-surface shadow-key lg:h-[600px] lg:flex-row">
         {/* Parts for this challenge */}
         <div className="lg:h-full shrink-0 [&>div]:w-full lg:[&>div]:w-56">
           <CircuitSidebar types={step.parts} />
         </div>
 
         {/* Canvas */}
-        <div className="flex-1 flex flex-col min-w-0 border-x border-gray-200">
-          <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
+        <div className="flex min-w-0 flex-1 flex-col border-line lg:border-x">
+          <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
             <div className="flex items-center gap-1">
               <button onClick={undo} disabled={!canUndo} className={iconButton} title="Undo (Ctrl+Z)"><Undo2 className="h-4 w-4" /></button>
               <button onClick={redo} disabled={!canRedo} className={iconButton} title="Redo (Ctrl+Y)"><Redo2 className="h-4 w-4" /></button>
               <button onClick={startOver} className={iconButton} title="Start this challenge again"><RotateCcw className="h-4 w-4" /></button>
-              {notice && <span className="ml-2 text-sm text-gray-600">{notice}</span>}
+              {notice && <span className="ml-2 text-sm text-ink-muted" role="status">{notice}</span>}
             </div>
             <div className="flex items-center gap-3">
               <div id="zoom-controls-container" className="hidden md:flex items-center" />
-              <button
-                onClick={() => setRunning(r => !r)}
-                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium text-white transition-colors ${running ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"}`}
-              >
+              {/* Run is the one "light it up" action on this screen */}
+              <Button size="sm" variant={running ? "secondary" : "glow"} onClick={() => setRunning(r => !r)} aria-pressed={running}>
                 {running ? <><Pause className="h-4 w-4" />Stop</> : <><Play className="h-4 w-4" />Run</>}
-              </button>
+              </Button>
             </div>
           </div>
           <div className="relative flex-1 min-h-[420px]">
@@ -127,57 +127,54 @@ const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
         </div>
 
         {/* Goals, hints and the selected part */}
-        <div className="lg:w-72 shrink-0 overflow-y-auto p-4 space-y-5">
+        <div className="shrink-0 space-y-5 overflow-y-auto border-t border-line p-4 lg:w-72 lg:border-t-0">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">Goals</h3>
-            <ul className="space-y-2">
+            <h3 className="mb-3 text-sm font-semibold text-ink">Goals</h3>
+            {/* Each goal is an LED: unlit until checked, then green when met, orange when not yet */}
+            <ul className="space-y-2.5">
               {step.goals.map((goal, i) => {
                 const passed = results?.[i]?.passed
                 return (
-                  <li key={i} className="flex gap-2 text-sm">
-                    {passed
-                      ? <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-green-500" />
-                      : <Circle className={`h-4 w-4 shrink-0 mt-0.5 ${results ? "text-red-400" : "text-gray-300"}`} />}
-                    <span className={passed ? "text-green-700" : "text-gray-700"}>{goal.text}</span>
+                  <li key={i} className="flex gap-2.5 text-sm">
+                    <span className="mt-1"><StatusLed state={passed ? "done" : results ? "warning" : "off"} /></span>
+                    <span className={passed ? "text-success" : "text-ink"}>
+                      {goal.text}
+                      {results && <span className="sr-only">{passed ? " (met)" : " (not yet)"}</span>}
+                    </span>
                   </li>
                 )
               })}
             </ul>
             {solved ? (
-              <p className="mt-4 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm font-medium text-green-700">
-                <PartyPopper className="h-4 w-4 shrink-0" />
+              <p className="mt-4 flex items-center gap-2 rounded-card border border-glow-dark/40 bg-glow-tint px-3 py-2.5 text-sm font-medium text-ink shadow-[0_2px_0_var(--color-glow-dark)]" role="status">
+                <PartyPopper className="h-4 w-4 shrink-0 text-carrot-ink" />
                 Challenge complete!
               </p>
             ) : !checked && (
-              <button
-                onClick={() => setChecked(true)}
-                className="mt-4 w-full rounded-lg bg-[#2176FF] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-              >
-                Check my circuit
-              </button>
+              <Button onClick={() => setChecked(true)} size="sm" className="mt-4 w-full">Check my circuit</Button>
             )}
             {results && !solved && (
-              <p className="mt-2 text-xs text-gray-500">Goals update as you change the circuit.</p>
+              <p className="mt-2 text-xs text-ink-muted">Goals update as you change the circuit.</p>
             )}
           </div>
 
           {step.hints && step.hints.length > 0 && !solved && (
             <div>
               {step.hints.slice(0, hintsShown).map((hint, i) => (
-                <p key={i} className="mb-2 flex gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-900">
-                  <Lightbulb className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                <p key={i} className="mb-2 flex gap-2 rounded-control border border-glow-dark/40 bg-glow-tint px-3 py-2 text-sm text-ink">
+                  <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-carrot-ink" />
                   <span><RichText text={hint} /></span>
                 </p>
               ))}
               {hintsShown < step.hints.length && (
-                <button onClick={() => setHintsShown(n => n + 1)} className="text-sm font-medium text-[#2176FF] hover:underline">
+                <button onClick={() => setHintsShown(n => n + 1)} className="text-sm font-medium text-signal hover:underline">
                   {hintsShown === 0 ? "Need a hint?" : "Another hint"}
                 </button>
               )}
             </div>
           )}
 
-          <div className="border-t border-gray-200 pt-4">
+          <div className="border-t border-line pt-4">
             <PropertiesPanel
               component={selected}
               selectionCount={selectedIds.length}

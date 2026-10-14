@@ -100,7 +100,7 @@ only `react` → would break at runtime).
 | `/profile` | `profile/page.tsx` | **Profile & settings**: overview (avatar, name, email, join date, level/points/lessons), name + preset avatar (saved together), email (verified badge, send verification, change via `verifyBeforeUpdateEmail`), password change, delete account (password in a `ConfirmDialog`). Email/password/delete ask for the current password every time (re-auth). Own login guard (not `useRequireAuth`) so deleting lands on `/`, not the login box. Protected. |
 | `/about`, `/privacy`, `/terms` | `about/`, `privacy/`, `terms/page.tsx` | Server components with `metadata` titles, laid out by `InfoPage`. **Privacy must stay true to the code** (no analytics/tracking cookies; Firebase + Vercel are the only processors; self-service delete) – update it if that changes. Owner is **UK-based**; contact email `abdulsalam.sami01@gmail.com` (`CONTACT_EMAIL` in `SiteFooter.tsx`); Terms governed by England & Wales law; Privacy has controller, lawful basis, UK GDPR rights + ICO. Not lawyer-reviewed. |
 | `/feedback` | `feedback/page.tsx` | Public feedback form: type (bug/idea/question/other, `?type=`), message (≤2000), optional email (prefilled when signed in), bug reports can include browser + page (`?from=`, same-site paths only; the error page links here). Honeypot field. Saves to Firestore `feedback` via `lib/feedback.ts`; `feedback` rules **published by the owner 14 Oct 2026** (real send confirmed). Owner reads feedback in the Firebase console. |
-| `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer**: steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
+| `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer** (redesigned 14 Oct 2026: sticky bar with LevelBadge + `StepTrack`, lit-LED "Lesson complete" screen): steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
 | (404) | `not-found.tsx` | "Open circuit!" page (broken-wire picture, Home/Lessons/Editor). Real 404 status, tab title via React 19 `<title>`. |
 | (crash) | `error.tsx`, `global-error.tsx` | `error.tsx`: "Short circuit!" with Try again (`reset`) / Go home, inside the normal layout. `global-error.tsx`: self-contained fallback if the root layout itself crashes (production only; dev shows Next's overlay). |
 | `/play`, `/kidscircuit` | | Kids mode landing + an emoji grid builder (separate, not connected to the simulator yet). |
@@ -146,6 +146,8 @@ only `react` → would break at runtime).
   avatar, name/email, links, Log out → `/`), mobile hamburger menu below `md`. Props:
   `sectionLinks` (landing page `#features`/`#education`), `onSignIn`/`onSignUp` (landing opens
   its modals; elsewhere → `/?login=1` / `/?signup=1`), `sticky` (off on lessons, whose own bar sticks).
+- `lessons/StepTrack.tsx` – the lesson's steps as icon nodes on a wire in the lesson bar
+  (passed = green, current = glowing yellow, upcoming = unlit; wire powered up to current).
 - `lessons/LessonPath.tsx` – a level's lessons on a "wire": StatusLed per lesson (done/up next/
   locked), wire segment between two finished lessons is blue ("powered"). Replaced `LessonCard`.
 - `lessons/` – `ReadStepView` (renders content blocks), `QuizStepView`, `ChallengeStepView`
@@ -332,6 +334,8 @@ battery 9 V, LED 2 V, lamp 100 Ω.
   (resistor-colour-code level badges, LED status dots), one bold moment per page, sentence case,
   no ALL-CAPS labels, no "→" in button text, motion only on load/interaction, reduced motion
   respected, `:focus-visible` outline everywhere.
+- Gotcha: global element styles (body, h1–h3, `:focus-visible`) live in `@layer base` in
+  globals.css; unlayered CSS beats every Tailwind utility (e.g. it broke `truncate`).
 - Gotcha: `next/font` variables must be on `<html>` (the `@theme` tokens are defined on `:root`);
   on `<body>` the fonts silently fall back to system-ui.
 - Rollout: pages still use their old ad-hoc classes until restyled (landing first).
@@ -420,8 +424,9 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 
 **Current focus (14 Oct 2026): visual redesign** of the website. Critique done; direction
 "playful but credible" approved; design system committed (`e0c8852`); **landing page
-redesigned (`7d0c63b`); **dashboard redesigned** (not committed). Next: lessons, profile, My
-Circuits, editor chrome, auth modals, kids mode, footer. Known: `/play` overflows by ~20 px on phones (pre-existing).
+redesigned (`7d0c63b`); **dashboard redesigned (`f6719b4`); **lesson pages redesigned**
+(not committed). Next: profile, My Circuits, editor chrome (also the challenge workbench's
+sidebar/Properties/zoom), auth modals, kids mode, footer. Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -447,6 +452,17 @@ Circuits, editor chrome, auth modals, kids mode, footer. Known: `/play` overflow
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed the dashboard (`f6719b4`). **Lesson pages redesign**: lesson bar with
+  LevelBadge + new `StepTrack`; Badge for step kind; reading steps (larger body text, tokenised
+  callouts with sr-only labels, ink formula card in the display font, part cards, table);
+  quiz (tactile options with a radio dot, success/danger marking, `Button`); challenge (panel
+  workbench, Run = glow button, goal LEDs off/warning/done, glowing "Challenge complete",
+  tokenised hints); lit-LED completion screen; locked/not-found states. Fixed: global base
+  styles moved into `@layer base` (they overrode `truncate`). Browser-tested with TEMP fake
+  user + stubbed `completeLesson` (restored, no Firebase writes): read → read → quiz (wrong then
+  right) → finish screen (+60 points); challenge goals + Run; 375 px header one line. Not
+  checked visually: the solved "Challenge complete" card. tsc/lint/tests pass. Not committed.
 
 - 2026-10-14 – Committed the landing page (`7d0c63b`). **Dashboard redesign**: rewrote
   `dashboard/page.tsx` ("Your learning" + editor button, Up next ink card with LevelBadge

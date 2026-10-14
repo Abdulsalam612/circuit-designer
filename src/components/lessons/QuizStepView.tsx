@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { CheckCircle2, XCircle } from "lucide-react"
 import type { QuizStep } from "@/types/lesson"
+import Button from "@/components/ui/Button"
 import RichText from "./RichText"
 
 interface QuizStepViewProps {
@@ -35,43 +36,56 @@ const QuizStepView = ({ step, onPassed }: QuizStepViewProps) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {step.questions.map((question, q) => {
         const isMarked = marked[q]
         const isRight = isMarked && answers[q] === question.answer
         return (
-          <fieldset key={q} className="rounded-xl border border-gray-200 bg-white p-5">
+          <fieldset key={q} className="rounded-panel border border-line bg-surface p-5 sm:p-6">
             <legend className="sr-only">Question {q + 1}</legend>
-            <p className="font-medium text-gray-900 mb-3">
-              <span className="text-gray-400 mr-2">{q + 1}.</span>
+            <p className="mb-4 text-[17px] font-medium leading-snug text-ink">
+              <span className="tabular mr-2 text-ink-faint">{q + 1}</span>
               <RichText text={question.prompt} />
             </p>
-            <div className="grid sm:grid-cols-2 gap-2">
+            <div className="grid gap-2.5 sm:grid-cols-2">
               {question.options.map((option, o) => {
                 const selected = answers[q] === o
-                let style = "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50"
-                if (selected) style = "border-[#2176FF] bg-blue-50 ring-1 ring-[#2176FF]"
-                if (isMarked && selected) style = isRight ? "border-green-500 bg-green-50 ring-1 ring-green-500" : "border-red-400 bg-red-50 ring-1 ring-red-400"
+                let style = "border-line-strong bg-surface shadow-key hover:border-signal/50 hover:bg-signal-tint"
+                if (selected) style = "border-signal bg-signal-tint shadow-[0_2px_0_var(--color-signal)]"
+                if (isMarked && selected) {
+                  style = isRight
+                    ? "border-success bg-success-tint shadow-[0_2px_0_var(--color-success)]"
+                    : "border-danger bg-danger-tint shadow-[0_2px_0_var(--color-danger)]"
+                }
                 return (
                   <button
                     key={o}
                     type="button"
                     onClick={() => choose(q, o)}
                     aria-pressed={selected}
-                    className={`text-left rounded-lg border px-4 py-2.5 text-sm text-gray-800 transition-colors ${style}`}
+                    className={`flex items-center gap-3 rounded-control border px-3.5 py-3 text-left text-ink transition-[background-color,border-color,transform] active:translate-y-[2px] ${style}`}
                   >
-                    {option}
+                    {/* A radio-style dot shows the choice without relying on colour alone */}
+                    <span
+                      aria-hidden="true"
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                        selected ? "border-current" : "border-line-strong"
+                      } ${isMarked && selected ? (isRight ? "text-success" : "text-danger") : "text-signal"}`}
+                    >
+                      {selected && <span className="h-2 w-2 rounded-full bg-current" />}
+                    </span>
+                    <span>{option}</span>
                   </button>
                 )
               })}
             </div>
             {isMarked && (
-              <p className={`mt-3 flex gap-2 text-sm ${isRight ? "text-green-700" : "text-red-700"}`}>
-                {isRight ? <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" /> : <XCircle className="h-4 w-4 shrink-0 mt-0.5" />}
+              <p className={`mt-4 flex gap-2 text-sm ${isRight ? "text-success" : "text-danger"}`} role="status">
+                {isRight ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <XCircle className="mt-0.5 h-4 w-4 shrink-0" />}
                 <span>
-                  {isRight ? "Correct! " : "Not quite. "}
+                  <strong className="font-semibold">{isRight ? "Correct. " : "Not quite. "}</strong>
                   {/* A wrong answer gets a nudge, not the answer, so it's still worth a retry */}
-                  {isRight ? <RichText text={question.explanation} /> : "Have another look and try again."}
+                  {isRight ? <span className="text-ink"><RichText text={question.explanation} /></span> : "Have another look and try again."}
                 </span>
               </p>
             )}
@@ -79,19 +93,12 @@ const QuizStepView = ({ step, onPassed }: QuizStepViewProps) => {
         )
       })}
 
-      <div className="flex items-center justify-between gap-4">
-        <p className="text-sm text-gray-500">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <p className="tabular text-sm text-ink-muted">
           {marked.some(Boolean) ? `${correctCount} of ${step.questions.length} correct` : `${step.questions.length} questions`}
         </p>
         {!allCorrect && (
-          <button
-            type="button"
-            onClick={check}
-            disabled={!allAnswered}
-            className="rounded-lg bg-[#2176FF] px-5 py-2.5 font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Check answers
-          </button>
+          <Button onClick={check} disabled={!allAnswered}>Check answers</Button>
         )}
       </div>
     </div>
