@@ -12,7 +12,7 @@ import { flipComponent, rotateComponent } from "@/lib/editing"
 import PropertiesPanel from "../PropertiesPanel"
 import RichText from "./RichText"
 
-const KonvaTestCanvas = dynamic(() => import("../KonvaTestCanvas"), {
+const CircuitCanvas = dynamic(() => import("../CircuitCanvas"), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-full w-full text-gray-500">Loading canvas...</div>,
 })
@@ -115,7 +115,7 @@ const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
           </div>
           <div className="relative flex-1 min-h-[420px]">
             <div className="absolute inset-0">
-              <KonvaTestCanvas
+              <CircuitCanvas
                 layout={layout}
                 onLayoutChange={apply}
                 onSelectionChange={setSelectedIds}

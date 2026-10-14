@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { Stage, Layer, Rect, Circle, Shape, Line, Label, Tag, Text } from "react-konva"
 import Konva from "konva"
-import styles from "./KonvaTestCanvas.module.css"
+import styles from "./CircuitCanvas.module.css"
 import interact from "interactjs"
 import CircuitPart, { CIRCUIT_PART_NAME, partSize } from "./circuit/CircuitPart"
 import { COMPONENT_DEFS, iconFor } from "@/lib/components"
@@ -58,7 +58,7 @@ const WIRE_COLOR = "#1f2937"
 const SELECT_COLOR = "#3498db"
 const INVALID_COLOR = "#ef4444"
 
-interface KonvaTestCanvasProps {
+interface CircuitCanvasProps {
   // The circuit is owned by the page (which keeps undo history and saves it)
   layout: CircuitLayout;
   onLayoutChange: (layout: CircuitLayout) => void;
@@ -71,7 +71,7 @@ interface KonvaTestCanvasProps {
   fitContainer?: boolean;
 }
 
-const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation, fitContainer = false }) => {
+const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation, fitContainer = false }) => {
   // Set initial dimensions to avoid hydration errors
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [isMounted, setIsMounted] = useState(false)
@@ -955,4 +955,4 @@ const KonvaTestCanvas: React.FC<KonvaTestCanvasProps> = ({ layout, onLayoutChang
   );
 };
 
-export default KonvaTestCanvas;
+export default CircuitCanvas;

@@ -17,7 +17,7 @@ import { simulate } from "@/lib/simulation";
 import type { CircuitComponent, CircuitLayout } from "@/types/circuit";
 
 // Dynamically import Konva components with SSR disabled
-const KonvaTestCanvas = dynamic(() => import("../../components/KonvaTestCanvas"), {
+const CircuitCanvas = dynamic(() => import("../../components/CircuitCanvas"), {
   ssr: false,
   loading: () => <div className="flex items-center justify-center h-full w-full">Loading canvas...</div>
 })
@@ -292,7 +292,7 @@ export default function SimulationPage() {
               </div>
 
               <div id="zoom-controls-container" className="flex items-center space-x-4">
-                {/* Zoom controls will be injected here from KonvaTestCanvas */}
+                {/* Zoom controls will be injected here from CircuitCanvas */}
               </div>
             </div>
           </div>
@@ -313,7 +313,7 @@ export default function SimulationPage() {
 
             {/* Canvas Content Area */}
             <div className="absolute inset-0 p-6">
-              <KonvaTestCanvas layout={layout} onLayoutChange={apply} onSelectionChange={setSelectedIds} simulation={simulation} />
+              <CircuitCanvas layout={layout} onLayoutChange={apply} onSelectionChange={setSelectedIds} simulation={simulation} />
             </div>
           </div>
         </div>

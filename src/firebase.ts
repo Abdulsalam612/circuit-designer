@@ -1,17 +1,26 @@
-// src/firebase.ts
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-// TODO: Replace with your Firebase project config
+// Firebase web config, from .env.local (see .env.example) locally and from the project's
+// Environment Variables on Vercel. These values aren't secret (they ship to the browser);
+// keeping them out of the code just means each environment can point at its own project.
+// Each variable must be written out in full: Next.js only inlines NEXT_PUBLIC_* values it
+// can see literally.
 const firebaseConfig = {
-  apiKey: "AIzaSyC3Jq9tKfOhY6EB_1-XeDvKl50oWar3dng",
-  authDomain: "circuitdesigner-4e620.firebaseapp.com",
-  projectId: "circuitdesigner-4e620",
-  storageBucket: "circuitdesigner-4e620.firebasestorage.app",
-  messagingSenderId: "670781521617",
-  appId: "1:670781521617:web:2121dd8509a9b93478cff0"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
+// Fail loudly rather than with a vague Firebase auth error later
+const missing = Object.entries(firebaseConfig).filter(([, value]) => !value).map(([key]) => key);
+if (missing.length > 0) {
+  throw new Error(`Firebase config missing (${missing.join(', ')}). Copy .env.example to .env.local and fill it in.`);
+}
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);

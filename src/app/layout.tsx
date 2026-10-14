@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,10 +12,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Public address of the site, used to make Open Graph / Twitter URLs absolute.
+// Change it here when CirKit gets a custom domain.
+const SITE_URL = "https://circuit-designer-abdulsalam612s-projects.vercel.app";
+
+const TITLE = "CirKit – Build, Simulate & Learn Electronics";
+const DESCRIPTION =
+  "Design and simulate circuits online. Learn electronics step by step with interactive lessons and hands-on circuit challenges.";
+
 export const metadata: Metadata = {
-  title: "CirKit – Build, Simulate & Learn Electronics",
-  description:
-    "Design and simulate circuits online. Learn electronics step by step with interactive tutorials and gamified challenges.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  authors: [{ name: "Abdulsalam Sami" }],
   keywords: [
     "circuit design",
     "electronics",
@@ -24,36 +33,30 @@ export const metadata: Metadata = {
     "learn electronics",
     "debug circuits",
   ],
+  // The share image comes from opengraph-image.tsx / twitter-image.tsx in this folder
   openGraph: {
-    title: "CirKit – Build, Simulate & Learn Electronics",
-    description:
-      "Design and simulate circuits online. Learn electronics step by step with interactive tutorials and gamified challenges.",
-    url: "https://yourdomain.com",
-    siteName: "CircuitCraft",
-    images: [
-      {
-        url: "https://yourdomain.com/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "CirKit – Build, Simulate & Learn Electronics",
-      },
-    ],
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/",
+    siteName: "CirKit",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "CirKit – Build, Simulate & Learn Electronics",
-    description:
-      "Design and simulate circuits online. Learn electronics step by step with interactive tutorials and gamified challenges.",
-    images: ["https://yourdomain.com/og-image.png"],
+    title: TITLE,
+    description: DESCRIPTION,
     creator: "@AbdulsalamSami",
   },
 };
 
-import { AuthProvider } from "@/context/AuthContext";
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0f172a",
+};
 
-import Head from "next/head";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -62,15 +65,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <Head>
-        {/* Responsive viewport */}
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* Author */}
-        <meta name="author" content="Abdulsalam Sami" />
-        {/* Favicon */}
-        <link rel="icon" type="image/png" href="/favicon.png" />
-        <meta name="theme-color" content="#0f172a" />
-      </Head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
