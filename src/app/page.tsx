@@ -20,11 +20,15 @@ import {
   User,
   Eye,
   EyeOff,
+  Loader2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import WelcomeBack from "@/components/WelcomeBack"
 import SiteHeader from "@/components/SiteHeader"
+import Button from "@/components/ui/Button"
+import Field, { inputClass } from "@/components/ui/Field"
+import { MIN_PASSWORD_LENGTH } from "@/lib/account"
 import SiteFooter from "@/components/SiteFooter"
 import { Course, FinalCallToAction, ForSchools, Hero, HowItWorks } from "@/components/landing/LandingSections"
 import { useToast } from "@/context/ToastContext"
@@ -128,6 +132,32 @@ export default function HomePage() {
     }
   }
 
+  const closeAuthDialogs = () => {
+    setShowLoginModal(false)
+    setShowSignupModal(false)
+    setShowResetModal(false)
+    // Passwords start hidden again next time
+    setShowPassword(false)
+    setResetEmail("")
+    setResetSuccess(false)
+    setResetError("")
+  }
+
+  // Esc closes whichever dialog is open
+  const dialogOpen = showLoginModal || showSignupModal || showResetModal
+  useEffect(() => {
+    if (!dialogOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return
+      setShowLoginModal(false)
+      setShowSignupModal(false)
+      setShowResetModal(false)
+      setShowPassword(false)
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [dialogOpen])
+
   const openLoginModal = () => {
     setShowSignupModal(false)
     setShowLoginModal(true)
@@ -139,60 +169,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Password Reset Modal */}
-      {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-pop-in">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
-            <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
-              onClick={() => {
-                setShowResetModal(false)
-                setResetEmail("")
-                setResetSuccess(false)
-                setResetError("")
-              }}
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
-            <h2 className="text-2xl font-bold text-[#31393C] mb-4 text-center">Reset Password</h2>
-            <form onSubmit={handlePasswordReset} className="space-y-4">
-              <div>
-                <label className="block text-[#31393C] mb-1">Email Address</label>
-                <input
-                  type="email"
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring focus:border-[#2176FF] text-black"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-              {resetSuccess && <p className="text-green-600 text-sm">Password reset email sent! Check your inbox.</p>}
-              {resetError && <p className="text-red-600 text-sm">{resetError}</p>}
-              <button
-                type="submit"
-                className="w-full bg-[#2176FF] text-white font-semibold py-2 rounded hover:bg-[#33A1FD] transition-colors"
-                disabled={resetLoading}
-              >
-                {resetLoading ? "Sending..." : "Send Reset Email"}
-              </button>
-              <button
-                type="button"
-                className="w-full mt-2 text-[#2176FF] hover:underline"
-                onClick={() => {
-                  setShowResetModal(false)
-                  setShowLoginModal(true)
-                }}
-              >
-                Back to Login
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
+    <div className="min-h-screen bg-paper">
       <SiteHeader
         sectionLinks={[
           { href: "#how-it-works", label: "How it works" },
@@ -202,282 +179,106 @@ export default function HomePage() {
         onSignUp={() => setShowSignupModal(true)}
       />
 
-      {/* Login Modal */}
+      {/* Sign in / create account / reset password. Only the look lives here; the handlers
+          above do the work. */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-pop-in">
-            <button
-              onClick={() => setShowLoginModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="text-center mb-6">
-              <div className="bg-[#2176FF] p-2.5 rounded-lg inline-block mb-2">
-                <CircuitBoard className="h-7 w-7 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-[#31393C]">Welcome back</h2>
-              <p className="text-gray-600 mt-1">Log in to continue your learning journey</p>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-[#31393C] mb-1">
-                  Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    type="email"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-[#2176FF] focus:border-[#2176FF] text-black"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-[#31393C] mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-[#2176FF] focus:border-[#2176FF] text-black"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-[#2176FF] focus:ring-[#2176FF] border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-[#31393C]">
-                    Remember me
-                  </label>
-                </div>
-
-                <div className="text-sm">
-                  <button
-                    type="button"
-                    className="font-medium text-[#2176FF] hover:text-[#33A1FD] bg-transparent border-0 p-0 m-0 cursor-pointer"
-                    onClick={() => {
-                      setShowLoginModal(false)
-                      setShowResetModal(true)
-                    }}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              </div>
-
+        <AuthDialog id="login" title="Welcome back" subtitle="Sign in to pick up where you left off." onClose={closeAuthDialogs}>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <Field label="Email" htmlFor="email">
+              <IconInput icon={Mail} id="email" type="email" autoComplete="email" value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
+            </Field>
+            <Field label="Password" htmlFor="password">
+              <PasswordInput id="password" autoComplete="current-password" value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)} shown={showPassword} onToggle={() => setShowPassword(v => !v)} />
+            </Field>
+            <div className="flex justify-end">
               <button
-                type="submit"
-                className="w-full bg-[#2176FF] hover:bg-[#33A1FD] text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                type="button"
+                className="text-sm font-medium text-signal hover:underline"
+                onClick={() => {
+                  setShowLoginModal(false)
+                  setShowResetModal(true)
+                }}
               >
-                Log in
+                Forgot your password?
               </button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Don&apos;t have an account?{" "}
-                <button onClick={openSignupModal} className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
-                  Sign up
-                </button>
-              </p>
             </div>
-          </div>
-        </div>
+            <Button type="submit" className="w-full">Sign in</Button>
+          </form>
+          <p className="mt-6 text-center text-sm text-ink-muted">
+            New to CirKit?{" "}
+            <button onClick={openSignupModal} className="font-medium text-signal hover:underline">Create an account</button>
+          </p>
+        </AuthDialog>
       )}
 
-      {/* Signup Modal */}
       {showSignupModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 relative animate-pop-in">
-            <button
-              onClick={() => setShowSignupModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-5 w-5" />
-            </button>
+        <AuthDialog id="signup" title="Create your account" subtitle="It's free, and it saves your circuits and progress." onClose={closeAuthDialogs}>
+          <form onSubmit={handleSignup} className="space-y-4" aria-busy={signupLoading}>
+            <Field label="Your name" htmlFor="name">
+              <IconInput icon={User} id="name" type="text" autoComplete="name" value={signupName}
+                onChange={(e) => setSignupName(e.target.value)} placeholder="Ada Lovelace" required autoFocus />
+            </Field>
+            <Field label="Email" htmlFor="signup-email">
+              <IconInput icon={Mail} id="signup-email" type="email" autoComplete="email" value={signupEmail}
+                onChange={(e) => setSignupEmail(e.target.value)} placeholder="you@example.com" required />
+            </Field>
+            <Field label="Password" htmlFor="signup-password" hint={`At least ${MIN_PASSWORD_LENGTH} characters.`}>
+              <PasswordInput id="signup-password" autoComplete="new-password" value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)} shown={showPassword} onToggle={() => setShowPassword(v => !v)} />
+            </Field>
+            <label htmlFor="terms" className="flex items-start gap-2.5 text-sm text-ink">
+              <input id="terms" name="terms" type="checkbox" required className="mt-0.5 h-4 w-4 shrink-0 rounded border-line-strong accent-signal" />
+              <span>
+                I agree to the{" "}
+                {/* New tab, so the half-filled signup form isn't lost */}
+                <a href="/terms" target="_blank" rel="noopener" className="font-medium text-signal hover:underline">Terms of Use</a>{" "}
+                and{" "}
+                <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-signal hover:underline">Privacy Policy</a>
+              </span>
+            </label>
+            <Button type="submit" className="w-full" disabled={signupLoading}>
+              {signupLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating your account…</> : "Create account"}
+            </Button>
+          </form>
+          <p className="mt-6 text-center text-sm text-ink-muted">
+            Already have an account?{" "}
+            <button onClick={openLoginModal} className="font-medium text-signal hover:underline">Sign in</button>
+          </p>
+        </AuthDialog>
+      )}
 
-            <div className="text-center mb-6">
-              <div className="bg-[#2176FF] p-2.5 rounded-lg inline-block mb-2">
-                <CircuitBoard className="h-7 w-7 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-[#31393C]">Create your account</h2>
-              <p className="text-gray-600 mt-1">Start your electronics learning journey today</p>
-            </div>
-
-            <form
-              onSubmit={handleSignup}
-              className="space-y-4"
-              style={signupLoading ? { pointerEvents: "none", opacity: 0.6 } : {}}
-            >
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-[#31393C] mb-1">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="name"
-                    type="text"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-[#2176FF] focus:border-[#2176FF] text-black"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="signup-email" className="block text-sm font-medium text-[#31393C] mb-1">
-                  Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="signup-email"
-                    type="email"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-[#2176FF] focus:border-[#2176FF] text-black"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="signup-password" className="block text-sm font-medium text-[#31393C] mb-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="signup-password"
-                    type={showPassword ? "text" : "password"}
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-[#2176FF] focus:border-[#2176FF] text-black"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-                <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters</p>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  id="terms"
-                  name="terms"
-                  type="checkbox"
-                  className="h-4 w-4 text-[#2176FF] focus:ring-[#2176FF] border-gray-300 rounded"
-                  required
-                />
-                <label htmlFor="terms" className="ml-2 block text-sm text-[#31393C]">
-                  I agree to the{" "}
-                  {/* New tab, so the half-filled signup form isn't lost */}
-                  <a href="/terms" target="_blank" rel="noopener" className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
-                    Terms of Use
-                  </a>{" "}
-                  and{" "}
-                  <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
-                    Privacy Policy
-                  </a>
-                </label>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-[#2176FF] hover:bg-[#33A1FD] text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center"
-                disabled={signupLoading}
-              >
-                {signupLoading ? (
-                  <>
-                    <svg
-                      className="animate-spin h-5 w-5 mr-2 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                    </svg>
-                    Signing up...
-                  </>
-                ) : (
-                  "Create account"
-                )}
-              </button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Already have an account?{" "}
-                <button onClick={openLoginModal} className="font-medium text-[#2176FF] hover:text-[#33A1FD]">
-                  Log in
-                </button>
+      {showResetModal && (
+        <AuthDialog id="reset" title="Reset your password" subtitle="We'll email you a link to choose a new one." onClose={closeAuthDialogs}>
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <Field label="Email" htmlFor="reset-email">
+              <IconInput icon={Mail} id="reset-email" type="email" autoComplete="email" value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
+            </Field>
+            {resetSuccess && (
+              <p className="rounded-control border border-success/25 bg-success-tint px-3 py-2.5 text-sm text-success" role="status">
+                Reset link sent. Check your inbox, and your spam folder too.
               </p>
-            </div>
-          </div>
-        </div>
+            )}
+            {resetError && (
+              <p className="rounded-control border border-danger/30 bg-danger-tint px-3 py-2.5 text-sm text-danger" role="alert">{resetError}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={resetLoading}>
+              {resetLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : "Send reset link"}
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                closeAuthDialogs()
+                setShowLoginModal(true)
+              }}
+            >
+              Back to sign in
+            </Button>
+          </form>
+        </AuthDialog>
       )}
 
       {/* Signed in: pick up where you left off. Signed out: the landing page. Nothing while
@@ -505,6 +306,71 @@ export default function HomePage() {
       {/* Footer */}
       <SiteFooter />
 
+    </div>
+  )
+}
+
+// ---- Sign-in dialogs ----
+
+function AuthDialog({ id, title, subtitle, onClose, children }: {
+  id: string
+  title: string
+  subtitle: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+        className="relative w-full max-w-md rounded-panel border border-line bg-surface p-6 shadow-lift animate-pop-in sm:p-8"
+        onClick={e => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-control p-1.5 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        <div className="mb-6">
+          <span className="mb-4 inline-flex rounded-control bg-brand p-2">
+            <CircuitBoard className="h-6 w-6 text-white" aria-hidden="true" />
+          </span>
+          <h2 id={`${id}-title`} className="font-display text-2xl font-semibold tracking-[-0.015em] text-ink">{title}</h2>
+          <p className="mt-1 text-ink-muted">{subtitle}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function IconInput({ icon: Icon, className = "", ...props }: React.ComponentProps<"input"> & { icon: typeof Mail }) {
+  return (
+    <div className="relative">
+      <Icon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-faint" aria-hidden="true" />
+      <input {...props} className={`${inputClass} pl-10 ${className}`} />
+    </div>
+  )
+}
+
+function PasswordInput({ shown, onToggle, ...props }: React.ComponentProps<"input"> & { shown: boolean; onToggle: () => void }) {
+  return (
+    <div className="relative">
+      <Lock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-faint" aria-hidden="true" />
+      <input {...props} type={shown ? "text" : "password"} required placeholder="••••••••" className={`${inputClass} pl-10 pr-11`} />
+      <button
+        type="button"
+        onClick={onToggle}
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-control p-1.5 text-ink-faint hover:text-ink"
+        aria-label={shown ? "Hide password" : "Show password"}
+        aria-pressed={shown}
+      >
+        {shown ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+      </button>
     </div>
   )
 }

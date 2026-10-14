@@ -427,8 +427,9 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 **Current focus (14 Oct 2026): visual redesign** of the website. Critique done; direction
 "playful but credible" approved; design system committed (`e0c8852`); **landing page
 redesigned (`7d0c63b`); **dashboard redesigned (`f6719b4`); **lesson pages (`7986cb6`); profile/My Circuits/shared
-pieces (`9e61fc0`); **editor frame redesigned** (not committed). Old styles now left only in
-the login/signup/reset modals (`app/page.tsx`) and kids mode (`/play`, `/kidscircuit`). Known: `/play` overflows by ~20 px on phones (pre-existing).
+pieces (`9e61fc0`); editor frame (`a416184`); sign-in dialogs redesigned. **Whole website
+redesign deployed 14 Oct 2026** (see §9). Old styles now left only in kids mode (`/play`,
+`/kidscircuit`) – next redesign step. Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -454,6 +455,14 @@ the login/signup/reset modals (`app/page.tsx`) and kids mode (`/play`, `/kidscir
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed the editor (`a416184`). **Sign-in dialogs redesign** in `app/page.tsx`:
+  login/signup/reset rebuilt on a shared `AuthDialog` (role=dialog, aria-modal, labelled title,
+  Esc / backdrop / labelled × to close) with `IconInput` + `PasswordInput` (labelled show/hide
+  toggle, hidden again on close) and the shared Field/Button; removed the fake "Remember me";
+  signup hint now "At least 6 characters" (was a wrong "8"); handlers unchanged. Tested: open,
+  Esc, backdrop, ×, switching login ↔ signup ↔ reset, focus on email, password toggle, one
+  refused sign-in with a made-up account (friendly error toast; nothing created), 375 px.
 
 - 2026-10-14 – Committed profile/My Circuits/shared pieces (`9e61fc0`). **Editor redesign
   (frame only – no editing logic changed)**: `simulation/page.tsx` toolbar (logo, My Circuits,
