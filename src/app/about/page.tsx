@@ -35,7 +35,7 @@ export default function AboutPage() {
           <strong>Save your work</strong> in <Link href="/circuits">My Circuits</Link>, or export it as a file.
         </li>
         <li>
-          <strong>CirKit Kids</strong> is a simpler, more playful <Link href="/play">mode for younger learners</Link>.
+          <strong>CirKit Kids</strong> is for younger learners (about 8 to 11): <Link href="/kids">build a machine, code it with blocks, and watch it go</Link>.
         </li>
       </ul>
 

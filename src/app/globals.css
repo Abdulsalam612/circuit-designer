@@ -41,6 +41,10 @@
   --color-carrot-ink: #9a4d00;
   --color-carrot-tint: #fff0e0;
 
+  /* CirKit Kids "sound" blocks (white text 5.7:1) */
+  --color-sound: #7c3aed;
+  --color-sound-dark: #5b21b6;
+
   /* States */
   --color-success: #127436; /* 5.2:1 on its tint, white text 5.9:1 */
   --color-success-tint: #e7f6ec;
@@ -130,4 +134,23 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-flow { animation: none; }
+}
+
+/* CirKit Kids snap board: current along a wire piece, and a spinning motor rotor */
+@keyframes kids-flow {
+  to { stroke-dashoffset: -24; }
+}
+.kids-flow {
+  animation: kids-flow 0.6s linear infinite;
+}
+@keyframes kids-spin {
+  to { transform: rotate(360deg); }
+}
+.kids-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kids-spin 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kids-flow, .kids-spin { animation: none; }
 }

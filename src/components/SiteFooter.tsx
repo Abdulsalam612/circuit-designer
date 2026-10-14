@@ -14,7 +14,7 @@ const COLUMNS: { title: string; colour: string; links: { href: string; label: st
     links: [
       { href: "/simulation", label: "Circuit Editor" },
       { href: "/dashboard", label: "Lessons" },
-      { href: "/play", label: "CirKit Kids" },
+      { href: "/kids", label: "CirKit Kids" },
       { href: "/circuits", label: "My Circuits" },
     ],
   },

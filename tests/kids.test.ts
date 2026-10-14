@@ -8,6 +8,7 @@ import { buildLayout, runMission, CM_PER_SECOND_AT_FULL_SPEED, TICK_SECONDS } fr
 import { KIDS_MISSIONS } from '../src/content/kids';
 import driveToTheFlag from '../src/content/kids/missions/drive-to-the-flag';
 import type { Block } from '../src/types/kids';
+import { programToState, stateToProgram, HAT_TYPE, type SavedWorkspace } from '../src/lib/kids/blocks';
 import type { CircuitLayout } from '../src/types/circuit';
 
 let fails = 0, passes = 0;
@@ -48,7 +49,10 @@ const layout = buildLayout(mission, all);
 check('mission layout is valid', isLayoutValid(layout.components, layout.wires));
 check('missions have unique ids', new Set(KIDS_MISSIONS.map(m => m.id)).size === KIDS_MISSIONS.length);
 for (const m of KIDS_MISSIONS) {
+  if (m.kind !== 'code') continue;
   check(`${m.id}: car motor exists`, m.layout.components.some(c => c.id === m.carMotorId && c.type === 'motor'));
+  const portNames = m.layout.components.filter(c => c.type === 'port').map(c => c.port);
+  check(`${m.id}: every port has a label`, portNames.every(p => !!p && !!m.portLabels[p]) && Object.keys(m.portLabels).every(p => portNames.includes(p)));
   check(`${m.id}: slots name real parts`, m.slots.every(s => m.layout.components.some(c => c.id === s.componentId)));
   check(`${m.id}: start program only uses offered blocks`, flatten(m.startProgram).every(b => m.blocks.includes(b.type)));
 }
@@ -144,6 +148,33 @@ const programWithWait = (seconds: number, speed = 50): Block[] => [
   check('mission: without the battery nothing works', noBattery.outcome === 'still' && noBattery.frames.every(f => (f.hub.brightness.light ?? 0) === 0));
   const noLight = runMission(mission, programWithWait(4), new Set(['battery', 'motor']));
   check('mission: the car still drives without its light', noLight.outcome === 'success');
+}
+
+// ---- Blockly workspace <-> program ----
+{
+  const program: Block[] = [
+    { type: 'motorOn', port: 'A', speed: 75 },
+    { type: 'repeat', times: 3, body: [{ type: 'lightOn', port: 'B' }, { type: 'wait', seconds: 0.5 }, { type: 'lightOff', port: 'B' }] },
+    { type: 'beep' },
+    { type: 'motorOff', port: 'A' },
+  ];
+  const state = programToState(program);
+  check('blocks: round trip keeps the program', JSON.stringify(stateToProgram(state)) === JSON.stringify(program), JSON.stringify(stateToProgram(state)));
+  check('blocks: the hat cannot be deleted', state.blocks?.blocks[0].type === HAT_TYPE && state.blocks.blocks[0].deletable === false);
+  check('blocks: empty program round trips', stateToProgram(programToState([])).length === 0);
+  check('blocks: mission start program round trips', JSON.stringify(stateToProgram(programToState(mission.startProgram))) === JSON.stringify(mission.startProgram));
+
+  // Loose blocks (not under the hat) and switched-off blocks don't run
+  const withExtras: SavedWorkspace = JSON.parse(JSON.stringify(state));
+  withExtras.blocks!.blocks.push({ type: 'kids_beep', x: 400, y: 40 });
+  const firstUnderHat = withExtras.blocks!.blocks[0].next!.block!;
+  firstUnderHat.disabledReasons = ['MANUALLY_DISABLED'];
+  const read = stateToProgram(withExtras);
+  check('blocks: loose and disabled blocks are ignored', read.length === program.length - 1 && read[0].type === 'repeat', JSON.stringify(read));
+  check('blocks: no hat, nothing runs', stateToProgram({ blocks: { languageVersion: 0, blocks: [{ type: 'kids_beep' }] } }).length === 0);
+  // Number fields arrive as strings or numbers depending on the field
+  const typed = stateToProgram({ blocks: { languageVersion: 0, blocks: [{ type: HAT_TYPE, next: { block: { type: 'kids_wait', fields: { SECONDS: '4' } } } }] } });
+  check('blocks: numbers are read from text', typed[0].type === 'wait' && typed[0].seconds === 4);
 }
 
 console.log(fails ? `${fails} kids checks FAILED, ${passes} passed` : `all ${passes} kids checks passed`);

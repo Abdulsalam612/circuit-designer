@@ -1,6 +1,8 @@
 # CirKit Kids – MVP design
 
-Status: **proposal, agreed direction 14 Oct 2026, nothing built yet.**
+Status: **in progress.** Agreed 14 Oct 2026; **changed to circuits first the same day** (owner:
+"what you have done here is coding, not circuits"). Engine, the snap board and missions
+"Make it go" (Part 1) and "Drive to the flag" (Part 2) are built.
 Clickable mock-up (private, owner's account): https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA
 
 ## 1. Why
@@ -8,14 +10,19 @@ Clickable mock-up (private, owner's account): https://claude.ai/artifact/EdKQje5
 LEGO Education works because children **build a real thing, code it, and see the code make it
 move**. The build gives the code meaning; the movement makes mistakes visible and fun.
 
-CirKit already has the hard part, a real circuit simulator. CirKit Kids puts that same loop on
-a tablet:
+CirKit already has the hard part, a real circuit simulator. CirKit is about **circuits**, so
+CirKit Kids starts there, and code comes second:
 
-> **Build it → Code it → Watch it go.**
+> **Part 1: Build circuits.** Snap chunky pieces (battery, wires, motor, bulb, switch) onto a
+> stud board. The real simulator decides what happens: the motor spins and the car drives only
+> when the loop is complete.
+>
+> **Part 2: Code your machine.** Swap the switch for a hub port and tell it what to do with
+> blocks: *Build it → Code it → Watch it go.*
 
-Children learn electricity (a motor only runs in a complete, powered circuit) **and** coding
-(steps in order, timing, loops, events, conditions) at the same time, and every program has a
-visible result.
+Children learn electricity first (complete loops, switches, series batteries, turning the
+battery round), then coding (steps in order, timing, loops, events) on top of circuits they
+already understand.
 
 ## 2. Who it's for
 
@@ -24,7 +31,22 @@ visible result.
 - Used on **school tablets and Chromebooks**: touch-first, 44 px+ targets, little reading.
 - Teachers: missions map to clear learning goals; class view comes with Stage 6.
 
-## 3. The MVP loop (one mission end to end)
+## 3. The MVP loop
+
+### Part 1: a circuit mission ("Make it go")
+
+| Step | What the child does | What they learn |
+|---|---|---|
+| **Pick a mission** | "Make it go": the car has a battery and a motor but nothing joins them | Purpose before tools |
+| **Build** | Tap a piece in the tray, then tap a glowing gap on the stud board. Tap a placed piece to turn it around, switch it on/off or take it off. | Parts, a complete loop |
+| **Watch** | Nothing to press: the simulator runs on every change. Current dots flow, the motor spins, the car drives (backwards if the battery is turned round). Goals tick off with LEDs; a short circuit is explained, not just flagged. | Cause and effect, short circuits |
+
+The snap board: studs 40 editor units apart; a wire spans one gap, a part spans two with its
+middle stud covered; pieces whose ends meet on a stud connect (the editor's own rule), so a
+board becomes a real `CircuitLayout`. The kids' battery is 4.5 V, so one battery runs the
+motor at half speed and two in series at full speed (the "Faster!" mission).
+
+### Part 2: a code mission ("Drive to the flag")
 
 | Step | What the child does | What they learn |
 |---|---|---|
@@ -42,16 +64,19 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 **In**
 - Route `/kids` (replaces today's `/play` + `/kidscircuit` placeholders, which are emoji
   mock-ups with no real simulation).
-- Mission select + workbench with Build / Code / Play.
-- **Mission 1 "Drive to the flag"** fully working, plus missions 2–3 if time allows:
-  2 "The blinking lighthouse" (repeat loop), 3 "Make a doorbell tune" (events, buzzer).
+- Mission select in two parts. **Part 1 (circuits):** "Make it go" (complete loop), then
+  "Faster!" (two batteries in series), "Lights on" (bulb + switch), "Backwards" (turn the
+  battery round). **Part 2 (code):** "Drive to the flag" (sequence, timing), then
+  "The blinking lighthouse" (repeat loop), "Make a doorbell tune" (events, buzzer).
+- Snap board for circuit missions; workbench with Build / Code / Play for code missions.
 - Block set (6–8 blocks): *When Go pressed* (hat), *Motor A forward [speed]*, *Motor A stop*,
   *Wait [s]*, *Light B on/off*, *Beep*, *Repeat [n]* (mission 2), *When button pressed*
   (mission 3).
 - Stars per mission (saved to progress like lessons), "Look inside" circuit view.
 
 **Out (later phases)**
-- Drag-and-drop circuit building with wires (the full editor is the "graduate" path).
+- Free wiring with bendy wires and dragging (the full editor is the "graduate" path; the snap
+  board is tap-to-place on purpose).
 - Sensors and `if` (mission 4 "Stop before the river").
 - Real hardware (BBC micro:bit over WebUSB/Web Bluetooth) – phase 2.
 - Teacher class view, join codes – Stage 6.
@@ -69,6 +94,16 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 - Kids builds are **fixed layouts with slots** per mission (data, like lesson challenge
   `start` layouts), so no wiring UI is needed; "Look inside" renders the layout with
   `CircuitThumbnail`-style drawing.
+
+### Snap board (Part 1)
+- `src/lib/kids/board.ts`: placement rules (`canPlace`, `placementFor`), `boardToLayout`
+  (board → real circuit), goal checks (`motor-spins`, `lamp-lit`, `no-short`) and
+  `kidsFeedback` (one plain sentence: no battery / short circuit / switch off / not a loop /
+  flowing). Tested in `tests/kids-board.test.ts`.
+- `src/components/kids/SnapBoard.tsx` (SVG board, every gap and piece a keyboard-reachable
+  button) and `CircuitMission.tsx` (tray, piece actions, goals, feedback, car track).
+- Circuit missions are data (`kind: 'circuit'`): board size, tray counts, start pieces
+  (optionally `fixed`), goals.
 
 ### Blocks
 - **Google Blockly** (Apache-2.0, used by most kids' coding tools) with a custom CirKit
@@ -99,11 +134,14 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 
 ## 6. Milestones
 
-1. **Engine** – motor + hub models, runner, tests (no UI). *Proves the idea is real.*
-2. **Workbench** – `/kids` with Build / Code / Play for mission 1, Blockly themed.
-3. **Missions 2–3** + stars saved to progress; retire `/play`, `/kidscircuit`.
-4. **Pitch build** – polish, a 60-second demo video (OpenMontage), teacher one-pager.
-5. **Phase 2** – micro:bit: run the same blocks on real hardware.
+1. **Engine** – motor + hub models, runner, tests (no UI). *Done.*
+2. **Workbench** – `/kids` with Build / Code / Play for "Drive to the flag", Blockly themed. *Done.*
+3. **Circuits first** – snap board + "Make it go"; `/kids` split into Part 1 / Part 2. *Done.*
+4. **More missions** – Part 1: "Faster!", "Lights on", "Backwards"; Part 2's build step
+   becomes the snap board with a hub port in place of the switch; stars saved to progress;
+   retire `/play`, `/kidscircuit`.
+5. **Pitch build** – polish, a 60-second demo video (OpenMontage), teacher one-pager.
+6. **Phase 2** – micro:bit: run the same blocks on real hardware.
 
 ## 7. Pitch notes
 
@@ -116,6 +154,7 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 ## 8. Open questions
 
 - Car physics: constant speed per % (simple, MVP) or acceleration (more realistic)?
-- Should the build step become drag-and-drop with real wires for older kids, or hand over to
-  the full editor?
+- "End of program turns every port off" switches the light off at once in "Drive to the
+  flag"; keep it (simple, safe) or leave ports as the program left them?
+- Should older kids get free wiring, or hand over to the full editor?
 - Audio narration for non-readers (ages 5–7, a later "Explore" tier)?

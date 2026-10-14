@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 37 kids checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 45 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -103,7 +103,9 @@ only `react` → would break at runtime).
 | `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer** (redesigned 14 Oct 2026: sticky bar with LevelBadge + `StepTrack`, lit-LED "Lesson complete" screen): steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
 | (404) | `not-found.tsx` | "Open circuit!" page (broken-wire picture, Home/Lessons/Editor). Real 404 status, tab title via React 19 `<title>`. |
 | (crash) | `error.tsx`, `global-error.tsx` | `error.tsx`: "Short circuit!" with Try again (`reset`) / Go home, inside the normal layout. `global-error.tsx`: self-contained fallback if the root layout itself crashes (production only; dev shows Next's overlay). |
-| `/play`, `/kidscircuit` | | Kids mode landing + an emoji grid builder (separate, not connected to the simulator yet). |
+| `/kids` | `kids/page.tsx` | **CirKit Kids** mission list (public, no account) in two parts – **Part 1: Build circuits**, **Part 2: Code your machine** – playable missions from `content/kids` + "Coming soon" cards per part. All "CirKit Kids" links point here. |
+| `/kids/[missionId]` | `kids/[missionId]/page.tsx` | Dispatches on `mission.kind`. **Circuit missions** → `CircuitMission` (snap board, see components). **Code missions** → the **workbench**: `KidsTopBar` (Build → Code → Play steps, stars), `BuildStep` (tap parts into the car; "Look inside" = real circuit via `buildLayout` + `CircuitThumbnail`), Code = `BlocklyEditor` + brief/hint, `PlayStep` (runs `stepMission` every 50 ms in real time; track, hub panel, step list, outcome messages). Nothing saved yet (milestone 3). |
+| `/play`, `/kidscircuit` | | Old kids placeholders – no longer linked; retire in kids milestone 3. | Kids mode landing + an emoji grid builder (separate, not connected to the simulator yet). |
 
 ### Editor components (`src/components/`)
 - `CircuitCanvas.tsx` (~900 lines; was `KonvaTestCanvas` until 13 Oct 2026). The whole interactive canvas: grid, pan (right-drag) / zoom (wheel), sidebar
@@ -117,6 +119,18 @@ only `react` → would break at runtime).
   (elements have class `componentItem` + `data-component-type`).
 - `PropertiesPanel.tsx` – type, live readings (while simulating), value input with SI prefixes,
   switch Open/Closed, Rotate, Flip direction (polarized parts), position.
+- `kids/` – CirKit Kids UI: `BlocklyEditor` (Google **Blockly 13.3.0**, pinned, Apache-2.0;
+  loaded client-only; Zelos renderer; custom theme with darkened brand colours so white block
+  text passes contrast; block defs `kids_*`; media served from `public/blockly-media` (copied
+  from the package – re-copy if Blockly is upgraded); orphan blocks disabled; emits `Block[]`
+  via `lib/kids/blocks.ts`), `KidsTopBar` (steps optional – circuit missions have none),
+  `BuildStep`, `PlayStep`, `CarArt` (`CarShape`). **Snap board**: `SnapBoard` (SVG stud plate;
+  pieces drawn as chunky tiles, current dots on wires, spinning motor rotor, glowing bulb;
+  while a tray piece is held every gap it fits glows; every gap/piece is an SVG `role=button`
+  reachable by keyboard) and `CircuitMission` (tray with counts, actions for the tapped piece:
+  Turn around / Turn on-off / Take it off, goals with `StatusLed`, `kidsFeedback` sentence,
+  hint, car track driven by motor speed via rAF, 3 stars + "Next mission" once solved;
+  simulate runs on every change). Animations `kids-flow` / `kids-spin` in globals.css.
 - `ui/` – **design system components** (§5.8): `Button` (variants primary/secondary/glow/
   ghost/danger, sizes sm/md/lg, `href` → Link; `buttonClass()`), `Card` (`card`/`panel`/`ink`/
   `glow`, `interactive`; `cardClass()`), `Badge` (tones), `LevelBadge` (resistor colour code),
@@ -171,13 +185,20 @@ only `react` → would break at runtime).
 - `lib/simulation.ts` – **DC solver**, readings, warnings, per-wire currents, formatters. Also
   models `motor` (resistance; `reading.speed` = V / `MOTOR_RATED_VOLTS` (9 V), −1..1, negative =
   backwards) and `port` (a CirKit Kids hub output: a switch the program controls).
-- `lib/kids/` – **CirKit Kids engine** (no UI yet): `program.ts` (block programs as data,
+- `lib/kids/` – **CirKit Kids engine**: `blocks.ts` (pure converters Blockly JSON ⇄ `Block[]`,
+  only blocks under the "when Go is pressed" hat run; `describeBlock`), `program.ts` (block programs as data,
   `flatten` unrolls `repeat` (capped at `MAX_STEPS`), `startRun` / `advance` tick runner: instant
   blocks run at once, Wait holds, end of program = all ports off), `hub.ts` (`driveHub`: ports
   driven by **PWM**, exact duty-weighted average over on/off combinations via `simulate()`),
   `mission.ts` (`buildLayout` leaves out unplaced parts, `runMission` / `stepMission`: motor speed
   × 40 cm/s moves the car; outcomes success/short/long/wall/still/timeout). Types in
-  `types/kids.ts`; missions in `content/kids/` (mission 1 `drive-to-the-flag`). `ComponentDef.kidsOnly`
+  `types/kids.ts` (`KidsMission` = `KidsCodeMission` | `KidsCircuitMission`); `board.ts` = the
+  **snap board**: studs `STUD` = 40 units apart, wire = 1 gap, part = 2 gaps (middle stud
+  covered), ends on the same stud connect; `canPlace`, `placementFor` (a part starts at the
+  tapped gap or ends there), `boardToLayout` (real layout; kids battery 4.5 V so one battery =
+  half motor speed, two in series = full), `checkGoals` (`motor-spins` ± direction, `lamp-lit`,
+  `no-short` – needs a battery), `kidsFeedback`. Missions in `content/kids/` (Part 1
+  `make-it-go`, Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
   hides parts (the port) from the editor's parts bin (`EDITOR_TYPES`); the motor is in the editor.
 - `lib/circuitStore.ts` – Firestore CRUD for circuits, `parseLayout` (validation), JSON
   import/export (`format: 'cirkit-circuit'`).
@@ -445,11 +466,17 @@ pieces (`9e61fc0`); editor frame (`a416184`); sign-in dialogs redesigned. **Whol
 redesign deployed 14 Oct 2026** (see §9). Old styles now left only in kids mode (`/play`,
 `/kidscircuit`).
 
-**Next: CirKit Kids MVP** – design agreed 14 Oct 2026, see **`docs/kids-mode-mvp.md`** (build a
+**Now: CirKit Kids MVP** – design agreed 14 Oct 2026, **changed to circuits first** (owner: "what you have done here is coding, not circuits"), see **`docs/kids-mode-mvp.md`** (build a
 car from parts → code it with blocks → watch it drive; ages 8–11; simulation first, micro:bit
 in phase 2; Blockly; motor + hub parts in the real solver). Clickable mock-up:
-https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. **Milestone 1 (engine + tests) done** (see §9); next milestone 2: the `/kids` workbench UI
-(Build / Code / Play) on top of `lib/kids`, with Blockly. Known: `/play` overflows by ~20 px on phones (pre-existing).
+https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. Milestone 1 (engine, `3f61892`) and **milestone 2 (the `/kids` workbench with Blockly) done**
+and **circuits first done**: snap board + Part 1 mission "Make it go", `/kids` split into
+Part 1 / Part 2 (milestone 2 + circuits first **not committed** – waiting for the owner).
+Next: more Part 1 missions ("Faster!" two batteries, "Lights on" bulb + switch, "Backwards");
+Part 2's Build step to become the snap board with a hub port in place of the switch; save
+stars to progress; retire `/play` and `/kidscircuit`.
+Open design question for the owner: "end of program stops everything" also switches the light
+off immediately (so "light B on" just before the end is only a flash). Known: `/play` overflows by ~20 px on phones (pre-existing).
 
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
@@ -475,6 +502,28 @@ https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. **Milestone 1 (engine + tests
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – **Kids: circuits first with snap pieces** (owner's call). `types/kids.ts` split
+  into code/circuit missions; `lib/kids/board.ts` (snap board engine) + `tests/kids-board.test.ts`
+  (45 checks: placement, solution spins motor at 0.5, missing wire → "complete loop", flipped
+  battery → backwards, short → warning, switch, two batteries → full speed; in `npm test`);
+  mission `make-it-go`; `SnapBoard` + `CircuitMission`; page dispatches by kind; `/kids` in
+  Part 1 / Part 2; design doc updated. Browser-tested at 1194×834 and 375 px: tap tray → gaps
+  glow → tap places; closing the loop with a real click → goals lit, flow dots, motor spins,
+  3 stars, "Next: Drive to the flag"; Turn around → motor reverses, car drives backwards;
+  short circuit → explained; code mission still works; no console errors, no overflow.
+- 2026-10-14 – Committed kids milestone 1 (`3f61892`). **Kids milestone 2 – workbench**:
+  installed `blockly@13.3.0` (exact; 13.4.0 was a day old), media copied to
+  `public/blockly-media`; `lib/kids/blocks.ts` (+8 tests: round trip, loose/disabled blocks
+  ignored, no hat = nothing); mission gains `portLabels`, `brief`, `hint`, `learn`;
+  `components/kids/*`; pages `/kids` and `/kids/[missionId]`; `--color-sound` token; all
+  CirKit Kids links → `/kids`; About copy updated. Browser-tested at 1194×834 (no login, nothing
+  saved): mission list, Build (parts, status, Look inside shows the circuit with the missing
+  part), Code (Blockly loads with theme, start program under the hat, all assets local, no
+  console errors), Play with the start program (live: wait highlighted, port A 50%, motor 50%;
+  "Not far enough… 40 cm"), changed wait to 4 in Blockly by typing → "You stopped on the flag!
+  80 cm" + 3 stars; no overflow at 768 and 375 px (step bar shows numbers only on phones).
+  tsc/lint/281 tests/build pass. Not committed.
 
 - 2026-10-14 – Committed the kids design doc (`75b28d7`). **Kids milestone 1 – engine**: new
   `motor` and `port` component types (catalog, icons `public/icons/motor.svg` / `port.svg`,

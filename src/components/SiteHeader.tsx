@@ -120,7 +120,7 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
             </Link>
           ))}
           <Link
-            href="/play"
+            href="/kids"
             className="bg-carrot hover:bg-glow text-ink px-5 py-2 rounded-control font-semibold shadow-[0_2px_0_var(--color-carrot-dark)] transition-colors"
           >
             CirKit Kids
@@ -214,7 +214,7 @@ export default function SiteHeader({ sectionLinks = [], onSignIn, onSignUp, stic
             ))}
           </div>
           <Link
-            href="/play"
+            href="/kids"
             className="block text-center bg-carrot hover:bg-glow text-ink px-5 py-2.5 rounded-control font-semibold shadow-[0_2px_0_var(--color-carrot-dark)] transition-colors"
           >
             CirKit Kids

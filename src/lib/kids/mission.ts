@@ -1,5 +1,5 @@
 import type { CircuitLayout } from '@/types/circuit';
-import type { Block, KidsMission } from '@/types/kids';
+import type { Block, KidsCodeMission } from '@/types/kids';
 import { advance, isBeeping, startRun, type RunState } from './program';
 import { driveHub, type HubOutput } from './hub';
 
@@ -15,7 +15,7 @@ export const MAX_RUN_SECONDS = 60;
 
 // The circuit with only the parts the child has fitted. Unplaced slot parts are left out,
 // so a missing battery or motor really does break the circuit.
-export const buildLayout = (mission: KidsMission, placed: ReadonlySet<string>): CircuitLayout => {
+export const buildLayout = (mission: KidsCodeMission, placed: ReadonlySet<string>): CircuitLayout => {
   const slotIds = new Set(mission.slots.map(s => s.componentId));
   return {
     ...mission.layout,
@@ -44,7 +44,7 @@ export interface MissionRun {
 // One tick: advance the program, drive the circuit, move the car
 export const stepMission = (
   layout: CircuitLayout,
-  mission: KidsMission,
+  mission: KidsCodeMission,
   run: RunState,
   distance: number,
 ): { run: RunState; frame: Frame } => {
@@ -59,7 +59,7 @@ export const stepMission = (
   };
 };
 
-export const judge = (mission: KidsMission, distance: number, hitWall: boolean, timedOut: boolean): Outcome => {
+export const judge = (mission: KidsCodeMission, distance: number, hitWall: boolean, timedOut: boolean): Outcome => {
   if (hitWall) return 'wall';
   if (timedOut) return 'timeout';
   if (distance < 0.5) return 'still';
@@ -68,7 +68,7 @@ export const judge = (mission: KidsMission, distance: number, hitWall: boolean, 
   return distance < min ? 'short' : 'long';
 };
 
-export const runMission = (mission: KidsMission, program: Block[], placed?: ReadonlySet<string>): MissionRun => {
+export const runMission = (mission: KidsCodeMission, program: Block[], placed?: ReadonlySet<string>): MissionRun => {
   const layout = buildLayout(mission, placed ?? new Set(mission.slots.map(s => s.componentId)));
   let run = startRun(program);
   let distance = 0;

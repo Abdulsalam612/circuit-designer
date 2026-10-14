@@ -1,4 +1,4 @@
-import type { KidsMission } from '@/types/kids';
+import type { KidsCodeMission } from '@/types/kids';
 
 // Mission 1. The car's circuit: a 9 V battery feeds two hub ports in parallel. Port A drives
 // the motor, port B the headlight (a lamp). The default program stops at 40 cm; the flag is
@@ -10,10 +10,14 @@ import type { KidsMission } from '@/types/kids';
 //      │                                      │
 //   (60,260)───────────────────────────────(380,260)
 
-const driveToTheFlag: KidsMission = {
+const driveToTheFlag: KidsCodeMission = {
+  kind: 'code',
   id: 'drive-to-the-flag',
   title: 'Drive to the flag',
   story: 'Build a car with a motor, then code it to stop exactly on the flag.',
+  brief: 'The flag is 80 cm away. At speed 50%, the car goes 20 cm every second.',
+  hint: 'How many seconds does the car need to go 80 cm?',
+  learn: 'steps in order, and timing',
   layout: {
     components: [
       { id: 'battery', type: 'battery', x: 60, y: 160, rotation: 90, value: 9 },
@@ -45,6 +49,7 @@ const driveToTheFlag: KidsMission = {
     { componentId: 'light', label: 'Light' },
   ],
   carMotorId: 'motor',
+  portLabels: { A: 'Motor', B: 'Light' },
   trackLength: 100,
   goal: { kind: 'stop-between', min: 72, max: 88, flag: 80 },
   blocks: ['motorOn', 'wait', 'motorOff', 'lightOn', 'lightOff', 'beep'],

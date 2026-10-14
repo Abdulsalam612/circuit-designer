@@ -34,7 +34,7 @@ export function Hero() {
           <p className={`${text.small} mt-6`}>Free to use, with {LESSONS.length} lessons so far.</p>
           <p className={`${text.small} mt-1`}>
             Younger learner?{" "}
-            <Link href="/play" className="font-medium text-carrot-ink underline underline-offset-4">
+            <Link href="/kids" className="font-medium text-carrot-ink underline underline-offset-4">
               Try CirKit Kids
             </Link>
           </p>
