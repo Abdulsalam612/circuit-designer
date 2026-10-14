@@ -2,8 +2,9 @@
 // Run with: npm test
 import { simulate } from '../src/lib/simulation';
 import { isLayoutValid } from '../src/lib/wires';
-import { allGaps, boardToLayout, canPlace, checkGoals, kidsFeedback, pieceGaps, placementFor, type Board } from '../src/lib/kids/board';
+import { allGaps, boardToLayout, canPlace, checkGoals, kidsFeedback, partAt, pieceGaps, rotated, type Board } from '../src/lib/kids/board';
 import makeItGo from '../src/content/kids/missions/make-it-go';
+import faster from '../src/content/kids/missions/faster';
 import { CIRCUIT_MISSIONS } from '../src/content/kids';
 import type { Piece, PieceKind } from '../src/types/kids';
 
@@ -31,8 +32,16 @@ const board: Board = makeItGo.board;
   check('place: nothing may end on a part\'s middle', !canPlace([motor], piece('wire', 2, 1, 'v'), board) && !canPlace([motor], piece('wire', 2, 0, 'v'), board));
   check('place: wires may end on a part\'s ends', canPlace([motor], piece('wire', 1, 1, 'v'), board) && canPlace([motor], piece('wire', 3, 1, 'v'), board));
   check('place: a part can\'t sit across another piece\'s end', !canPlace([piece('wire', 2, 2, 'v')], piece('battery', 1, 2, 'h'), board));
-  const atEdge = placementFor([], 'battery', { at: { c: 4, r: 0 }, dir: 'h' }, board);
-  check('place: a part tapped at the edge ends there instead', atEdge?.at.c === 3, JSON.stringify(atEdge));
+  const centred = partAt([], 'battery', { c: 2, r: 2 }, board);
+  check('place: a part sits centred on the tapped stud, lying across', centred?.at.c === 1 && centred.at.r === 2 && centred.dir === 'h', JSON.stringify(centred));
+  const edge = partAt([], 'battery', { c: 0, r: 2 }, board);
+  check('place: at the side edge it stands up instead', edge?.dir === 'v' && edge.at.r === 1, JSON.stringify(edge));
+  check('place: no part fits on a corner stud', partAt([], 'battery', { c: 0, r: 0 }, board) === null);
+  const lying = piece('motor', 1, 2, 'h');
+  const turned = rotated([lying], lying, board);
+  check('rotate: turns on its middle stud', turned?.dir === 'v' && turned.at.c === 2 && turned.at.r === 1, JSON.stringify(turned));
+  const top = piece('motor', 1, 0, 'h');
+  check('rotate: refused when there is no room (top edge)', rotated([top], top, board) === null);
   check('place: every gap is offered once', allGaps(board).length === (board.cols - 1) * board.rows + board.cols * (board.rows - 1));
 }
 
@@ -111,6 +120,37 @@ const solution = (): Piece[] => [
   ];
   const speed = simulate(boardToLayout(pieces)).readings[two[1].id].speed ?? 0;
   check('two batteries: the motor runs at full speed', speed > 0.97, `${speed}`);
+}
+
+// ---- "Faster!": a second battery and a switch ----
+{
+  const bottom = (p: Piece) => p.kind === 'wire' && p.at.r === 3 && p.at.c < 4;
+  const answer = (flipped = false, closed = true): Piece[] => [
+    ...faster.start.filter(p => !bottom(p)),
+    piece('battery', 0, 3, 'h', { flipped }),
+    piece('switch', 2, 3, 'h', { closed }),
+  ];
+  const pieces = answer();
+  check('faster: the answer fits the board', pieces.every((p, i) => canPlace(pieces.slice(0, i), p, faster.board)));
+  const motorId = faster.start.find(p => p.kind === 'motor')!.id;
+  const speed = simulate(boardToLayout(pieces)).readings[motorId].speed ?? 0;
+  check('faster: full speed with both batteries and the switch on', speed > 0.97, `${speed}`);
+  check('faster: every goal is met', checkGoals(pieces, faster.goals).every(g => g.met));
+  check('faster: the start is half speed, not full', !checkGoals(faster.start, faster.goals)[0].met);
+
+  const off = answer(false, false);
+  const offGoals = checkGoals(off, faster.goals);
+  check('faster: switch off stops the car', !offGoals[0].met);
+  check('faster: the switch goal counts with the switch off too', offGoals[1].met);
+
+  const wrongWay = answer(true);
+  const wrongResult = simulate(boardToLayout(wrongWay));
+  check('faster: batteries facing each other cancel out', Math.abs(wrongResult.readings[motorId].speed ?? 0) < 1e-6);
+  check('faster: kids are told the batteries push against each other', kidsFeedback(wrongWay, wrongResult).text.includes('against each other'));
+
+  // A switch beside the loop (not in it) controls nothing
+  const aside = [...faster.start, piece('switch', 1, 4, 'h', { closed: true })];
+  check('faster: a switch outside the loop does not count', !checkGoals(aside, faster.goals)[1].met);
 }
 
 // ---- Content checks ----

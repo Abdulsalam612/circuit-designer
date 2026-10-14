@@ -55,23 +55,34 @@ export const canPlace = (pieces: Piece[], candidate: Pick<Piece, 'kind' | 'at' |
   return true;
 };
 
-// Where a piece goes when the child taps a gap: a wire fills that gap; a part starts there,
-// or, if there's no room, ends there
-export const placementFor = (
+// The stud a part's body sits on
+export const partMiddle = (p: Pick<Piece, 'at' | 'dir'>): Stud => step(p.at, p.dir, 1);
+
+// A part goes where the child taps a stud: centred on it, lying across if it fits there,
+// otherwise standing up (wires are placed on gaps instead)
+export const partAt = (
   pieces: Piece[],
   kind: PieceKind,
-  gap: { at: Stud; dir: 'h' | 'v' },
+  middle: Stud,
   board: Board,
+  prefer: 'h' | 'v' = 'h',
 ): Pick<Piece, 'kind' | 'at' | 'dir'> | null => {
-  const options = pieceLength(kind) === 1
-    ? [gap.at]
-    : [gap.at, step(gap.at, gap.dir, -1)];
-  for (const at of options) {
-    const candidate = { kind, at, dir: gap.dir };
+  for (const dir of prefer === 'h' ? (['h', 'v'] as const) : (['v', 'h'] as const)) {
+    const candidate = { kind, at: step(middle, dir, -1), dir };
     if (canPlace(pieces, candidate, board)) return candidate;
   }
   return null;
 };
+
+// The same part turned a quarter round on its middle stud, if there's room
+export const rotated = (pieces: Piece[], piece: Piece, board: Board): Piece | null => {
+  const dir = piece.dir === 'h' ? 'v' : 'h';
+  const turned = { ...piece, dir, at: step(partMiddle(piece), dir, -1) } as Piece;
+  return canPlace(pieces.filter(p => p.id !== piece.id), turned, board) ? turned : null;
+};
+
+export const allStuds = (board: Board): Stud[] =>
+  Array.from({ length: board.cols * board.rows }, (_, i) => ({ c: i % board.cols, r: Math.floor(i / board.cols) }));
 
 // Every gap on the board, for drawing tap targets
 export const allGaps = (board: Board) => {
@@ -122,6 +133,14 @@ export interface GoalCheck { goal: CircuitGoal; met: boolean }
 export const checkGoals = (pieces: Piece[], goals: CircuitGoal[], result = simulate(boardToLayout(pieces))): GoalCheck[] =>
   goals.map(goal => ({ goal, met: goalMet(pieces, goal, result) }));
 
+// Whether anything is moving or glowing
+const isGoing = (pieces: Piece[], result: SimulationResult) =>
+  pieces.some(p => (p.kind === 'motor' && Math.abs(result.readings[p.id]?.speed ?? 0) > 0.05)
+    || (p.kind === 'lamp' && (result.readings[p.id]?.brightness ?? 0) > 0.05));
+
+const withSwitch = (pieces: Piece[], id: string, closed: boolean) =>
+  pieces.map(p => (p.id === id ? { ...p, closed } : p));
+
 const goalMet = (pieces: Piece[], goal: CircuitGoal, result: SimulationResult): boolean => {
   const of = (kind: PieceKind) => pieces.filter(p => p.kind === kind).map(p => result.readings[p.id]).filter(Boolean);
   switch (goal.kind) {
@@ -136,6 +155,11 @@ const goalMet = (pieces: Piece[], goal: CircuitGoal, result: SimulationResult): 
     }
     case 'lamp-lit':
       return of('lamp').some(r => (r.brightness ?? 0) >= (goal.minBrightness ?? 0.3));
+    case 'switch-controls':
+      // Judged with the switch on and off, whichever way it's set now
+      return pieces.some(sw => sw.kind === 'switch'
+        && isGoing(pieces, simulate(boardToLayout(withSwitch(pieces, sw.id, true))))
+        && !isGoing(pieces, simulate(boardToLayout(withSwitch(pieces, sw.id, false)))));
     case 'no-short':
       // Only counts once there's something that could short
       return pieces.some(p => p.kind === 'battery') && !result.warnings.some(w => w.kind === 'short-circuit');
@@ -149,13 +173,17 @@ export const kidsFeedback = (pieces: Piece[], result: SimulationResult): { tone:
   if (kinds.has('short-circuit')) {
     return { tone: 'problem', text: 'Short circuit! The electricity is taking a shortcut straight back to the battery. That makes real batteries hot. Take a wire out.' };
   }
-  const motors = pieces.filter(p => p.kind === 'motor').map(p => result.readings[p.id]?.speed ?? 0);
-  const lamps = pieces.filter(p => p.kind === 'lamp').map(p => result.readings[p.id]?.brightness ?? 0);
-  if (motors.some(s => Math.abs(s) > 0.05) || lamps.some(b => b > 0.05)) {
+  if (isGoing(pieces, result)) {
     return { tone: 'good', text: 'Electricity is flowing round your loop!' };
   }
   if (pieces.some(p => p.kind === 'switch' && !p.closed)) {
     return { tone: 'problem', text: 'The switch is off, so the loop is broken. Tap the switch to turn it on.' };
+  }
+  // Two batteries facing opposite ways cancel out: turning one round would make it go
+  const batteries = pieces.filter(p => p.kind === 'battery');
+  if (batteries.length > 1 && batteries.some(b =>
+    isGoing(pieces, simulate(boardToLayout(pieces.map(p => (p.id === b.id ? { ...p, flipped: !p.flipped } : p))))))) {
+    return { tone: 'problem', text: 'Your batteries are pushing against each other, so they cancel out. Turn one of them around so their + ends point the same way round the loop.' };
   }
   return { tone: 'problem', text: 'Nothing is happening yet. Electricity needs a complete loop: out of the battery, through the motor, and back to the battery.' };
 };

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
-import { ArrowLeft, ArrowLeftRight, Cpu, Gauge, Lightbulb, Music, Play, TowerControl, Waves } from "lucide-react"
+import { ArrowLeft, ArrowLeftRight, Cpu, Lightbulb, Music, Play, TowerControl, Waves } from "lucide-react"
 import { KIDS_MISSIONS } from "@/content/kids"
 import type { KidsMission } from "@/types/kids"
 import { KidsLogo } from "@/components/kids/KidsTopBar"
@@ -21,8 +21,7 @@ const PARTS: { title: string; intro: string; kind: KidsMission["kind"]; coming: 
     intro: "Snap pieces together and make things happen. No code yet – just electricity.",
     kind: "circuit",
     coming: [
-      { title: "Faster!", learn: "two batteries push harder", icon: Gauge },
-      { title: "Lights on", learn: "a switch opens and closes the loop", icon: Lightbulb },
+      { title: "Lights on", learn: "bulbs light up, and two in a row share the push", icon: Lightbulb },
       { title: "Backwards", learn: "turning the battery round turns the motor round", icon: ArrowLeftRight },
     ],
   },

@@ -38,13 +38,15 @@ already understand.
 | Step | What the child does | What they learn |
 |---|---|---|
 | **Pick a mission** | "Make it go": the car has a battery and a motor but nothing joins them | Purpose before tools |
-| **Build** | Tap a piece in the tray, then tap a glowing gap on the stud board. Tap a placed piece to turn it around, switch it on/off or take it off. | Parts, a complete loop |
+| **Build** | Tap a piece in the tray, then tap where it goes: a wire on a glowing gap between two studs, a part (battery, motor, switch…) on the glowing stud its middle sits on. Tap a placed piece to rotate it, turn it around or take it off; tap a switch to flick it. | Parts, a complete loop |
 | **Watch** | Nothing to press: the simulator runs on every change. Current dots flow, the motor spins, the car drives (backwards if the battery is turned round). Goals tick off with LEDs; a short circuit is explained, not just flagged. | Cause and effect, short circuits |
 
 The snap board: studs 40 editor units apart; a wire spans one gap, a part spans two with its
 middle stud covered; pieces whose ends meet on a stud connect (the editor's own rule), so a
 board becomes a real `CircuitLayout`. The kids' battery is 4.5 V, so one battery runs the
-motor at half speed and two in series at full speed (the "Faster!" mission).
+motor at half speed and two in series at full speed. **"Faster!"** (built) starts from the
+finished "Make it go" loop: take wires off, add a second battery (full speed) and a switch
+(start/stop). A battery facing the wrong way cancels the other out, and the feedback says so.
 
 ### Part 2: a code mission ("Drive to the flag")
 
@@ -136,8 +138,8 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 
 1. **Engine** – motor + hub models, runner, tests (no UI). *Done.*
 2. **Workbench** – `/kids` with Build / Code / Play for "Drive to the flag", Blockly themed. *Done.*
-3. **Circuits first** – snap board + "Make it go"; `/kids` split into Part 1 / Part 2. *Done.*
-4. **More missions** – Part 1: "Faster!", "Lights on", "Backwards"; Part 2's build step
+3. **Circuits first** – snap board + "Make it go" and "Faster!"; `/kids` split into Part 1 / Part 2. *Done.*
+4. **More missions** – Part 1: "Lights on", "Backwards"; Part 2's build step
    becomes the snap board with a hub port in place of the switch; stars saved to progress;
    retire `/play`, `/kidscircuit`.
 5. **Pitch build** – polish, a 60-second demo video (OpenMontage), teacher one-pager.

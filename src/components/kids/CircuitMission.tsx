@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, Lightbulb, Power, RotateCcw, Star, Trash2, X, Repeat2 } from "lucide-react"
+import { ArrowRight, Lightbulb, Power, Repeat2, RotateCcw, RotateCw, Star, Trash2, X } from "lucide-react"
 import { simulate } from "@/lib/simulation"
-import { boardToLayout, checkGoals, kidsFeedback } from "@/lib/kids/board"
+import { boardToLayout, checkGoals, kidsFeedback, pieceLength, rotated } from "@/lib/kids/board"
 import { CM_PER_SECOND_AT_FULL_SPEED } from "@/lib/kids/mission"
 import type { KidsCircuitMission, Piece, PieceKind } from "@/types/kids"
 import KidsTopBar from "./KidsTopBar"
@@ -58,6 +58,13 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
   }
   const select = (id: string) => {
     if (holding) return
+    const piece = pieces.find(p => p.id === id)
+    // A switch is for flicking: tapping it turns it on or off (and shows its actions)
+    if (piece?.kind === "switch") {
+      update(id, { closed: !piece.closed })
+      setSelected(id)
+      return
+    }
     setSelected(s => (s === id ? null : id))
   }
   const update = (id: string, change: Partial<Piece>) => setPieces(prev => prev.map(p => (p.id === id ? { ...p, ...change } : p)))
@@ -108,12 +115,28 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
           <div className="flex min-h-12 flex-wrap items-center gap-2.5 rounded-card border border-line bg-surface px-4 py-2" aria-live="polite">
             {holding ? (
               <>
-                <span className="font-medium">Tap a yellow gap to put the {PIECE_NAMES[holding].toLowerCase()} there.</span>
+                <span className="font-medium">
+                  {pieceLength(holding) === 1
+                    ? "Tap a yellow gap between two studs to put a wire there."
+                    : `Tap a yellow stud: the ${PIECE_NAMES[holding].toLowerCase()}'s middle sits on it. Tap the piece afterwards to rotate it.`}
+                </span>
                 <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setHolding(null)}><X className="h-4 w-4" /> Put it back</Button>
               </>
             ) : selectedPiece ? (
               <>
                 <span className="font-semibold">{PIECE_NAMES[selectedPiece.kind]}</span>
+                {selectedPiece.kind !== "wire" && (
+                  <Button
+                    variant="secondary" size="sm"
+                    disabled={!rotated(pieces, selectedPiece, mission.board)}
+                    onClick={() => {
+                      const turned = rotated(pieces, selectedPiece, mission.board)
+                      if (turned) update(selectedPiece.id, { at: turned.at, dir: turned.dir })
+                    }}
+                  >
+                    <RotateCw className="h-4 w-4" /> Rotate
+                  </Button>
+                )}
                 {selectedPiece.kind !== "wire" && selectedPiece.kind !== "switch" && (
                   <Button variant="secondary" size="sm" onClick={() => update(selectedPiece.id, { flipped: !selectedPiece.flipped })}>
                     <Repeat2 className="h-4 w-4" /> Turn around

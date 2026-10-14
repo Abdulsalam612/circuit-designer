@@ -85,7 +85,9 @@ export interface Piece {
 export type CircuitGoal =
   | { kind: 'motor-spins'; text: string; direction?: 'forwards' | 'backwards'; minSpeed?: number }
   | { kind: 'lamp-lit'; text: string; minBrightness?: number }
-  | { kind: 'no-short'; text: string };
+  | { kind: 'no-short'; text: string }
+  // A switch in the loop really controls it: on, the motor runs; off, it stops
+  | { kind: 'switch-controls'; text: string };
 
 export interface KidsCircuitMission {
   kind: 'circuit';

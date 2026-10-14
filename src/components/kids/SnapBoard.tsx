@@ -2,11 +2,12 @@
 
 import type { KeyboardEvent } from "react"
 import type { SimulationResult } from "@/lib/simulation"
-import { allGaps, pieceEnds, placementFor, type Board } from "@/lib/kids/board"
+import { allGaps, allStuds, canPlace, partAt, pieceEnds, pieceLength, type Board } from "@/lib/kids/board"
 import type { Piece, PieceKind, Stud } from "@/types/kids"
 
 // The snap board, drawn as SVG: a plate of studs, the child's pieces on it, and – while a
-// tray piece is picked up – a glowing target on every gap it would fit. Everything is tapped,
+// tray piece is picked up – a glowing target everywhere it would fit: a wire on a gap between
+// two studs, a part (two gaps long) on the stud its middle will sit on. Targets never overlap. Everything is tapped,
 // never dragged, so it works with small fingers and a keyboard alike.
 
 const S = 84 // pixels between studs
@@ -48,11 +49,14 @@ interface SnapBoardProps {
 export default function SnapBoard({ board, pieces, result, holding, selected, onPlace, onSelect }: SnapBoardProps) {
   const width = 2 * M + (board.cols - 1) * S
   const height = 2 * M + (board.rows - 1) * S
-  const studs = Array.from({ length: board.cols * board.rows }, (_, i) => ({ c: i % board.cols, r: Math.floor(i / board.cols) }))
-  const targets = holding
-    ? allGaps(board).flatMap(gap => {
-        const placement = placementFor(pieces, holding, gap, board)
-        return placement ? [{ gap, placement }] : []
+  const studs = allStuds(board)
+  const wireTargets = holding && pieceLength(holding) === 1
+    ? allGaps(board).filter(gap => canPlace(pieces, { kind: holding, ...gap }, board))
+    : []
+  const partTargets = holding && pieceLength(holding) === 2
+    ? studs.flatMap(stud => {
+        const placement = partAt(pieces, holding, stud, board)
+        return placement ? [{ stud, placement }] : []
       })
     : []
   const wires = pieces.filter(p => p.kind === "wire")
@@ -75,26 +79,45 @@ export default function SnapBoard({ board, pieces, result, holding, selected, on
       {wires.map(p => <WirePiece key={p.id} piece={p} current={result.wireCurrents[p.id] ?? 0} selected={p.id === selected} onSelect={onSelect} />)}
       {parts.map(p => <PartPiece key={p.id} piece={p} result={result} selected={p.id === selected} onSelect={onSelect} />)}
 
-      {/* Where the picked-up piece can go */}
-      {targets.map(({ gap, placement }) => {
-        const [a, b] = pieceEnds(placement)
-        const pa = px(a), pb = px(b)
-        const g0 = px(gap.at)
+      {/* Where the picked-up wire can go: one slim tile per free gap */}
+      {wireTargets.map(gap => {
+        const [a, b] = pieceEnds({ kind: "wire", ...gap })
+        const g0 = px(a)
         const horizontal = gap.dir === "h"
-        const label = `Put the ${PIECE_NAMES[placement.kind].toLowerCase()} from ${studName(a)} to ${studName(b)}`
         return (
-          <g key={`${gap.at.c},${gap.at.r},${gap.dir}`} {...pressable(label, () => onPlace(placement))} className="group cursor-pointer outline-none">
-            {/* The tap area is the tapped gap; the preview shows where the whole piece lands */}
+          <g key={`${gap.at.c},${gap.at.r},${gap.dir}`} {...pressable(`Put the wire from ${studName(a)} to ${studName(b)}`, () => onPlace({ kind: "wire", ...gap }))} className="group cursor-pointer outline-none">
+            {/* Invisible, wider tap area; the visible tile stays clear of the studs */}
             <rect
-              x={horizontal ? g0.x + 12 : g0.x - 22} y={horizontal ? g0.y - 22 : g0.y + 12}
-              width={horizontal ? S - 24 : 44} height={horizontal ? 44 : S - 24}
-              rx={12} fill="#FDCA40" fillOpacity={0.28} stroke="#C46F0C" strokeOpacity={0.55} strokeWidth={2} strokeDasharray="6 5"
-              className="transition-[fill-opacity] group-hover:fill-opacity-60 group-focus-visible:fill-opacity-60"
+              x={horizontal ? g0.x + 14 : g0.x - 26} y={horizontal ? g0.y - 26 : g0.y + 14}
+              width={horizontal ? S - 28 : 52} height={horizontal ? 52 : S - 28} fill="transparent"
             />
+            <rect
+              x={horizontal ? g0.x + 17 : g0.x - 13} y={horizontal ? g0.y - 13 : g0.y + 17}
+              width={horizontal ? S - 34 : 26} height={horizontal ? 26 : S - 34}
+              rx={13} fill="#FDCA40" fillOpacity={0.35} stroke="#C46F0C" strokeOpacity={0.6} strokeWidth={2} strokeDasharray="6 5"
+              className="transition-[fill-opacity] group-hover:fill-opacity-80 group-focus-visible:fill-opacity-80"
+            />
+          </g>
+        )
+      })}
+
+      {/* Where the picked-up part can go: the stud its middle will sit on. Hovering or
+          focusing a stud shows the whole part's place. */}
+      {partTargets.map(({ stud, placement }) => {
+        const [a, b] = pieceEnds(placement)
+        const pa = px(a), pb = px(b), m = px(stud)
+        const label = `Put the ${PIECE_NAMES[placement.kind].toLowerCase()} on ${studName(stud)}, from ${studName(a)} to ${studName(b)}`
+        return (
+          <g key={`${stud.c},${stud.r}`} {...pressable(label, () => onPlace(placement))} className="group cursor-pointer outline-none">
             <line
               x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-              stroke="#1A66E8" strokeWidth={10} strokeLinecap="round" strokeOpacity={0}
-              className="pointer-events-none group-hover:stroke-opacity-40 group-focus-visible:stroke-opacity-40"
+              stroke="#1A66E8" strokeWidth={44} strokeLinecap="round" strokeOpacity={0}
+              className="pointer-events-none transition-[stroke-opacity] group-hover:stroke-opacity-25 group-focus-visible:stroke-opacity-25"
+            />
+            <circle cx={m.x} cy={m.y} r={30} fill="transparent" />
+            <circle
+              cx={m.x} cy={m.y} r={21} fill="#FDCA40" fillOpacity={0.45} stroke="#C46F0C" strokeOpacity={0.7} strokeWidth={2} strokeDasharray="6 5"
+              className="transition-[fill-opacity] group-hover:fill-opacity-90 group-focus-visible:fill-opacity-90"
             />
           </g>
         )

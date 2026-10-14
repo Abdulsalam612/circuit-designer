@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 45 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 61 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -126,9 +126,11 @@ only `react` → would break at runtime).
   via `lib/kids/blocks.ts`), `KidsTopBar` (steps optional – circuit missions have none),
   `BuildStep`, `PlayStep`, `CarArt` (`CarShape`). **Snap board**: `SnapBoard` (SVG stud plate;
   pieces drawn as chunky tiles, current dots on wires, spinning motor rotor, glowing bulb;
-  while a tray piece is held every gap it fits glows; every gap/piece is an SVG `role=button`
+  while a tray piece is held its targets glow – a **wire** on a slim gap tile, a **part** on
+  the stud its middle will sit on (never overlapping); every gap/piece is an SVG `role=button`
   reachable by keyboard) and `CircuitMission` (tray with counts, actions for the tapped piece:
-  Turn around / Turn on-off / Take it off, goals with `StatusLed`, `kidsFeedback` sentence,
+  Rotate (quarter turn on its middle stud, if there's room) / Turn around / Take it off;
+  tapping a **switch** flicks it on/off; goals with `StatusLed`, `kidsFeedback` sentence,
   hint, car track driven by motor speed via rAF, 3 stars + "Next mission" once solved;
   simulate runs on every change). Animations `kids-flow` / `kids-spin` in globals.css.
 - `ui/` – **design system components** (§5.8): `Button` (variants primary/secondary/glow/
@@ -194,11 +196,12 @@ only `react` → would break at runtime).
   × 40 cm/s moves the car; outcomes success/short/long/wall/still/timeout). Types in
   `types/kids.ts` (`KidsMission` = `KidsCodeMission` | `KidsCircuitMission`); `board.ts` = the
   **snap board**: studs `STUD` = 40 units apart, wire = 1 gap, part = 2 gaps (middle stud
-  covered), ends on the same stud connect; `canPlace`, `placementFor` (a part starts at the
-  tapped gap or ends there), `boardToLayout` (real layout; kids battery 4.5 V so one battery =
+  covered), ends on the same stud connect; `canPlace`, `partAt` (a part centred on the tapped
+  stud, across if it fits, else upright), `rotated`, `boardToLayout` (real layout; kids battery 4.5 V so one battery =
   half motor speed, two in series = full), `checkGoals` (`motor-spins` ± direction, `lamp-lit`,
-  `no-short` – needs a battery), `kidsFeedback`. Missions in `content/kids/` (Part 1
-  `make-it-go`, Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
+  `no-short` – needs a battery, `switch-controls` – judged with the switch on and off),
+  `kidsFeedback` (also "batteries pushing against each other"). Missions in `content/kids/`
+  (Part 1 `make-it-go`, `faster`; Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
   hides parts (the port) from the editor's parts bin (`EDITOR_TYPES`); the motor is in the editor.
 - `lib/circuitStore.ts` – Firestore CRUD for circuits, `parseLayout` (validation), JSON
   import/export (`format: 'cirkit-circuit'`).
@@ -471,8 +474,9 @@ car from parts → code it with blocks → watch it drive; ages 8–11; simulati
 in phase 2; Blockly; motor + hub parts in the real solver). Clickable mock-up:
 https://claude.ai/artifact/EdKQje5512nQxEn2QCbVsA. Milestone 1 (engine, `3f61892`) and **milestone 2 (the `/kids` workbench with Blockly) done**
 and **circuits first done**: snap board + Part 1 mission "Make it go", `/kids` split into
-Part 1 / Part 2 (milestone 2 + circuits first **not committed** – waiting for the owner).
-Next: more Part 1 missions ("Faster!" two batteries, "Lights on" bulb + switch, "Backwards");
+Part 1 / Part 2 (committed `94f9ed5`). Then **"Faster!"** (second battery + switch), parts placed
+on studs, Rotate, tap-to-flick switch – **not committed**.
+Next: more Part 1 missions ("Lights on" bulbs, "Backwards");
 Part 2's Build step to become the snap board with a hub port in place of the switch; save
 stars to progress; retire `/play` and `/kidscircuit`.
 Open design question for the owner: "end of program stops everything" also switches the light
@@ -503,6 +507,16 @@ off immediately (so "light B on" just before the end is only a flash). Known: `/
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
 
+- 2026-10-14 – Committed kids milestone 2 + circuits first (`94f9ed5`). **"Faster!" mission +
+  board fixes** (owner: gaps overlapped, and tapping one gap put a battery on two): wire targets
+  are slim non-overlapping gap tiles; part targets are studs (`partAt`, part centred on the
+  stud); Rotate action (`rotated`); tapping a switch flicks it; goal `switch-controls`;
+  feedback for opposing batteries; mission `faster` (starts from the "Make it go" loop; goals
+  full speed ≥ 0.9, switch starts/stops, no short). Board tests 45 → 61. Browser-tested at
+  1194×834: targets don't overlap, battery lands centred on the tapped stud, Rotate disabled at
+  the edge; Faster built with wires taken off + battery + switch, real tap on the switch → all
+  goals, 3 stars; switch off → "switch is off", car still; battery turned round → "pushing
+  against each other"; mission list 1–3; 375 px no overflow; no console errors.
 - 2026-10-14 – **Kids: circuits first with snap pieces** (owner's call). `types/kids.ts` split
   into code/circuit missions; `lib/kids/board.ts` (snap board engine) + `tests/kids-board.test.ts`
   (45 checks: placement, solution spins motor at 0.5, missing wire → "complete loop", flipped
