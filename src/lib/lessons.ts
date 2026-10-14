@@ -32,6 +32,43 @@ export const lessonAfter = (lessonId: string): Lesson | null => {
 // A LED or lamp counts as lit from 10% brightness (about 2 mA through an LED)
 const LIT_BRIGHTNESS = 0.1;
 
+// Totals for the dashboard stats panel, worked out from which lessons are complete. A
+// lesson only completes once every quiz and challenge in it is passed, so a completed
+// lesson's quizzes and challenges all count as passed. Unknown ids (e.g. removed lessons)
+// are ignored.
+export interface LearningStats {
+  lessonsDone: number;
+  lessonsTotal: number;
+  quizzesPassed: number;
+  quizzesTotal: number;
+  challengesSolved: number;
+  challengesTotal: number;
+  // Sum of the lessons' estimated times
+  minutesLearned: number;
+}
+
+export const learningStats = (completed: ReadonlySet<string>, lessons: readonly Lesson[] = LESSONS): LearningStats => {
+  const stats: LearningStats = {
+    lessonsDone: 0, lessonsTotal: lessons.length,
+    quizzesPassed: 0, quizzesTotal: 0,
+    challengesSolved: 0, challengesTotal: 0,
+    minutesLearned: 0,
+  };
+  for (const lesson of lessons) {
+    const done = completed.has(lesson.id);
+    const quizzes = lesson.steps.filter(s => s.kind === 'quiz').length;
+    const challenges = lesson.steps.filter(s => s.kind === 'challenge').length;
+    stats.quizzesTotal += quizzes;
+    stats.challengesTotal += challenges;
+    if (!done) continue;
+    stats.lessonsDone++;
+    stats.quizzesPassed += quizzes;
+    stats.challengesSolved += challenges;
+    stats.minutesLearned += lesson.minutes;
+  }
+  return stats;
+};
+
 export interface GoalResult {
   goal: ChallengeGoal;
   passed: boolean;

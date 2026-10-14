@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 36 solver checks passed", "all 26 unit checks passed", "all 151 lesson checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 36 solver checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -120,6 +120,9 @@ only `react` → would break at runtime).
 - `SiteFooter.tsx` – shared footer (landing + info pages): Product / CirKit / Help & legal
   columns, only real links; exports `GITHUB_URL`, `ISSUES_URL`. `InfoPage.tsx` – layout for
   text pages (header, title band, plain h2/p/ul styled via `[&_h2]:` selectors, footer).
+- `StatsPanel.tsx` – dashboard stats tiles: lessons, quizzes passed, challenges solved,
+  circuits saved, points, time learning. Only real data (replaced the fake "streak" and
+  "Level 1 · 50 pts to next level" cards); streaks/levels come back with Stage 6.
 - `UserAvatar.tsx` – preset avatar (`lib/avatars.ts`: 8 electronics icons on brand colours,
   ids stored as `avatar` on `users/{uid}` – never rename) or initials on blue.
 - `StatusPage.tsx` – shared layout for the 404/error pages (SiteHeader + inline SVG circuit:
@@ -170,13 +173,14 @@ only `react` → would break at runtime).
 - `types/lesson.ts` – `Lesson`, steps (`read` / `quiz` / `challenge`), content blocks, `ChallengeGoal`.
 - `content/lessons/` – **the course**: one file per lesson + `index.ts` (`LEVELS`, ordered `LESSONS`).
 - `lib/lessons.ts` – `getLesson`, `lessonState` (unlock rule), `nextLesson`, `lessonAfter`,
-  **`checkChallenge`** (runs `simulate()` and judges each goal, incl. series/parallel detection).
+  **`checkChallenge`** (runs `simulate()` and judges each goal, incl. series/parallel detection),
+  **`learningStats`** (lessons/quizzes/challenges done + minutes, from completed lesson ids).
 - `lib/progress.ts` – `loadProgress`, `completeLesson` (Firestore transaction, awards points once).
 
 ### Tests (`tests/`)
 `simulation.test.ts` (36 checks: divider, LED+resistor, overload, reversed LED, short, open
 switch, capacitor/inductor at DC, series batteries, ground, parallel lamps, two LEDs, weak
-battery, wire currents…), `units.test.ts` (26 parse/format checks) and `lessons.test.ts` (151:
+battery, wire currents…), `units.test.ts` (26 parse/format checks) and `lessons.test.ts` (155:
 content validity – unique ids, quiz answers in range, challenge start layouts valid and not
 already solved – unlock rules, and each challenge solved/failed by sample circuits). Run
 `npm test`, plus `wires.test.ts` (14: wire moves, stretching, refusals, branch points).
@@ -380,8 +384,11 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 **Suggested next steps (in order):**
 1. **Website (Stage 7) – the owner's chosen next focus (14 Oct 2026).** Shared navbar and
    toasts, 404/error pages committed (`3bffa54`, not pushed); **profile page committed (`a267821`, owner tested it signed in – all works). About/Privacy/
-   Terms pages + shared footer committed (`c2b0479`). Feedback form done and working live against
-   Firestore (rules published), not committed. Next: About/Contact/Terms/Privacy,
+   Terms pages + shared footer committed (`c2b0479`). Feedback form committed (`89f329d`). Stats
+   panel done, not committed. **Stage 7 is then complete** except the optional items
+   (Google sign-in, light/dark theme). Small known issue: on phones the dashboard's "Up next"
+   banner truncates the lesson title ("Capa…"). Next (owner to choose): Stage 5 follow-ups /
+   Stage 6 gamification (real streaks + level-up would feed the stats panel). Older notes: About/Contact/Terms/Privacy,
    feedback form, dashboard stats panel.
 2. Stage 5 follow-ups: Guides tab is still hard-coded placeholder cards in `dashboard/page.tsx`
    (turn guides into content like lessons, or drop the tab); level-up from XP (`level` never
@@ -398,6 +405,14 @@ item: starting a wire from an empty grid point (optional). See the Master Checkl
 ## 9. Session log (newest first)
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
+
+- 2026-10-14 – Committed the feedback form as `89f329d`. **Stage 7: dashboard stats panel** –
+  `components/StatsPanel.tsx`, `learningStats` in `lib/lessons.ts` (+4 checks in
+  `tests/lessons.test.ts`, 231 total), `dashboard/page.tsx` (old 4 cards → panel; loads the
+  circuit count via `listCircuits`, "–" if it fails). Tested with TEMP fake user/progress/
+  circuits (backed up/restored, no "TEMP" left): values cross-checked against the lesson files
+  (5 lessons → 5/11 quizzes, 2/6 challenges, 53 min), 6 columns desktop / 2 on phones, refused
+  circuit read shows "–". tsc/lint/tests pass. Not committed.
 
 - 2026-10-14 – Owner published the new `firestore.rules`. Sent one real message from the
   local `/feedback` (type "other", signed out, no email, text starts "TEST from Claude…") –

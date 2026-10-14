@@ -1,7 +1,7 @@
 // Checks the lesson content is well-formed and that challenge goals are judged correctly.
 // Run with: npm test
 import { LESSONS, LEVELS } from '../src/content/lessons';
-import { checkChallenge, getLesson, lessonState, nextLesson } from '../src/lib/lessons';
+import { checkChallenge, getLesson, learningStats, lessonState, nextLesson } from '../src/lib/lessons';
 import { isLayoutValid } from '../src/lib/wires';
 import type { CircuitComponent, CircuitLayout, ComponentType } from '../src/types/circuit';
 import type { ChallengeStep } from '../src/types/lesson';
@@ -128,6 +128,21 @@ check('series fails parallel', !solves('parallel-circuits', series));
   };
   check('fixed layout valid', isLayoutValid(fixed.components, fixed.wires));
   check('fixed circuit solves', solves('fix-the-circuit', fixed), failed('fix-the-circuit', fixed).join('; '));
+}
+
+// ---- Stats panel ----
+{
+  const none = learningStats(new Set());
+  const all = learningStats(new Set(ids));
+  check('stats: nothing done', none.lessonsDone === 0 && none.quizzesPassed === 0 && none.challengesSolved === 0 && none.minutesLearned === 0);
+  check('stats: totals', none.lessonsTotal === LESSONS.length && none.quizzesTotal > 0 && none.challengesTotal > 0);
+  check('stats: everything done', all.lessonsDone === all.lessonsTotal && all.quizzesPassed === all.quizzesTotal
+    && all.challengesSolved === all.challengesTotal && all.minutesLearned === LESSONS.reduce((n, l) => n + l.minutes, 0));
+  const first = LESSONS[0];
+  const one = learningStats(new Set([first.id, 'removed-lesson']));
+  check('stats: one lesson, unknown ids ignored', one.lessonsDone === 1 && one.minutesLearned === first.minutes
+    && one.quizzesPassed === first.steps.filter(s => s.kind === 'quiz').length
+    && one.challengesSolved === first.steps.filter(s => s.kind === 'challenge').length);
 }
 
 console.log(fails ? `${fails} lesson checks FAILED, ${passes} passed` : `all ${passes} lesson checks passed`);

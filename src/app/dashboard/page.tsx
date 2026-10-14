@@ -1,17 +1,19 @@
 "use client"
 
-import { ArrowRight, Play, CheckCircle, Star, BookOpen, Zap, Target, Clock, Award, Trophy } from "lucide-react"
+import { ArrowRight, Play, CheckCircle, BookOpen, Zap, Target, Clock, Award, Trophy } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/context/AuthContext";
 import { doc, updateDoc } from "firebase/firestore";
 import { firestore } from "@/firebase";
 import { LESSONS, LEVELS } from "@/content/lessons";
-import { lessonState, nextLesson } from "@/lib/lessons";
+import { learningStats, lessonState, nextLesson } from "@/lib/lessons";
+import { listCircuits } from "@/lib/circuitStore";
 import { loadProgress, type LearningProgress } from "@/lib/progress";
 import LessonCard from "@/components/lessons/LessonCard";
 import ProgressBar from "@/components/lessons/ProgressBar";
 import SiteHeader from "@/components/SiteHeader";
+import StatsPanel from "@/components/StatsPanel";
 
 type GuideType = "Safety" | "Reference" | "Troubleshooting" | "Advanced";
 
@@ -29,6 +31,7 @@ export default function DashboardPage() {
   const { user, loading: authLoading } = useRequireAuth();
   const [userProgress, setUserProgress] = useState<LearningProgress | null>(null);
   const [progressLoading, setProgressLoading] = useState(true);
+  const [circuitCount, setCircuitCount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +40,10 @@ export default function DashboardPage() {
       .then(setUserProgress)
       .catch((error) => console.error("Failed to load progress:", error))
       .finally(() => setProgressLoading(false));
+    // Only for the stats panel, so a failure just shows "–"
+    listCircuits(user.uid)
+      .then(circuits => setCircuitCount(circuits.length))
+      .catch(() => setCircuitCount(null));
   }, [user]);
 
   if (!authLoading && !user) {
@@ -135,45 +142,8 @@ export default function DashboardPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Learning Dashboard</h1>
 
-        {/* Progress Overview */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Progress</h3>
-              <Target className="h-5 w-5 text-blue-500" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">
-              {completedCount}/{LESSONS.length}
-            </div>
-            <ProgressBar value={completedCount} max={LESSONS.length} />
-          </div>
-
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Current Streak</h3>
-              <Star className="h-5 w-5 text-yellow-500" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{userProgress.currentStreak} days</div>
-            <p className="text-sm text-gray-500">Keep it up!</p>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Total Points</h3>
-              <Award className="h-5 w-5 text-green-500" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{userProgress.totalPoints}</div>
-            <p className="text-sm text-gray-500">Earned from lessons</p>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 border border-gray-200">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-600">Current Level</h3>
-              <Zap className="h-5 w-5 text-purple-500" />
-            </div>
-            <div className="text-2xl font-bold text-gray-900">Level {userProgress.level}</div>
-            <p className="text-sm text-gray-500">50 pts to next level</p>
-          </div>
+        <div className="mb-8">
+          <StatsPanel stats={learningStats(completedLessons)} points={userProgress.totalPoints} circuitCount={circuitCount} />
         </div>
 
         {/* Navigation Tabs */}
