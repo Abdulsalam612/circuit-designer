@@ -5,14 +5,15 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Bug, Home, RotateCcw } from "lucide-react"
 import StatusPage, { primaryButton, secondaryButton } from "@/components/StatusPage"
+import { reportError } from "@/lib/reportError"
 
 // Shown when a page crashes while rendering. The site header (layout) still works, so the
 // user can try again or go somewhere else instead of seeing a blank screen.
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const pathname = usePathname()
   useEffect(() => {
-    // Keep the details for debugging; the page itself stays friendly
-    console.error(error)
+    // Keep the details for debugging (console and Sentry); the page itself stays friendly
+    reportError(error, "Page crashed")
   }, [error])
 
   return (

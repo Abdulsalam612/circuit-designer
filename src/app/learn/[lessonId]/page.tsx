@@ -19,6 +19,7 @@ import Badge from "@/components/ui/Badge"
 import Card from "@/components/ui/Card"
 import LevelBadge from "@/components/ui/LevelBadge"
 import { heading } from "@/components/ui/typography"
+import { reportError } from "@/lib/reportError"
 
 const STEP_ICON = { read: BookOpen, quiz: HelpCircle, challenge: Wrench }
 const STEP_KIND_LABEL = { read: "Read", quiz: "Quiz", challenge: "Build challenge" }
@@ -82,7 +83,7 @@ const LessonView = ({ lessonId }: { lessonId: string }) => {
     loadProgress(user.uid)
       .then(setProgress)
       .catch((err) => {
-        console.error("Failed to load progress:", err)
+        reportError(err, "Load progress (lesson)")
         setProgress(EMPTY_PROGRESS)
       })
   }, [user, authLoading])
@@ -146,7 +147,7 @@ const LessonView = ({ lessonId }: { lessonId: string }) => {
       setProgress(updated)
       setFinished({ pointsEarned: updated.totalPoints - before })
     } catch (err) {
-      console.error("Failed to save lesson progress:", err)
+      reportError(err, "Save lesson progress")
       setSaveError("Couldn't save your progress. Check your connection and try again.")
     } finally {
       setFinishing(false)

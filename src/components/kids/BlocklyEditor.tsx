@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { Block, BlockType } from "@/types/kids"
 import { BLOCKLY_TYPE, HAT_TYPE, programToState, stateToProgram, type SavedWorkspace } from "@/lib/kids/blocks"
+import { reportError } from "@/lib/reportError"
 
 // The block editor (Google Blockly, Apache-2.0). Blockly is loaded in the browser only. The
 // program lives in the parent as Block[]; this component reports every change.
@@ -129,7 +130,7 @@ export default function BlocklyEditor({ blocks, initial, onChange }: BlocklyEdit
           workspace.dispose()
         }
       } catch (err) {
-        console.error("Couldn't start the block editor:", err)
+        reportError(err, "Start the block editor")
         if (!disposed) setFailed(true)
       }
     })()

@@ -47,7 +47,7 @@ own solver (see §5.6); upstream is github.com/sharpie7/circuitjs1 if ever neede
 cd "E:/Desketop/Circuit Designer/circuit-designer"
 npm install          # first time
 npm run dev          # http://localhost:3000  (first page compile can take ~40 s)
-npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 91 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
+npm test             # solver, unit-parser and lesson checks (tsx): expect "all 41 solver checks passed" … "all 45 kids checks passed", "all 125 board checks passed", "all 26 unit checks passed", "all 155 lesson checks passed", "all 14 wire checks passed"
 npx tsc --noEmit     # type-check
 npm run lint         # ESLint via next lint (prints a deprecation notice in Next 15.5 – harmless)
 npm run build        # production build – run before pushing to master
@@ -69,6 +69,18 @@ npm run build        # production build – run before pushing to master
   missing. **The same 6 vars must exist in Vercel (Project → Settings → Environment
   Variables, Production + Preview) before any deploy of this code, or the live site breaks.**
   The values aren't secret (they ship to the browser).
+- **Sentry error reports** (`@sentry/nextjs` **10.76.0**, pinned; org `abdulsalam-fw`). Files:
+  `src/sentry.shared.ts` (options), `src/instrumentation-client.ts` (browser),
+  `src/instrumentation.ts` (server/edge + `onRequestError`), `next.config.ts`
+  (`withSentryConfig` from `@sentry/nextjs/config`, `tunnelRoute: "/monitoring"`),
+  `src/lib/reportError.ts` (for caught failures: save circuit, load/save progress, list
+  circuits, block editor; also `app/error.tsx`, `app/global-error.tsx`). **Errors only**:
+  enabled only in production builds with `NEXT_PUBLIC_SENTRY_DSN`; no tracing, no replay, no
+  browser/server session pings, no client reports, `sendDefaultPii: false` – verified with a
+  local catcher: a report holds the error, page URL, user agent, breadcrumbs; no user/IP.
+  Vercel env: `NEXT_PUBLIC_SENTRY_DSN` (public), `SENTRY_PROJECT` + `SENTRY_AUTH_TOKEN`
+  (secret, source maps). The privacy page describes it – keep them in step. Local prod test:
+  launch config `cirkit-prod` (port 3100) after `npm run build`.
 - Firestore security rules are in `firestore.rules` and **are published** (owner did it):
   each user can only read/write `users/{uid}` and `users/{uid}/circuits/*`.
 
@@ -103,7 +115,7 @@ only `react` → would break at runtime).
 | `/learn/[lessonId]` | `learn/[lessonId]/page.tsx` | **Lesson viewer** (redesigned 14 Oct 2026: sticky bar with LevelBadge + `StepTrack`, lit-LED "Lesson complete" screen): steps one at a time (read → quiz → build challenge), Next is locked until a quiz is all correct / a challenge's goals are met; Finish saves completion + points; locked lessons show a message. Protected. |
 | (404) | `not-found.tsx` | "Open circuit!" page (broken-wire picture, Home/Lessons/Editor). Real 404 status, tab title via React 19 `<title>`. |
 | (crash) | `error.tsx`, `global-error.tsx` | `error.tsx`: "Short circuit!" with Try again (`reset`) / Go home, inside the normal layout. `global-error.tsx`: self-contained fallback if the root layout itself crashes (production only; dev shows Next's overlay). |
-| `/kids` | `kids/page.tsx` | **CirKit Kids** mission list (public, no account) in two parts – **Part 1: Build circuits**, **Part 2: Code your machine** – playable missions from `content/kids` + "Coming soon" cards per part. All "CirKit Kids" links point here. |
+| `/kids` | `kids/page.tsx` | **CirKit Kids mission map** (public, no account) in two parts – **Part 1: Build circuits**, **Part 2: Code your machine**. Light tiles, one per mission: its own picture (`MissionArt`, per mission id, on a tint), number badge, title, `topic` chip, yellow play disc; the whole tile is the link. Dashed "Coming soon" tiles end each part. All "CirKit Kids" links point here. |
 | `/kids/[missionId]` | `kids/[missionId]/page.tsx` | Dispatches on `mission.kind`. **Circuit missions** → `CircuitMission` (snap board, see components). **Code missions** → the **workbench**: `KidsTopBar` (Build → Code → Play steps, stars), `BuildStep` (tap parts into the car; "Look inside" = real circuit via `buildLayout` + `CircuitThumbnail`), Code = `BlocklyEditor` + brief/hint, `PlayStep` (runs `stepMission` every 50 ms in real time; track, hub panel, step list, outcome messages). Nothing saved yet (milestone 3). |
 | `/play`, `/kidscircuit` | | Old kids placeholders – no longer linked; retire in kids milestone 3. | Kids mode landing + an emoji grid builder (separate, not connected to the simulator yet). |
 
@@ -126,14 +138,17 @@ only `react` → would break at runtime).
   via `lib/kids/blocks.ts`), `KidsTopBar` (steps optional – circuit missions have none),
   `BuildStep`, `PlayStep`, `CarArt` (`CarShape`). **Snap board**: `SnapBoard` (SVG stud plate;
   pieces drawn as chunky tiles, current dots on wires, spinning motor rotor, glowing bulb;
-  while a tray piece is held its targets glow – a **wire** on a slim gap tile, a **part** on
-  the stud its middle will sit on (never overlapping); every gap/piece is an SVG `role=button`
+  while a tray piece is held its targets glow – a **wire**/thing on a slim gap tile; a **part**
+  in two taps: start studs glow, then the start is marked (+ for a battery, else 1) and only
+  the valid finish studs glow (− / 2) with a preview on hover/focus (never overlapping); every gap/piece is an SVG `role=button`
   reachable by keyboard) and `CircuitMission` (tray with counts, actions for the tapped piece:
-  Rotate (quarter turn on its middle stud, if there's room) / Turn around / Take it off;
+  Rotate (quarter turn on its middle stud, if there's room) / Turn around / Take it off
+  (also the **Delete/Backspace** key; never for `fixed` pieces); tray icons are small drawings
+  of each part (battery with + / −, motor fan, switch lever, bulb, resistor bands, wire);
   tapping a **switch** flicks it on/off; goals with `StatusLed`, `kidsFeedback` sentence,
   hint, car track driven by motor speed via rAF, 3 stars + "Next mission" once solved;
   simulate runs on every change). A circuit mission's `scene` picks what it drives: the car
-  `Track` (default) or `FanScene` (desk fan: blades at motor speed, papers flutter in a gentle
+  `Track` (default), `TorchScene` (dark bedroom, beam finds the cat) or `FanScene` (desk fan: blades at motor speed, papers flutter in a gentle
   breeze, blow away above 0.35). Animations `kids-flow` / `kids-spin` / `kids-paper-flutter` /
   `kids-paper-fly` in globals.css – these deliberately ignore `prefers-reduced-motion` (the
   motion is the simulator's answer, like the car; the owner's Windows has animations off, which
@@ -201,14 +216,19 @@ only `react` → would break at runtime).
   × 40 cm/s moves the car; outcomes success/short/long/wall/still/timeout). Types in
   `types/kids.ts` (`KidsMission` = `KidsCodeMission` | `KidsCircuitMission`); `board.ts` = the
   **snap board**: studs `STUD` = 40 units apart, wire = 1 gap, part = 2 gaps (middle stud
-  covered), ends on the same stud connect; `canPlace`, `partAt` (a part centred on the tapped
-  stud, across if it fits, else upright), `rotated`, `boardToLayout` (real layout; kids battery 4.5 V so one battery =
+  covered), ends on the same stud connect; `canPlace`, `partBetween` / `partEndOptions` (a part is
+  placed with two taps – start stud, then finish stud two away in a line; the first is pin 0,
+  a battery's +, so tapping right-to-left/bottom-to-top stores it `flipped`), `rotated`, `boardToLayout` (real layout; kids battery 4.5 V so one battery =
   half motor speed, two in series = full), `checkGoals` (`motor-spins` ± direction, `lamp-lit`,
+  **Things** (`THINGS`: coin, key, paper clip = metal, conduct → a wire in the layout; eraser,
+  lolly stick, plastic spoon = insulators → left out, loop open; one gap long), `testedThings`
+  (things where a wire would make the loop work), goal `things-tested` (judged from the mission's
+  findings, passed to `checkGoals`), feedback "it's a conductor/insulator, made of …";
   `motor-spins` can have a `maxSpeed`, `lamp-lit` takes a `count` of bulbs, `no-short` – needs a battery, `switch-controls` – judged with the switch on and off),
   `kidsFeedback` (also "batteries pushing against each other", "one bulb is still dark",
   "bulbs on but dim – give each its own path"; the open-loop message names the motor or bulb). Missions in `content/kids/`
   (Part 1 `make-it-go`, `faster`, `lights-on`, `backwards`, `gentle-breeze` – the last three
-  start from `missions/first-loop.ts`; Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
+  start from `missions/first-loop.ts`, and `does-it-conduct`; Part 2 `drive-to-the-flag`; `CIRCUIT_MISSIONS` / `CODE_MISSIONS`). `ComponentDef.kidsOnly`
   hides parts (the port) from the editor's parts bin (`EDITOR_TYPES`); the motor is in the editor.
 - `lib/circuitStore.ts` – Firestore CRUD for circuits, `parseLayout` (validation), JSON
   import/export (`format: 'cirkit-circuit'`).
@@ -484,8 +504,9 @@ and **circuits first done**: snap board + Part 1 mission "Make it go", `/kids` s
 Part 1 / Part 2 (committed `94f9ed5`). **"Faster!"** (second battery + switch), parts placed
 on studs, Rotate, tap-to-flick switch (committed `877aaf6`). **"Lights on"** (two bulbs: in a row
 dim, side by side bright) (committed `52ca177`). **"Backwards"** and **"Gentle breeze"** (first
-non-car mission: desk fan + resistor) – **not committed**.
-Next ideas: Part 1 "Does it conduct?" (conductors/insulators – needs new pieces);
+non-car mission: desk fan + resistor) (committed `02b4f62`). **"Does it conduct?"** (torch +
+six everyday things, "What you found out" panel, `testGap` marked on the board) – **not committed**.
+Next ideas: Part 1 "Steady hand game" (buzz wire – needs a buzzer piece);
 Part 2's Build step to become the snap board with a hub port in place of the switch; save
 stars to progress; retire `/play` and `/kidscircuit`.
 Open design question for the owner: "end of program stops everything" also switches the light
@@ -516,6 +537,42 @@ off immediately (so "light B on" just before the end is only a flash). Known: `/
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
 
+- 2026-10-20 – **Sentry added** (owner: "if a user faced a bug I get it"; org slug
+  `abdulsalam-fw`). See §2. Privacy page: new "If something breaks" section, Sentry in "Who
+  else handles it", date 20 Oct 2026. `.env.example` gains the Sentry vars. Build passes.
+  Tested with a dummy localhost DSN + local catcher (nothing left the machine): uncaught error
+  → one report, no user/IP; plain visits → nothing sent (after turning off browser sessions,
+  client reports, tracing, server request sessions). Waiting on the owner: Sentry project
+  slug + DSN + auth token in Vercel. The owner's wizard "run code" was not used.
+- 2026-10-14 – **Kids UI redesign** (owner: not simple/organised enough; frontend-design skill).
+  Mission map: light tiles with a picture per mission (`MissionArt`), number, title, short
+  `topic` (new mission field), play disc – no story paragraphs. Mission screen: scene on top;
+  one board card = "what to do now" header + board + **parts box** at the bottom (big
+  icon-over-name tiles, count badge); side column = mission card (brief, tick-circle goals,
+  findings) + helper bubble (feedback + "Need a hint?"). Board never sets its own height
+  (fills the space side by side, keeps its shape stacked) so the parts box stays on screen;
+  `ThingShape` moved to its own file. Checked at 1194×834 (fits, no scroll), 1280×720 (fits,
+  side column scrolls slightly), 375 px; Make it go solved end to end in the new layout.
+- 2026-10-14 – **Board UX** (owner): tray icons drawn per part instead of coloured blocks;
+  Delete/Backspace removes the selected piece (not fixed ones); parts placed with **two taps**
+  (start, then finish – the child picks the direction; battery: + then −). `partAt` replaced by
+  `partBetween` + `partEndOptions`; board tests 119 → 125 (directions, flipped by tap order,
+  blocked finishes, a battery tapped + at the bottom reverses the motor). Browser-tested at
+  1194×834 with real taps/keys: battery + then − on Faster's bottom row → placed + on the left,
+  switch the same way → solved; Delete on a selected wire removes it; Delete on the torch's fixed
+  battery does nothing; 375 px no overflow.
+- 2026-10-14 – Car redrawn (owner: it looked like it drove backwards – the long low end and
+  sloped glass were at the back). `CarShape` now has the long bonnet and sloped windscreen at
+  the front (right), a short boot and steep back window, red tail light, bumpers, two side
+  windows and a door; same box, so every scene/card still lines up. Checked enlarged and in place.
+- 2026-10-14 – Committed Backwards + Gentle breeze (`02b4f62`). **"Does it conduct?"**: new
+  thing pieces (`ThingKind`, `THINGS`), `testedThings`, goal `things-tested`, mission `testGap`
+  ("Test here" on the board), findings panel (kept on Start again), `TorchScene`, torch card
+  art, fixed pieces can't be rotated/turned; coming-soon card now "Steady hand game". Board
+  tests 91 → 119. Browser-tested at 1194×834: eraser by real taps → "Doesn't", insulator/rubber
+  message, torch dark; swapped for the coin by real taps → torch lights, beam finds the cat,
+  "Conducts"/metal; key, lolly stick, spoon, paper clip → all six right, 3 stars; 375 px no
+  overflow; no new console errors.
 - 2026-10-14 – Fan/papers looked static: the owner's browser reports reduced motion, and the
   kids animations were switched off for it. Now they always run (essential motion); blades
   centred on their hubs (no wobble); stronger paper flutter. Checked: animations running and

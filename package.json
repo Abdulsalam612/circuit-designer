@@ -10,6 +10,7 @@
     "test": "tsx tests/simulation.test.ts && tsx tests/units.test.ts && tsx tests/lessons.test.ts && tsx tests/wires.test.ts && tsx tests/kids.test.ts && tsx tests/kids-board.test.ts"
   },
   "dependencies": {
+    "@sentry/nextjs": "10.76.0",
     "blockly": "13.3.0",
     "firebase": "^11.9.0",
     "interactjs": "^1.10.27",

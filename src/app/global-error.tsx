@@ -1,11 +1,17 @@
 "use client"
 
+import { useEffect } from "react"
+import * as Sentry from "@sentry/nextjs"
 import "./globals.css"
 
 // Last resort: the root layout itself crashed, so nothing from it (header, providers,
 // fonts) is available. Keep this self-contained. Only shown in production builds; in
 // development Next's error overlay appears instead.
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    Sentry.captureException(error, { tags: { where: "Site crashed" } })
+  }, [error])
+
   return (
     <html lang="en">
       <body className="min-h-screen flex items-center justify-center bg-paper px-4">

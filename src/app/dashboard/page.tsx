@@ -15,6 +15,7 @@ import Button from "@/components/ui/Button"
 import Card from "@/components/ui/Card"
 import LevelBadge from "@/components/ui/LevelBadge"
 import { heading, text } from "@/components/ui/typography"
+import { reportError } from "@/lib/reportError"
 
 // The learning dashboard: what to do next, how far you've got, and the course laid out as a
 // circuit (see LessonPath). The old placeholder "Guides" tab and dead "Quick actions" tiles
@@ -31,7 +32,7 @@ export default function DashboardPage() {
     setProgressLoading(true)
     loadProgress(user.uid)
       .then(setProgress)
-      .catch(error => console.error("Failed to load progress:", error))
+      .catch(error => reportError(error, "Load progress (dashboard)"))
       .finally(() => setProgressLoading(false))
     // Only for the stats panel, so a failure just shows "–"
     listCircuits(user.uid)

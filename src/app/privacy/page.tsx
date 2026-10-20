@@ -10,14 +10,14 @@ export const metadata: Metadata = {
 
 // Keep this in step with the code: what signup writes (app/page.tsx), the profile doc
 // (lib/progress.ts, lib/account.ts), saved circuits (lib/circuitStore.ts). If you add
-// analytics, cookies or a new service, update this page.
+// analytics, cookies or a new service, update this page. Error reports: src/sentry.shared.ts.
 
 export default function PrivacyPage() {
   return (
     <InfoPage
       title="Privacy Policy"
       intro="The short version: we only keep what CirKit needs to work, we don't track you, and you can delete everything yourself at any time."
-      updated="14 October 2026"
+      updated="20 October 2026"
     >
       <h2>Who we are</h2>
       <p>
@@ -51,8 +51,17 @@ export default function PrivacyPage() {
         We use this only to read, answer and fix what you tell us, and delete it once it&apos;s no longer needed.
       </p>
 
+      <h3>If something breaks</h3>
+      <p>
+        When CirKit hits an error, it sends an error report so we can find and fix the bug. A report says what went
+        wrong in the code, which page it happened on, and your browser and device type. It doesn&apos;t include your
+        name, email address, IP address, circuits or anything you typed, and nothing records what you do on the
+        page. Our legal reason is our legitimate interest in keeping CirKit working. Reports are kept for
+        up to 90 days and then deleted automatically.
+      </p>
+
       <h2>Who else handles it</h2>
-      <p>CirKit uses two services to run. They process data for us under their own privacy terms:</p>
+      <p>CirKit uses three services to run. They process data for us under their own privacy terms:</p>
       <ul>
         <li>
           <strong>Google Firebase</strong> stores your account, profile, circuits and any feedback you send, and sends account emails
@@ -62,6 +71,10 @@ export default function PrivacyPage() {
           <strong>Vercel</strong> hosts the website. Like any web host, it handles basic request information (such as
           your IP address and browser type) to deliver pages and keep the site secure.{" "}
           <a href="https://vercel.com/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Vercel privacy policy</a>.
+        </li>
+        <li>
+          <strong>Sentry</strong> receives the error reports described above.{" "}
+          <a href="https://sentry.io/privacy/" target="_blank" rel="noopener noreferrer">Sentry privacy policy</a>.
         </li>
       </ul>
       <p>We never sell your data or share it for advertising.</p>

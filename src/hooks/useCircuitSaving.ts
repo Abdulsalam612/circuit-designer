@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CircuitLayout } from "@/types/circuit";
 import { createCircuit, loadCircuit, saveCircuit } from "@/lib/circuitStore";
+import { reportError } from "@/lib/reportError";
 
 export type SaveStatus = "loading" | "new" | "unsaved" | "saving" | "saved" | "error";
 
@@ -107,6 +108,7 @@ export const useCircuitSaving = ({ uid, name, layout, onLoaded }: Options) => {
         const changedSince = snapshot(latest.current.name, latest.current.layout) !== snap;
         setStatus(changedSince ? "unsaved" : "saved");
       } catch (e) {
+        reportError(e, "Save circuit");
         setError(describeError(e));
         setStatus("error");
       }

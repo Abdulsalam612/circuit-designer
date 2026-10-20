@@ -19,6 +19,7 @@ import Card from "@/components/ui/Card"
 import { inputClass } from "@/components/ui/Field"
 import { heading, text } from "@/components/ui/typography"
 import { useToast } from "@/context/ToastContext"
+import { reportError } from "@/lib/reportError"
 
 const formatDate = (date: Date | null) =>
   date
@@ -40,6 +41,7 @@ export default function MyCircuitsPage() {
       setCircuits(await listCircuits(user.uid))
       setError(null)
     } catch (e) {
+      reportError(e, "List circuits")
       const code = (e as { code?: string })?.code
       setError(code === "permission-denied"
         ? "Not allowed to read your circuits. Check the Firestore security rules (see firestore.rules)."
