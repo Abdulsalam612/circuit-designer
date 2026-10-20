@@ -20,6 +20,7 @@ const lightsOn: KidsCircuitMission = {
   story: 'It’s getting dark and the car has to drive home. It needs two bright headlights first.',
   brief: 'Light up both headlight bulbs from one battery, and make them both shine brightly.',
   hint: 'Two bulbs in a row share the battery’s push, so both are dim. Give each bulb its own path from one end of the battery to the other.',
+  topic: 'Bulbs',
   learn: 'bulbs in a row share the push; side by side, each gets all of it',
   board: { cols: 6, rows: 5 },
   tray: [

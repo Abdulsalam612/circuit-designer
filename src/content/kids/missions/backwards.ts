@@ -12,6 +12,7 @@ const backwards: KidsCircuitMission = {
   story: 'The car parked nose-first against the garage wall. To get out, it has to drive backwards.',
   brief: 'Make the motor run the other way so the car reverses out of the garage. You don’t need any new pieces.',
   hint: 'Electricity flows out of the battery’s + end and back into its − end. What happens if you tap the battery and turn it around?',
+  topic: 'Which way round',
   learn: 'turning the battery round makes the electricity, and the motor, go the other way',
   board: { cols: 6, rows: 5 },
   tray: [

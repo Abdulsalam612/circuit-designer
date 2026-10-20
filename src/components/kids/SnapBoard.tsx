@@ -2,13 +2,16 @@
 
 import type { KeyboardEvent } from "react"
 import type { SimulationResult } from "@/lib/simulation"
-import { allGaps, allStuds, canPlace, partAt, pieceEnds, pieceLength, type Board } from "@/lib/kids/board"
-import type { Piece, PieceKind, Stud } from "@/types/kids"
+import { allGaps, allStuds, canPlace, isThing, partEndOptions, pieceEnds, pieceLength, THINGS, type Board } from "@/lib/kids/board"
+import type { PartKind, Piece, PieceKind, Stud, ThingKind } from "@/types/kids"
+import ThingShape from "./ThingShape"
 
 // The snap board, drawn as SVG: a plate of studs, the child's pieces on it, and – while a
-// tray piece is picked up – a glowing target everywhere it would fit: a wire on a gap between
-// two studs, a part (two gaps long) on the stud its middle will sit on. Targets never overlap. Everything is tapped,
-// never dragged, so it works with small fingers and a keyboard alike.
+// tray piece is picked up – a glowing target everywhere it would fit: a wire or an everyday
+// thing on a gap between two studs; a part (two gaps long) in two taps – the stud where it
+// starts, then the stud where it finishes – so the child decides which way round it goes.
+// Targets never overlap. Everything is tapped, never dragged, so it works with small fingers
+// and a keyboard alike.
 
 const S = 84 // pixels between studs
 const M = 46 // margin round the studs
@@ -20,6 +23,7 @@ export const PIECE_NAMES: Record<PieceKind, string> = {
   lamp: "Bulb",
   switch: "Switch",
   resistor: "Resistor",
+  ...(Object.fromEntries(Object.entries(THINGS).map(([k, t]) => [k, t.name])) as Record<ThingKind, string>),
 }
 
 const px = (s: Stud) => ({ x: M + s.c * S, y: M + s.r * S })
@@ -42,25 +46,32 @@ interface SnapBoardProps {
   result: SimulationResult
   holding: PieceKind | null
   selected: string | null
-  onPlace: (piece: Pick<Piece, "kind" | "at" | "dir">) => void
+  onPlace: (piece: Pick<Piece, "kind" | "at" | "dir" | "flipped">) => void
+  // The first stud tapped for a part being placed, and how to set or clear it
+  partStart: Stud | null
+  onPartStart: (stud: Stud | null) => void
   onSelect: (id: string) => void
+  testGap?: { at: Stud; dir: "h" | "v" }
 }
 
-export default function SnapBoard({ board, pieces, result, holding, selected, onPlace, onSelect }: SnapBoardProps) {
+export default function SnapBoard({ board, pieces, result, holding, selected, onPlace, partStart, onPartStart, onSelect, testGap }: SnapBoardProps) {
   const width = 2 * M + (board.cols - 1) * S
   const height = 2 * M + (board.rows - 1) * S
   const studs = allStuds(board)
   const wireTargets = holding && pieceLength(holding) === 1
     ? allGaps(board).filter(gap => canPlace(pieces, { kind: holding, ...gap }, board))
     : []
-  const partTargets = holding && pieceLength(holding) === 2
-    ? studs.flatMap(stud => {
-        const placement = partAt(pieces, holding, stud, board)
-        return placement ? [{ stud, placement }] : []
-      })
+  const placingPart = holding && pieceLength(holding) === 2 ? holding : null
+  // First tap: every stud a part could start from. Second tap: where it can finish.
+  const startTargets = placingPart && !partStart
+    ? studs.filter(stud => partEndOptions(pieces, placingPart, stud, board).length > 0)
     : []
+  const endTargets = placingPart && partStart ? partEndOptions(pieces, placingPart, partStart, board) : []
+  // A battery's ends are + and −; other parts' are just 1 and 2
+  const [firstMark, secondMark] = placingPart === "battery" ? ["+", "−"] : ["1", "2"]
   const wires = pieces.filter(p => p.kind === "wire")
-  const parts = pieces.filter(p => p.kind !== "wire")
+  const things = pieces.filter(p => isThing(p.kind))
+  const parts = pieces.filter(p => p.kind !== "wire" && !isThing(p.kind))
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="group" aria-label="Your circuit board">
@@ -76,16 +87,19 @@ export default function SnapBoard({ board, pieces, result, holding, selected, on
         )
       })}
 
+      {testGap && <TestGapMark gap={testGap} />}
+
       {wires.map(p => <WirePiece key={p.id} piece={p} current={result.wireCurrents[p.id] ?? 0} selected={p.id === selected} onSelect={onSelect} />)}
       {parts.map(p => <PartPiece key={p.id} piece={p} result={result} selected={p.id === selected} onSelect={onSelect} />)}
+      {things.map(p => <ThingPiece key={p.id} piece={p} current={result.wireCurrents[p.id] ?? 0} selected={p.id === selected} onSelect={onSelect} />)}
 
-      {/* Where the picked-up wire can go: one slim tile per free gap */}
-      {wireTargets.map(gap => {
-        const [a, b] = pieceEnds({ kind: "wire", ...gap })
+      {/* Where the picked-up wire or thing can go: one slim tile per free gap */}
+      {holding && wireTargets.map(gap => {
+        const [a, b] = pieceEnds({ kind: holding, ...gap })
         const g0 = px(a)
         const horizontal = gap.dir === "h"
         return (
-          <g key={`${gap.at.c},${gap.at.r},${gap.dir}`} {...pressable(`Put the wire from ${studName(a)} to ${studName(b)}`, () => onPlace({ kind: "wire", ...gap }))} className="group cursor-pointer outline-none">
+          <g key={`${gap.at.c},${gap.at.r},${gap.dir}`} {...pressable(`Put the ${PIECE_NAMES[holding].toLowerCase()} from ${studName(a)} to ${studName(b)}`, () => onPlace({ kind: holding, ...gap }))} className="group cursor-pointer outline-none">
             {/* Invisible, wider tap area; the visible tile stays clear of the studs */}
             <rect
               x={horizontal ? g0.x + 14 : g0.x - 26} y={horizontal ? g0.y - 26 : g0.y + 14}
@@ -101,27 +115,50 @@ export default function SnapBoard({ board, pieces, result, holding, selected, on
         )
       })}
 
-      {/* Where the picked-up part can go: the stud its middle will sit on. Hovering or
-          focusing a stud shows the whole part's place. */}
-      {partTargets.map(({ stud, placement }) => {
-        const [a, b] = pieceEnds(placement)
-        const pa = px(a), pb = px(b), m = px(stud)
-        const label = `Put the ${PIECE_NAMES[placement.kind].toLowerCase()} on ${studName(stud)}, from ${studName(a)} to ${studName(b)}`
+      {/* Placing a part, tap 1: where it starts */}
+      {placingPart && startTargets.map(stud => {
+        const m = px(stud)
+        const label = `Start the ${PIECE_NAMES[placingPart].toLowerCase()}${placingPart === "battery" ? "'s + end" : ""} at ${studName(stud)}`
         return (
-          <g key={`${stud.c},${stud.r}`} {...pressable(label, () => onPlace(placement))} className="group cursor-pointer outline-none">
-            <line
-              x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-              stroke="#1A66E8" strokeWidth={44} strokeLinecap="round" strokeOpacity={0}
-              className="pointer-events-none transition-[stroke-opacity] group-hover:stroke-opacity-25 group-focus-visible:stroke-opacity-25"
-            />
+          <g key={`${stud.c},${stud.r}`} {...pressable(label, () => onPartStart(stud))} className="group cursor-pointer outline-none">
             <circle cx={m.x} cy={m.y} r={30} fill="transparent" />
             <circle
-              cx={m.x} cy={m.y} r={21} fill="#FDCA40" fillOpacity={0.45} stroke="#C46F0C" strokeOpacity={0.7} strokeWidth={2} strokeDasharray="6 5"
+              cx={m.x} cy={m.y} r={19} fill="#FDCA40" fillOpacity={0.45} stroke="#C46F0C" strokeOpacity={0.7} strokeWidth={2} strokeDasharray="6 5"
               className="transition-[fill-opacity] group-hover:fill-opacity-90 group-focus-visible:fill-opacity-90"
             />
           </g>
         )
       })}
+
+      {/* Tap 2: where it finishes. Hovering or focusing one shows where the part will lie. */}
+      {placingPart && partStart && endTargets.map(({ to, placement }) => {
+        const a = px(partStart), b = px(to)
+        const label = `Finish the ${PIECE_NAMES[placingPart].toLowerCase()}${placingPart === "battery" ? "'s − end" : ""} at ${studName(to)}`
+        return (
+          <g key={`${to.c},${to.r}`} {...pressable(label, () => onPlace(placement))} className="group cursor-pointer outline-none">
+            <line
+              x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+              stroke="#1A66E8" strokeWidth={44} strokeLinecap="round" strokeOpacity={0}
+              className="pointer-events-none transition-[stroke-opacity] group-hover:stroke-opacity-25 group-focus-visible:stroke-opacity-25"
+            />
+            <circle cx={b.x} cy={b.y} r={30} fill="transparent" />
+            <circle
+              cx={b.x} cy={b.y} r={19} fill="#FDCA40" fillOpacity={0.6} stroke="#C46F0C" strokeWidth={2.5} strokeDasharray="6 5"
+              className="transition-[fill-opacity] group-hover:fill-opacity-100 group-focus-visible:fill-opacity-100"
+            />
+            <text x={b.x} y={b.y + 7} textAnchor="middle" fontSize={20} fontWeight={700} fill="#1D2326" className="pointer-events-none">{secondMark}</text>
+          </g>
+        )
+      })}
+      {placingPart && partStart && (() => {
+        const m = px(partStart)
+        return (
+          <g {...pressable(`Change where the ${PIECE_NAMES[placingPart].toLowerCase()} starts`, () => onPartStart(null))} className="cursor-pointer outline-none">
+            <circle cx={m.x} cy={m.y} r={21} fill="#1A66E8" stroke="#1048A8" strokeWidth={3} />
+            <text x={m.x} y={m.y + 7} textAnchor="middle" fontSize={20} fontWeight={700} fill="#FFFFFF" className="pointer-events-none">{firstMark}</text>
+          </g>
+        )
+      })()}
     </svg>
   )
 }
@@ -153,7 +190,52 @@ function WirePiece({ piece, current, selected, onSelect }: { piece: Piece; curre
   )
 }
 
-const TILE: Record<Exclude<PieceKind, "wire">, { fill: string; lip: string }> = {
+// The gap the mission wants things tested in: a dashed outline and a label beside it
+function TestGapMark({ gap }: { gap: { at: Stud; dir: "h" | "v" } }) {
+  const a = px(gap.at)
+  const horizontal = gap.dir === "h"
+  const mid = horizontal ? { x: a.x + S / 2, y: a.y } : { x: a.x, y: a.y + S / 2 }
+  return (
+    <g aria-hidden="true">
+      <rect
+        x={mid.x - (horizontal ? S / 2 - 4 : 30)} y={mid.y - (horizontal ? 30 : S / 2 - 4)}
+        width={horizontal ? S - 8 : 60} height={horizontal ? 60 : S - 8}
+        rx={16} fill="none" stroke="#C46F0C" strokeWidth={3} strokeDasharray="8 6"
+      />
+      <text
+        x={horizontal ? mid.x : mid.x + 44} y={horizontal ? mid.y + 50 : mid.y + 5}
+        textAnchor={horizontal ? "middle" : "start"} fontSize={15} fontWeight={700} fill="#9A4D00"
+      >
+        Test here
+      </text>
+    </g>
+  )
+}
+
+// An everyday thing bridging one gap, drawn lying along it. Metal ones carry current dots.
+function ThingPiece({ piece, current, selected, onSelect }: { piece: Piece; current: number; selected: boolean; onSelect: (id: string) => void }) {
+  const kind = piece.kind as ThingKind
+  const [a, b] = pieceEnds(piece).map(px)
+  const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+  const flowing = Math.abs(current) > 1e-4
+  return (
+    <g {...pressable(`${THINGS[kind].name}, from ${studName(piece.at)}`, () => onSelect(piece.id))} className="cursor-pointer outline-none [&:focus-visible>line:first-child]:stroke-opacity-30">
+      <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#1A66E8" strokeWidth={56} strokeLinecap="round" strokeOpacity={selected ? 0.22 : 0} />
+      <g transform={`translate(${mid.x} ${mid.y}) rotate(${piece.dir === "h" ? 0 : 90})`}>
+        <ThingShape kind={kind} />
+      </g>
+      {flowing && (
+        <line
+          x1={current > 0 ? a.x : b.x} y1={current > 0 ? a.y : b.y} x2={current > 0 ? b.x : a.x} y2={current > 0 ? b.y : a.y}
+          stroke="#FDCA40" strokeWidth={6} strokeLinecap="round" strokeDasharray="0.1 12" className="kids-flow"
+        />
+      )}
+      {[a, b].map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={9} fill="#5B666B" stroke="#1D2326" strokeWidth={2} />)}
+    </g>
+  )
+}
+
+const TILE: Record<PartKind, { fill: string; lip: string }> = {
   battery: { fill: "#F79824", lip: "#C46F0C" },
   motor: { fill: "#2176FF", lip: "#1048A8" },
   lamp: { fill: "#FFFFFF", lip: "#B9C4C9" },
@@ -162,7 +244,7 @@ const TILE: Record<Exclude<PieceKind, "wire">, { fill: string; lip: string }> = 
 }
 
 function PartPiece({ piece, result, selected, onSelect }: { piece: Piece; result: SimulationResult; selected: boolean; onSelect: (id: string) => void }) {
-  const kind = piece.kind as Exclude<PieceKind, "wire">
+  const kind = piece.kind as PartKind
   const [a, b] = pieceEnds(piece).map(px)
   const reading = result.readings[piece.id]
   const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
@@ -202,7 +284,7 @@ function PartPiece({ piece, result, selected, onSelect }: { piece: Piece; result
 }
 
 // What's printed on each tile, upright whichever way the piece lies
-function PartFace({ kind, piece, speed, brightness, horizontal }: { kind: Exclude<PieceKind, "wire">; piece: Piece; speed: number; brightness: number; horizontal: boolean }) {
+function PartFace({ kind, piece, speed, brightness, horizontal }: { kind: PartKind; piece: Piece; speed: number; brightness: number; horizontal: boolean }) {
   switch (kind) {
     case "battery":
       return (

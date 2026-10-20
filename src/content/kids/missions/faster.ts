@@ -21,6 +21,7 @@ const faster: KidsCircuitMission = {
   story: 'The car works, but it crawls along and there is no way to stop it. Give it more push and an on/off switch.',
   brief: 'Add a second battery so the motor runs at full speed, and a switch so you can start and stop the car. Take wires off the loop to make room.',
   hint: 'Take two wires off the bottom of the loop for each new piece. Point both batteries’ + ends the same way round the loop, or they cancel out.',
+  topic: 'More power',
   learn: 'two batteries in a row push harder, and a switch opens and closes the loop',
   board: { cols: 6, rows: 5 },
   tray: [

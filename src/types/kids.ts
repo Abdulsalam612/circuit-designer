@@ -42,6 +42,8 @@ export interface KidsCodeMission {
   hint: string;
   // The coding idea it teaches, for mission cards ("steps in order, and timing")
   learn: string;
+  // One to three words for the mission map ("Complete loops")
+  topic: string;
   // The finished build: the real circuit, with the hub's ports as `port` components
   layout: CircuitLayout;
   slots: BuildSlot[];
@@ -58,9 +60,12 @@ export interface KidsCodeMission {
 
 // ---- Part 1: circuit missions (snap pieces on a stud board, no code) ----
 
-// Pieces sit between studs on a grid. A wire spans one gap, a part spans two. Pieces whose
-// ends meet on a stud are connected (the same rule as the circuit editor).
-export type PieceKind = 'wire' | 'battery' | 'motor' | 'lamp' | 'switch' | 'resistor';
+// Pieces sit between studs on a grid. A wire or an everyday thing spans one gap, a part spans
+// two. Pieces whose ends meet on a stud are connected (the same rule as the circuit editor).
+export type PartKind = 'battery' | 'motor' | 'lamp' | 'switch' | 'resistor';
+// Everyday things to test in "Does it conduct?": metal ones act as a wire, the rest as a gap
+export type ThingKind = 'coin' | 'key' | 'clip' | 'eraser' | 'stick' | 'spoon';
+export type PieceKind = 'wire' | PartKind | ThingKind;
 
 export interface Stud {
   c: number;
@@ -89,7 +94,9 @@ export type CircuitGoal =
   | { kind: 'lamp-lit'; text: string; minBrightness?: number; count?: number }
   | { kind: 'no-short'; text: string }
   // A switch in the loop really controls it: on, the motor runs; off, it stops
-  | { kind: 'switch-controls'; text: string };
+  | { kind: 'switch-controls'; text: string }
+  // At least `count` everyday things have been tried in a working loop (this mission's history)
+  | { kind: 'things-tested'; text: string; count: number };
 
 export interface KidsCircuitMission {
   kind: 'circuit';
@@ -99,14 +106,18 @@ export interface KidsCircuitMission {
   brief: string;
   hint: string;
   learn: string;
+  // One to three words for the mission map ("Complete loops")
+  topic: string;
   // Studs across and down
   board: { cols: number; rows: number };
   // How many of each piece the child gets
   tray: { kind: PieceKind; count: number }[];
   start: Piece[];
   goals: CircuitGoal[];
-  // What the circuit drives on screen: the car on its road (default) or a desk fan
-  scene?: 'car' | 'fan';
+  // What the circuit drives on screen: the car on its road (default), a desk fan or a torch
+  scene?: 'car' | 'fan' | 'torch';
+  // A gap the board marks "Test here" (for testing things)
+  testGap?: { at: Stud; dir: 'h' | 'v' };
 }
 
 export type KidsMission = KidsCodeMission | KidsCircuitMission;

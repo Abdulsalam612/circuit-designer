@@ -21,13 +21,25 @@ const Wheel = ({ cx, turn }: { cx: number; turn: number }) => (
 export function CarShape({ light = 0, wheelTurn = 0 }: { light?: number; wheelTurn?: number }) {
   return (
     <g>
-      {light > 0.01 && <ellipse cx={156} cy={45} rx={20 + 26 * light} ry={8 + 9 * light} fill="#FDCA40" opacity={0.25 + 0.5 * light} />}
+      {light > 0.01 && <ellipse cx={160} cy={44} rx={20 + 26 * light} ry={8 + 9 * light} fill="#FDCA40" opacity={0.25 + 0.5 * light} />}
+      {/* Body: short boot at the back (left), long bonnet at the front (right), so it
+          clearly drives to the right */}
       <path
-        d="M8 62 L8 44 Q9 36 18 35 L48 32 L66 14 Q71 10 78 10 L104 10 Q111 10 115 16 L128 34 L140 37 Q148 39 148 48 L148 62 Z"
+        d="M10 62 L10 42 Q10 34 18 33 L37 32 L45 13 Q47 10 53 10 L84 10 Q90 10 94 14 L112 31 L142 35 Q152 37 152 47 L152 62 Z"
         fill="#2176FF" stroke="#1048A8" strokeWidth={2.5} strokeLinejoin="round"
       />
-      <path d="M74 16 L104 16 Q108 16 111 20 L121 34 L60 34 Z" fill="#E8F0FE" stroke="#1048A8" strokeWidth={2} />
-      <circle cx={143} cy={45} r={5} fill={light > 0.01 ? "#FDCA40" : "#FFFFFF"} stroke="#C46F0C" strokeWidth={1.5} />
+      {/* Side windows: steep back window, sloped windscreen, a pillar between */}
+      <path d="M50 16 L66 16 L66 31 L43 31 Z" fill="#E8F0FE" stroke="#1048A8" strokeWidth={2} strokeLinejoin="round" />
+      <path d="M71 16 L86 16 Q89 16 91 18 L104 31 L71 31 Z" fill="#E8F0FE" stroke="#1048A8" strokeWidth={2} strokeLinejoin="round" />
+      {/* Door line and handle */}
+      <path d="M68 33 L68 56" stroke="#1048A8" strokeWidth={1.5} />
+      <rect x={74} y={38} width={9} height={3} rx={1.5} fill="#1048A8" />
+      {/* Bumpers */}
+      <rect x={6} y={52} width={12} height={8} rx={3} fill="#31393C" />
+      <rect x={144} y={52} width={12} height={8} rx={3} fill="#31393C" />
+      {/* Red tail light at the back, headlight at the front */}
+      <rect x={10} y={38} width={6} height={9} rx={2} fill="#E5484D" stroke="#9B1C1F" strokeWidth={1} />
+      <circle cx={146} cy={44} r={5} fill={light > 0.01 ? "#FDCA40" : "#FFFFFF"} stroke="#C46F0C" strokeWidth={1.5} />
       <Wheel cx={40} turn={wheelTurn} />
       <Wheel cx={118} turn={wheelTurn} />
     </g>

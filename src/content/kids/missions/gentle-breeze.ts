@@ -14,6 +14,7 @@ const gentleBreeze: KidsCircuitMission = {
   story: 'It’s a hot day and the desk fan is blowing so hard that all the homework flies away!',
   brief: 'Slow the fan down to a gentle breeze, so it still spins but the papers stay on the desk. Try the resistor.',
   hint: 'A resistor makes it harder for electricity to flow, so less gets through the motor. Take two wires out of the loop and put the resistor in their place.',
+  topic: 'Resistors',
   learn: 'a resistor slows the electricity down',
   board: { cols: 6, rows: 5 },
   tray: [

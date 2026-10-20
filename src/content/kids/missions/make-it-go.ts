@@ -18,6 +18,7 @@ const makeItGo: KidsCircuitMission = {
   story: 'The car has a battery and a motor, but nothing joins them up. Build the loop that makes it drive.',
   brief: 'Place the battery and the motor, then join them with wires so electricity can flow out of the battery, through the motor, and back again.',
   hint: 'Follow the path with your finger: can you get from one end of the battery all the way round to the other end?',
+  topic: 'Complete loops',
   learn: 'a circuit must be a complete loop',
   board: { cols: 6, rows: 5 },
   tray: [

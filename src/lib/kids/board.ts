@@ -1,5 +1,5 @@
 import type { CircuitComponent, CircuitLayout, ComponentType, Wire } from '@/types/circuit';
-import type { CircuitGoal, Piece, PieceKind, Stud } from '@/types/kids';
+import type { CircuitGoal, PartKind, Piece, PieceKind, Stud, ThingKind } from '@/types/kids';
 import { simulate, type SimulationResult } from '@/lib/simulation';
 import { COMPONENT_DEFS } from '@/lib/components';
 
@@ -10,9 +10,23 @@ import { COMPONENT_DEFS } from '@/lib/components';
 
 export const STUD = 40;
 
-export const pieceLength = (kind: PieceKind) => (kind === 'wire' ? 1 : 2);
+// Everyday things for "Does it conduct?". Metals let electricity through; the board treats a
+// conductor as a wire and an insulator as nothing at all (the loop stays open), which is what
+// the solver would see.
+export const THINGS: Record<ThingKind, { name: string; material: string; conducts: boolean }> = {
+  coin: { name: 'Coin', material: 'metal', conducts: true },
+  key: { name: 'Key', material: 'metal', conducts: true },
+  clip: { name: 'Paper clip', material: 'metal', conducts: true },
+  eraser: { name: 'Eraser', material: 'rubber', conducts: false },
+  stick: { name: 'Lolly stick', material: 'wood', conducts: false },
+  spoon: { name: 'Plastic spoon', material: 'plastic', conducts: false },
+};
 
-const COMPONENT_OF: Record<Exclude<PieceKind, 'wire'>, ComponentType> = {
+export const isThing = (kind: PieceKind): kind is ThingKind => kind in THINGS;
+
+export const pieceLength = (kind: PieceKind) => (kind === 'wire' || isThing(kind) ? 1 : 2);
+
+const COMPONENT_OF: Record<PartKind, ComponentType> = {
   battery: 'battery',
   motor: 'motor',
   lamp: 'lamp',
@@ -58,21 +72,35 @@ export const canPlace = (pieces: Piece[], candidate: Pick<Piece, 'kind' | 'at' |
 // The stud a part's body sits on
 export const partMiddle = (p: Pick<Piece, 'at' | 'dir'>): Stud => step(p.at, p.dir, 1);
 
-// A part goes where the child taps a stud: centred on it, lying across if it fits there,
-// otherwise standing up (wires are placed on gaps instead)
-export const partAt = (
+// A part is placed with two taps: the stud where it starts, then the stud where it finishes,
+// two studs away in a straight line. The first stud is the part's first end (a battery's +,
+// the end a motor turns "forwards" from), so the child chooses the direction, not the board.
+// Pieces are stored running right or down from `at`; a part tapped right-to-left or
+// bottom-to-top is the same place, turned around.
+export const partBetween = (
   pieces: Piece[],
   kind: PieceKind,
-  middle: Stud,
+  from: Stud,
+  to: Stud,
   board: Board,
-  prefer: 'h' | 'v' = 'h',
-): Pick<Piece, 'kind' | 'at' | 'dir'> | null => {
-  for (const dir of prefer === 'h' ? (['h', 'v'] as const) : (['v', 'h'] as const)) {
-    const candidate = { kind, at: step(middle, dir, -1), dir };
-    if (canPlace(pieces, candidate, board)) return candidate;
-  }
-  return null;
+): Pick<Piece, 'kind' | 'at' | 'dir' | 'flipped'> | null => {
+  const dc = to.c - from.c, dr = to.r - from.r;
+  const straight = (Math.abs(dc) === 2 && dr === 0) || (Math.abs(dr) === 2 && dc === 0);
+  if (!straight || pieceLength(kind) !== 2) return null;
+  const dir = dr === 0 ? 'h' : 'v';
+  const backwards = dc < 0 || dr < 0;
+  const candidate = { kind, at: backwards ? to : from, dir, flipped: backwards } as const;
+  return canPlace(pieces, candidate, board) ? candidate : null;
 };
+
+// The studs a part could finish at, once it starts at `from`
+export const partEndOptions = (pieces: Piece[], kind: PieceKind, from: Stud, board: Board) =>
+  [{ c: 2, r: 0 }, { c: -2, r: 0 }, { c: 0, r: 2 }, { c: 0, r: -2 }]
+    .map(d => ({ c: from.c + d.c, r: from.r + d.r }))
+    .flatMap(to => {
+      const placement = partBetween(pieces, kind, from, to, board);
+      return placement ? [{ to, placement }] : [];
+    });
 
 // The same part turned a quarter round on its middle stud, if there's room
 export const rotated = (pieces: Piece[], piece: Piece, board: Board): Piece | null => {
@@ -105,10 +133,11 @@ export const boardToLayout = (pieces: Piece[]): CircuitLayout => {
   const wires: Wire[] = [];
   for (const p of pieces) {
     const [a, b] = pieceEnds(p);
-    if (p.kind === 'wire') {
+    if (p.kind === 'wire' || (isThing(p.kind) && THINGS[p.kind].conducts)) {
       wires.push({ id: p.id, x1: point(a).x, y1: point(a).y, x2: point(b).x, y2: point(b).y });
       continue;
     }
+    if (isThing(p.kind)) continue;
     const type = COMPONENT_OF[p.kind];
     // Pin 0 (a battery's +) is at the start stud unless the part is turned around
     const base = p.dir === 'h' ? 0 : 90;
@@ -130,13 +159,25 @@ export const boardToLayout = (pieces: Piece[]): CircuitLayout => {
 
 export interface GoalCheck { goal: CircuitGoal; met: boolean }
 
-export const checkGoals = (pieces: Piece[], goals: CircuitGoal[], result = simulate(boardToLayout(pieces))): GoalCheck[] =>
-  goals.map(goal => ({ goal, met: goalMet(pieces, goal, result) }));
+// `tested`: the things tried so far in this mission (see testedThings)
+export const checkGoals = (
+  pieces: Piece[],
+  goals: CircuitGoal[],
+  result = simulate(boardToLayout(pieces)),
+  tested: ReadonlySet<ThingKind> = new Set(),
+): GoalCheck[] =>
+  goals.map(goal => ({ goal, met: goal.kind === 'things-tested' ? tested.size >= goal.count : goalMet(pieces, goal, result) }));
 
 // Whether anything is moving or glowing
 const isGoing = (pieces: Piece[], result: SimulationResult) =>
   pieces.some(p => (p.kind === 'motor' && Math.abs(result.readings[p.id]?.speed ?? 0) > 0.05)
     || (p.kind === 'lamp' && (result.readings[p.id]?.brightness ?? 0) > 0.05));
+
+// The things on the board that are being tested right now: in a place where, if they were a
+// wire, the loop would work. Whether it then actually works is the test's answer.
+export const testedThings = (pieces: Piece[]): Piece[] =>
+  pieces.filter(t => isThing(t.kind)
+    && isGoing(pieces, simulate(boardToLayout(pieces.map(p => (p.id === t.id ? { ...p, kind: 'wire' as const } : p))))));
 
 const withSwitch = (pieces: Piece[], id: string, closed: boolean) =>
   pieces.map(p => (p.id === id ? { ...p, closed } : p));
@@ -161,6 +202,8 @@ const goalMet = (pieces: Piece[], goal: CircuitGoal, result: SimulationResult): 
       return pieces.some(sw => sw.kind === 'switch'
         && isGoing(pieces, simulate(boardToLayout(withSwitch(pieces, sw.id, true))))
         && !isGoing(pieces, simulate(boardToLayout(withSwitch(pieces, sw.id, false)))));
+    case 'things-tested':
+      return false; // needs the mission's history: checkGoals handles it
     case 'no-short':
       // Only counts once there's something that could short
       return pieces.some(p => p.kind === 'battery') && !result.warnings.some(w => w.kind === 'short-circuit');
@@ -182,7 +225,17 @@ export const kidsFeedback = (pieces: Piece[], result: SimulationResult): { tone:
     if (lamps.length > 1 && Math.max(...lamps) < 0.6) {
       return { tone: 'problem', text: "Your bulbs are on, but dim. Bulbs in a row share the battery’s push. Can you give each bulb its own path from one end of the battery to the other?" };
     }
+    const conductor = testedThings(pieces).find(p => isThing(p.kind) && THINGS[p.kind].conducts);
+    if (conductor && isThing(conductor.kind)) {
+      const t = THINGS[conductor.kind];
+      return { tone: 'good', text: `The ${t.name.toLowerCase()} lets electricity through: it’s a conductor! It’s made of ${t.material}.` };
+    }
     return { tone: 'good', text: 'Electricity is flowing round your loop!' };
+  }
+  const insulator = testedThings(pieces).find(p => isThing(p.kind) && !THINGS[p.kind].conducts);
+  if (insulator && isThing(insulator.kind)) {
+    const t = THINGS[insulator.kind];
+    return { tone: 'problem', text: `The ${t.name.toLowerCase()} doesn’t let electricity through: it’s an insulator. It’s made of ${t.material}.` };
   }
   if (pieces.some(p => p.kind === 'switch' && !p.closed)) {
     return { tone: 'problem', text: 'The switch is off, so the loop is broken. Tap the switch to turn it on.' };

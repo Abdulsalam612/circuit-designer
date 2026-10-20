@@ -2,14 +2,16 @@
 // Run with: npm test
 import { simulate } from '../src/lib/simulation';
 import { isLayoutValid } from '../src/lib/wires';
-import { allGaps, boardToLayout, canPlace, checkGoals, kidsFeedback, partAt, pieceGaps, rotated, type Board } from '../src/lib/kids/board';
+import { allGaps, boardToLayout, canPlace, checkGoals, kidsFeedback, partBetween, partEndOptions, pieceGaps, rotated, testedThings, THINGS, type Board } from '../src/lib/kids/board';
 import makeItGo from '../src/content/kids/missions/make-it-go';
 import faster from '../src/content/kids/missions/faster';
 import lightsOn from '../src/content/kids/missions/lights-on';
 import backwards from '../src/content/kids/missions/backwards';
 import gentleBreeze from '../src/content/kids/missions/gentle-breeze';
+import doesItConduct from '../src/content/kids/missions/does-it-conduct';
+import { FIRST_LOOP } from '../src/content/kids/missions/first-loop';
 import { CIRCUIT_MISSIONS } from '../src/content/kids';
-import type { Piece, PieceKind } from '../src/types/kids';
+import type { Piece, PieceKind, ThingKind } from '../src/types/kids';
 
 let fails = 0, passes = 0;
 const check = (name: string, cond: boolean, detail = '') => {
@@ -35,11 +37,24 @@ const board: Board = makeItGo.board;
   check('place: nothing may end on a part\'s middle', !canPlace([motor], piece('wire', 2, 1, 'v'), board) && !canPlace([motor], piece('wire', 2, 0, 'v'), board));
   check('place: wires may end on a part\'s ends', canPlace([motor], piece('wire', 1, 1, 'v'), board) && canPlace([motor], piece('wire', 3, 1, 'v'), board));
   check('place: a part can\'t sit across another piece\'s end', !canPlace([piece('wire', 2, 2, 'v')], piece('battery', 1, 2, 'h'), board));
-  const centred = partAt([], 'battery', { c: 2, r: 2 }, board);
-  check('place: a part sits centred on the tapped stud, lying across', centred?.at.c === 1 && centred.at.r === 2 && centred.dir === 'h', JSON.stringify(centred));
-  const edge = partAt([], 'battery', { c: 0, r: 2 }, board);
-  check('place: at the side edge it stands up instead', edge?.dir === 'v' && edge.at.r === 1, JSON.stringify(edge));
-  check('place: no part fits on a corner stud', partAt([], 'battery', { c: 0, r: 0 }, board) === null);
+  // Two taps: where the part starts, then where it finishes
+  const across = partBetween([], 'battery', { c: 1, r: 2 }, { c: 3, r: 2 }, board);
+  check('place: start then finish to the right lies across, as tapped', across?.at.c === 1 && across.dir === 'h' && !across.flipped, JSON.stringify(across));
+  const leftwards = partBetween([], 'battery', { c: 3, r: 2 }, { c: 1, r: 2 }, board);
+  check('place: tapped right to left, it is the same place turned around (+ on the right)', leftwards?.at.c === 1 && leftwards.dir === 'h' && leftwards.flipped === true, JSON.stringify(leftwards));
+  const upwards = partBetween([], 'battery', { c: 0, r: 3 }, { c: 0, r: 1 }, board);
+  check('place: tapped bottom to top, it stands up turned around (+ at the bottom)', upwards?.at.r === 1 && upwards.dir === 'v' && upwards.flipped === true, JSON.stringify(upwards));
+  check('place: the finish must be two studs away in a straight line',
+    partBetween([], 'motor', { c: 1, r: 1 }, { c: 2, r: 1 }, board) === null && partBetween([], 'motor', { c: 1, r: 1 }, { c: 3, r: 3 }, board) === null);
+  check('place: wires are not placed with two taps', partBetween([], 'wire', { c: 0, r: 0 }, { c: 2, r: 0 }, board) === null);
+  check('place: from a corner, a part can finish two ways', partEndOptions([], 'motor', { c: 0, r: 0 }, board).length === 2);
+  check('place: from the middle, four ways', partEndOptions([], 'motor', { c: 2, r: 2 }, board).length === 4);
+  check('place: a finish blocked by another piece is not offered',
+    partEndOptions([piece('wire', 3, 2, 'h')], 'motor', { c: 2, r: 2 }, board).every(o => !(o.to.c === 4 && o.to.r === 2)));
+  // Flipping by tapping order really reverses a battery
+  const loopWithout = FIRST_LOOP.filter(p => p.kind !== 'battery');
+  const plusAtBottom = { ...partBetween(loopWithout, 'battery', { c: 0, r: 3 }, { c: 0, r: 1 }, board)!, id: 'b' } as Piece;
+  check('place: a battery tapped + at the bottom runs the motor backwards', (simulate(boardToLayout([plusAtBottom, ...loopWithout])).readings['start-motor'].speed ?? 0) < -0.4);
   const lying = piece('motor', 1, 2, 'h');
   const turned = rotated([lying], lying, board);
   check('rotate: turns on its middle stud', turned?.dir === 'v' && turned.at.c === 2 && turned.at.r === 1, JSON.stringify(turned));
@@ -214,6 +229,34 @@ const solution = (): Piece[] => [
   check('breeze: the resistor slows the fan to a quarter speed', Math.abs(slow - 0.25) < 0.02, `${slow}`);
   check('breeze: with the resistor every goal is met', checkGoals(withResistor, gentleBreeze.goals).every(g => g.met));
   check('breeze: a "max speed" goal fails when too fast', !checkGoals(solution(), [{ kind: 'motor-spins', text: '', maxSpeed: 0.35 }])[0].met);
+}
+
+// ---- "Does it conduct?": metals light the torch, the rest don't ----
+{
+  const gap = doesItConduct.testGap!;
+  const bulb = (pieces: Piece[]) => simulate(boardToLayout(pieces)).readings['torch-bulb'].brightness ?? 0;
+  check('conduct: the torch starts dark', bulb(doesItConduct.start) < 0.01);
+  check('conduct: the test gap is free', canPlace(doesItConduct.start, { kind: 'coin', ...gap }, doesItConduct.board));
+  check('conduct: everything at the start is fixed', doesItConduct.start.every(p => p.fixed));
+  for (const kind of Object.keys(THINGS) as ThingKind[]) {
+    const pieces = [...doesItConduct.start, piece(kind, gap.at.c, gap.at.r, gap.dir)];
+    const lit = bulb(pieces) > 0.5;
+    check(`conduct: the ${kind} ${THINGS[kind].conducts ? 'lights' : 'doesn’t light'} the torch`, lit === THINGS[kind].conducts);
+    check(`conduct: the ${kind} in the gap counts as tested`, testedThings(pieces).some(p => p.kind === kind));
+    const text = kidsFeedback(pieces, simulate(boardToLayout(pieces))).text;
+    check(`conduct: feedback names the ${kind} as ${THINGS[kind].conducts ? 'a conductor' : 'an insulator'}`,
+      text.includes(THINGS[kind].conducts ? 'a conductor' : 'an insulator') && text.includes(THINGS[kind].material), text);
+  }
+  const elsewhere = [...doesItConduct.start, piece('coin', 1, 1, 'h')];
+  check('conduct: a thing away from the loop isn’t tested', testedThings(elsewhere).length === 0);
+
+  const withCoin = [...doesItConduct.start, piece('coin', gap.at.c, gap.at.r, gap.dir)];
+  const some = new Set<ThingKind>(['coin', 'eraser']);
+  const all = new Set(Object.keys(THINGS) as ThingKind[]);
+  check('conduct: torch lit but not all tested: not done', !checkGoals(withCoin, doesItConduct.goals, undefined, some).every(g => g.met));
+  check('conduct: all tested and the torch lit: done', checkGoals(withCoin, doesItConduct.goals, undefined, all).every(g => g.met));
+  const withEraser = [...doesItConduct.start, piece('eraser', gap.at.c, gap.at.r, gap.dir)];
+  check('conduct: all tested but an insulator in the gap: not done', !checkGoals(withEraser, doesItConduct.goals, undefined, all).every(g => g.met));
 }
 
 // ---- Content checks ----

@@ -17,6 +17,7 @@ const driveToTheFlag: KidsCodeMission = {
   story: 'Build a car with a motor, then code it to stop exactly on the flag.',
   brief: 'The flag is 80 cm away. At speed 50%, the car goes 20 cm every second.',
   hint: 'How many seconds does the car need to go 80 cm?',
+  topic: 'Steps and timing',
   learn: 'steps in order, and timing',
   layout: {
     components: [

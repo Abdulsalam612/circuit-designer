@@ -38,7 +38,7 @@ already understand.
 | Step | What the child does | What they learn |
 |---|---|---|
 | **Pick a mission** | "Make it go": the car has a battery and a motor but nothing joins them | Purpose before tools |
-| **Build** | Tap a piece in the tray, then tap where it goes: a wire on a glowing gap between two studs, a part (battery, motor, switch…) on the glowing stud its middle sits on. Tap a placed piece to rotate it, turn it around or take it off; tap a switch to flick it. | Parts, a complete loop |
+| **Build** | Tap a piece in the tray, then tap where it goes: a wire on a glowing gap between two studs; a part (battery, motor, switch…) with two taps – the stud where it starts, then where it finishes (a battery: + end, then − end), so the child chooses which way round it goes. Tap a placed piece to rotate it, turn it around or take it off (or press Delete); tap a switch to flick it. | Parts, a complete loop |
 | **Watch** | Nothing to press: the simulator runs on every change. Current dots flow, the motor spins, the car drives (backwards if the battery is turned round). Goals tick off with LEDs; a short circuit is explained, not just flagged. | Cause and effect, short circuits |
 
 The snap board: studs 40 editor units apart; a wire spans one gap, a part spans two with its
@@ -53,7 +53,11 @@ for "its own path"; side by side each bulb gets the full push and both shine.
 **"Backwards"** (built): turn the battery (or the motor) round and the car reverses.
 **"Gentle breeze"** (built, the first mission that isn't the car): a desk fan blows the
 homework off the desk; a resistor slows it to a gentle breeze. Each circuit mission names a
-`scene` (car or fan), so new missions can drive new machines.
+`scene` (car, fan or torch), so new missions can drive new machines.
+**"Does it conduct?"** (built): the torch's circuit is fixed with one gap marked "Test here";
+children try a coin, key, paper clip, eraser, lolly stick and plastic spoon. Metals light the
+torch (the beam finds the cat under the bed), the rest don't; each result goes into "What you
+found out". Done when all six are tested and the torch shines.
 
 ### Part 2: a code mission ("Drive to the flag")
 
@@ -145,8 +149,8 @@ Missing parts give a teaching failure ("The motor needs the battery and the hub"
 
 1. **Engine** – motor + hub models, runner, tests (no UI). *Done.*
 2. **Workbench** – `/kids` with Build / Code / Play for "Drive to the flag", Blockly themed. *Done.*
-3. **Circuits first** – snap board + "Make it go", "Faster!", "Lights on", "Backwards", "Gentle breeze"; `/kids` split into Part 1 / Part 2. *Done.*
-4. **More missions** – Part 1: "Does it conduct?" (conductors and insulators), more scenes; Part 2's build step
+3. **Circuits first** – snap board + "Make it go", "Faster!", "Lights on", "Backwards", "Gentle breeze", "Does it conduct?"; `/kids` split into Part 1 / Part 2. *Done.*
+4. **More missions** – Part 1: "Steady hand game" (buzz wire, needs a buzzer), more scenes; Part 2's build step
    becomes the snap board with a hub port in place of the switch; stars saved to progress;
    retire `/play`, `/kidscircuit`.
 5. **Pitch build** – polish, a 60-second demo video (OpenMontage), teacher one-pager.
