@@ -7,14 +7,16 @@ import { reportError } from "@/lib/reportError"
 
 // The block editor (Google Blockly, Apache-2.0). Blockly is loaded in the browser only. The
 // program lives in the parent as Block[]; this component reports every change.
-// Block colours are darkened brand colours so white block text passes contrast (4.5:1+).
+// Block colours are darkened brand colours so white block text passes contrast (4.5:1+). The
+// start block is ink (it's the one that isn't an action), and sound is pink rather than
+// purple, so it can't be mistaken for the blue motor blocks with colour-blind eyes.
 
 const STYLES = {
-  kids_event: { colourPrimary: "#8A6400", colourSecondary: "#A87B0A", colourTertiary: "#6B4E00" },
+  kids_event: { colourPrimary: "#31393C", colourSecondary: "#4A5457", colourTertiary: "#1D2326" },
   kids_motor: { colourPrimary: "#1A66E8", colourSecondary: "#3D7FEC", colourTertiary: "#1048A8" },
   kids_light: { colourPrimary: "#9A4D00", colourSecondary: "#B05E0C", colourTertiary: "#7A3D00" },
   kids_control: { colourPrimary: "#127436", colourSecondary: "#1E8A46", colourTertiary: "#0B4D23" },
-  kids_sound: { colourPrimary: "#7C3AED", colourSecondary: "#8B52F0", colourTertiary: "#5B21B6" },
+  kids_sound: { colourPrimary: "#BE185D", colourSecondary: "#D02A70", colourTertiary: "#9D174D" },
 }
 
 const PORTS = [["A", "A"], ["B", "B"]]
@@ -110,7 +112,7 @@ export default function BlocklyEditor({ blocks, initial, onChange }: BlocklyEdit
           theme,
           media: "/blockly-media/",
           trashcan: true,
-          zoom: { controls: true, wheel: false, startScale: 0.9, maxScale: 1.6, minScale: 0.5 },
+          zoom: { controls: true, wheel: false, startScale: 1.15, maxScale: 1.6, minScale: 0.5 },
           move: { scrollbars: true, drag: true, wheel: true },
           grid: { spacing: 20, length: 1, colour: "#E6EDF8", snap: true },
         })

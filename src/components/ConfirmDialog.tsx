@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { AlertTriangle } from "lucide-react"
+import { buttonClass } from "@/components/ui/Button"
 
 // Styled replacement for window.confirm(). Controlled: render it with open=true and handle
 // onConfirm / onCancel. Esc or a click on the backdrop cancels.
@@ -11,6 +12,8 @@ interface ConfirmDialogProps {
   title: string
   message?: React.ReactNode
   confirmLabel?: string
+  // e.g. "No" in CirKit Kids
+  cancelLabel?: string
   // Red confirm button, for things that can't be undone
   danger?: boolean
   // Extra content under the message, e.g. a password field
@@ -26,6 +29,7 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel = "Confirm",
+  cancelLabel = "Cancel",
   danger = false,
   children,
   confirmDisabled = false,
@@ -72,20 +76,16 @@ export default function ConfirmDialog({
           </div>
         </div>
         {children && <div className="mt-4">{children}</div>}
-        <div className="mt-6 flex justify-end gap-2">
-          <button
-            ref={cancelRef}
-            onClick={onCancel}
-            className="rounded-control px-4 py-2 font-medium text-ink hover:bg-ink/5 transition-colors"
-          >
-            Cancel
+        {/* The site's own buttons: 44 px tall (easy on tablets) and readable when disabled */}
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <button ref={cancelRef} type="button" onClick={onCancel} className={buttonClass("secondary")}>
+            {cancelLabel}
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={confirmDisabled}
-            className={`rounded-control px-4 py-2 font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              danger ? "bg-danger hover:bg-danger-hover" : "bg-signal hover:bg-signal-hover"
-            }`}
+            className={buttonClass(danger ? "danger" : "primary")}
           >
             {confirmLabel}
           </button>

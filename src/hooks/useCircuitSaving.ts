@@ -4,20 +4,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CircuitLayout } from "@/types/circuit";
 import { createCircuit, loadCircuit, saveCircuit } from "@/lib/circuitStore";
 import { reportError } from "@/lib/reportError";
+import {
+  canSave, describeLoadError, describeSaveError, hasUnsavedChanges, type SaveStatus,
+} from "@/components/editor/saveRules";
 
-export type SaveStatus = "loading" | "new" | "unsaved" | "saving" | "saved" | "error";
+export type { SaveStatus };
 
 // Wait this long after the last change before saving automatically
 const AUTOSAVE_DELAY_MS = 1500;
 
 const snapshot = (name: string, layout: CircuitLayout) => JSON.stringify({ name, layout });
-
-const describeError = (error: unknown) => {
-  const code = (error as { code?: string })?.code;
-  if (code === "permission-denied") return "Not allowed to save. Check the Firestore security rules (see firestore.rules).";
-  if (code === "unavailable") return "You appear to be offline. Changes will save when you reconnect.";
-  return error instanceof Error ? error.message : "Something went wrong while saving.";
-};
 
 interface Options {
   uid: string | null;
@@ -43,6 +39,8 @@ export const useCircuitSaving = ({ uid, name, layout, onLoaded }: Options) => {
   const inFlight = useRef<Promise<void> | null>(null);
   const onLoadedRef = useRef(onLoaded);
   onLoadedRef.current = onLoaded;
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
   // Load once the user is known
   useEffect(() => {
@@ -73,14 +71,18 @@ export const useCircuitSaving = ({ uid, name, layout, onLoaded }: Options) => {
       })
       .catch(e => {
         if (cancelled) return;
-        setError(describeError(e));
-        setStatus("error");
+        reportError(e, "Load circuit");
+        // savedSnapshot stays null, which keeps saving off (see canSave)
+        setError(describeLoadError(e));
+        setStatus("loadFailed");
       });
     return () => { cancelled = true; };
   }, [uid]);
 
   const save = useCallback(async () => {
-    if (!uid) return;
+    // Never while loading or after a failed load: with no circuit id yet, this would create a
+    // new empty circuit and replace ?id= in the address bar
+    if (!uid || !canSave(statusRef.current, savedSnapshot.current)) return;
     // One save at a time; a save requested meanwhile runs after it with the latest state
     while (inFlight.current) await inFlight.current;
 
@@ -109,7 +111,7 @@ export const useCircuitSaving = ({ uid, name, layout, onLoaded }: Options) => {
         setStatus(changedSince ? "unsaved" : "saved");
       } catch (e) {
         reportError(e, "Save circuit");
-        setError(describeError(e));
+        setError(describeSaveError(e));
         setStatus("error");
       }
     })();
@@ -131,7 +133,8 @@ export const useCircuitSaving = ({ uid, name, layout, onLoaded }: Options) => {
   // Warn before leaving with changes that haven't been saved yet
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (snapshot(latest.current.name, latest.current.layout) !== savedSnapshot.current) {
+      // Not after a failed load (nothing was ever stored to compare with)
+      if (hasUnsavedChanges(snapshot(latest.current.name, latest.current.layout), savedSnapshot.current)) {
         e.preventDefault();
       }
     };

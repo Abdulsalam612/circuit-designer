@@ -27,6 +27,19 @@ export const PIECE_NAMES: Record<PieceKind, string> = {
 }
 
 const px = (s: Stud) => ({ x: M + s.c * S, y: M + s.r * S })
+
+// Tap areas, sized for fingers on a phone-sized board. Stud targets: 2 × 38 = 76 across,
+// still short of the 84 between studs, so neighbours never overlap.
+const STUD_TAP = 38
+const GAP_TAP = 35 // half the width of a gap's tap area
+// A gap's tap area: a long hexagon from just past one stud to just short of the next. Its
+// slanted ends stay on its own side of each stud's diagonal, so the gaps meeting at a stud
+// (right of it and below it) only touch at a point.
+const gapTapArea = (from: { x: number; y: number }, horizontal: boolean) => {
+  const near = 14, flat = 35
+  const pts: [number, number][] = [[near, 0], [flat, -GAP_TAP], [S - flat, -GAP_TAP], [S - near, 0], [S - flat, GAP_TAP], [flat, GAP_TAP]]
+  return pts.map(([along, across]) => (horizontal ? `${from.x + along},${from.y + across}` : `${from.x + across},${from.y + along}`)).join(" ")
+}
 const studName = (s: Stud) => `column ${s.c + 1}, row ${s.r + 1}`
 
 // Enter and Space press an SVG "button", like a real one
@@ -75,15 +88,12 @@ export default function SnapBoard({ board, pieces, result, holding, selected, on
 
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" role="group" aria-label="Your circuit board">
-      {/* The plate and its studs */}
+      {/* The plate and its studs. Empty studs lie flat, so only the targets look tappable. */}
       <rect x={4} y={4} width={width - 8} height={height - 8} rx={22} fill="#DCE7F9" stroke="#B9CCEB" strokeWidth={2} />
       {studs.map(s => {
         const { x, y } = px(s)
         return (
-          <g key={`${s.c},${s.r}`} aria-hidden="true">
-            <circle cx={x} cy={y + 2} r={11} fill="#B9CCEB" />
-            <circle cx={x} cy={y} r={11} fill="#EEF3FC" stroke="#C7D6EF" strokeWidth={1.5} />
-          </g>
+          <circle key={`${s.c},${s.r}`} cx={x} cy={y} r={11} fill="#EEF3FC" stroke="#B9CCEB" strokeWidth={1.5} aria-hidden="true" />
         )
       })}
 
@@ -100,11 +110,9 @@ export default function SnapBoard({ board, pieces, result, holding, selected, on
         const horizontal = gap.dir === "h"
         return (
           <g key={`${gap.at.c},${gap.at.r},${gap.dir}`} {...pressable(`Put the ${PIECE_NAMES[holding].toLowerCase()} from ${studName(a)} to ${studName(b)}`, () => onPlace({ kind: holding, ...gap }))} className="group cursor-pointer outline-none">
-            {/* Invisible, wider tap area; the visible tile stays clear of the studs */}
-            <rect
-              x={horizontal ? g0.x + 14 : g0.x - 26} y={horizontal ? g0.y - 26 : g0.y + 14}
-              width={horizontal ? S - 28 : 52} height={horizontal ? 52 : S - 28} fill="transparent"
-            />
+            {/* Invisible, wider tap area (70 across, for fingers); the visible tile stays clear
+                of the studs. Its corners are cut at 45°, so it never overlaps the gap round the corner. */}
+            <polygon points={gapTapArea(g0, horizontal)} fill="transparent" />
             <rect
               x={horizontal ? g0.x + 17 : g0.x - 13} y={horizontal ? g0.y - 13 : g0.y + 17}
               width={horizontal ? S - 34 : 26} height={horizontal ? 26 : S - 34}
@@ -121,7 +129,7 @@ export default function SnapBoard({ board, pieces, result, holding, selected, on
         const label = `Start the ${PIECE_NAMES[placingPart].toLowerCase()}${placingPart === "battery" ? "'s + end" : ""} at ${studName(stud)}`
         return (
           <g key={`${stud.c},${stud.r}`} {...pressable(label, () => onPartStart(stud))} className="group cursor-pointer outline-none">
-            <circle cx={m.x} cy={m.y} r={30} fill="transparent" />
+            <circle cx={m.x} cy={m.y} r={STUD_TAP} fill="transparent" />
             <circle
               cx={m.x} cy={m.y} r={19} fill="#FDCA40" fillOpacity={0.45} stroke="#C46F0C" strokeOpacity={0.7} strokeWidth={2} strokeDasharray="6 5"
               className="transition-[fill-opacity] group-hover:fill-opacity-90 group-focus-visible:fill-opacity-90"
@@ -141,7 +149,7 @@ export default function SnapBoard({ board, pieces, result, holding, selected, on
               stroke="#1A66E8" strokeWidth={44} strokeLinecap="round" strokeOpacity={0}
               className="pointer-events-none transition-[stroke-opacity] group-hover:stroke-opacity-25 group-focus-visible:stroke-opacity-25"
             />
-            <circle cx={b.x} cy={b.y} r={30} fill="transparent" />
+            <circle cx={b.x} cy={b.y} r={STUD_TAP} fill="transparent" />
             <circle
               cx={b.x} cy={b.y} r={19} fill="#FDCA40" fillOpacity={0.6} stroke="#C46F0C" strokeWidth={2.5} strokeDasharray="6 5"
               className="transition-[fill-opacity] group-hover:fill-opacity-100 group-focus-visible:fill-opacity-100"

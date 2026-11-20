@@ -27,7 +27,7 @@ const gentleBreeze: KidsCircuitMission = {
   goals: [
     { kind: 'motor-spins', text: 'The fan spins', minSpeed: 0.15 },
     { kind: 'motor-spins', text: 'Gentle enough that the papers stay on the desk', minSpeed: 0.15, maxSpeed: 0.35 },
-    { kind: 'no-short', text: 'No short circuit' },
+    { kind: 'no-short', text: 'No shortcuts for the electricity' },
   ],
   scene: 'fan',
 };

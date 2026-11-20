@@ -1,21 +1,24 @@
 import Link from "next/link"
-import { CircuitBoard } from "lucide-react"
+import Wordmark from "@/components/Wordmark"
+import AccountPageLink from "@/components/AccountPageLink"
 
 // Shared footer (landing page + About/Terms/Privacy). Only real links – no "#" placeholders.
+// A server component, so the constants below can be imported by server pages. Links marked
+// `account` go through AccountPageLink, which sends signed-out visitors to sign-up first.
 
 export const GITHUB_URL = "https://github.com/Abdulsalam612/circuit-designer"
 export const ISSUES_URL = `${GITHUB_URL}/issues`
 export const CONTACT_EMAIL = "abdulsalam.sami01@gmail.com"
 
-const COLUMNS: { title: string; colour: string; links: { href: string; label: string; external?: boolean }[] }[] = [
+const COLUMNS: { title: string; colour: string; links: { href: string; label: string; external?: boolean; account?: boolean }[] }[] = [
   {
     title: "Product",
     colour: "text-glow",
     links: [
-      { href: "/simulation", label: "Circuit Editor" },
-      { href: "/dashboard", label: "Lessons" },
+      { href: "/dashboard", label: "Lessons", account: true },
+      { href: "/simulation", label: "Circuit Editor", account: true },
+      { href: "/circuits", label: "My Circuits", account: true },
       { href: "/kids", label: "CirKit Kids" },
-      { href: "/circuits", label: "My Circuits" },
     ],
   },
   {
@@ -39,37 +42,40 @@ const COLUMNS: { title: string; colour: string; links: { href: string; label: st
   },
 ]
 
+// Taller links (about 36 px) so they're easier to tap than a bare line of text
+const footerLink = "inline-block py-1.5 hover:text-white transition-colors"
+
 export default function SiteFooter() {
   return (
     <footer className="bg-ink text-white py-12">
-      <div className="container mx-auto px-6">
+      {/* Same container as the pages and the header */}
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-4">
           <div>
-            <Link href="/" className="flex items-center space-x-3 mb-4">
-              <div className="bg-brand p-2 rounded-control">
-                <CircuitBoard className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xl font-bold">CirKit</span>
-            </Link>
+            <div className="mb-4">
+              <Wordmark onDark />
+            </div>
             <p className="text-white/70">Making electronics education accessible and engaging for everyone.</p>
           </div>
 
           {COLUMNS.map(column => (
             <div key={column.title}>
-              <h3 className={`font-semibold mb-4 ${column.colour}`}>{column.title}</h3>
-              <ul className="space-y-2 text-white/70">
+              <h3 className={`font-semibold mb-3 ${column.colour}`}>{column.title}</h3>
+              <ul className="text-white/70">
                 {column.links.map(link => (
                   <li key={link.label}>
                     {link.external ? (
                       <a
                         href={link.href}
                         {...(link.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                        className="hover:text-white transition-colors"
+                        className={footerLink}
                       >
                         {link.label}
                       </a>
+                    ) : link.account ? (
+                      <AccountPageLink href={link.href} className={footerLink}>{link.label}</AccountPageLink>
                     ) : (
-                      <Link href={link.href} className="hover:text-white transition-colors">
+                      <Link href={link.href} className={footerLink}>
                         {link.label}
                       </Link>
                     )}

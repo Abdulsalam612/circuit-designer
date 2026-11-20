@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, HelpCircle, Lock, Loader2, Wrench } from "lucide-react"
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, HelpCircle, Lock, Loader2, RotateCw, Wrench } from "lucide-react"
 import { useRequireAuth } from "@/context/AuthContext"
 import { LEVELS } from "@/content/lessons"
 import { getLesson, lessonAfter, lessonState } from "@/lib/lessons"
@@ -73,6 +73,9 @@ const LessonView = ({ lessonId }: { lessonId: string }) => {
   const [finishing, setFinishing] = useState(false)
   const [finished, setFinished] = useState<{ pointsEarned: number } | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Progress couldn't be read: say so with a retry, rather than showing the lesson as locked
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (authLoading) return
@@ -80,13 +83,14 @@ const LessonView = ({ lessonId }: { lessonId: string }) => {
       setProgress(EMPTY_PROGRESS)
       return
     }
+    setLoadFailed(false)
     loadProgress(user.uid)
       .then(setProgress)
       .catch((err) => {
         reportError(err, "Load progress (lesson)")
-        setProgress(EMPTY_PROGRESS)
+        setLoadFailed(true)
       })
-  }, [user, authLoading])
+  }, [user, authLoading, attempt])
 
   // Start at the top of each step
   useEffect(() => {
@@ -97,6 +101,21 @@ const LessonView = ({ lessonId }: { lessonId: string }) => {
     setPassedSteps(prev => (prev.has(index) ? prev : new Set(prev).add(index)))
   }, [])
   const markCurrentPassed = useCallback(() => markPassed(stepIndex), [markPassed, stepIndex])
+
+  if (loadFailed && !progress) {
+    return (
+      <Centered>
+        <h1 className={`${heading.lg} mb-2`}>Couldn&apos;t load your progress</h1>
+        <p className="mb-6 text-ink-muted">Check your connection and try again.</p>
+        <div className="flex flex-col justify-center gap-3 sm:flex-row">
+          <Button onClick={() => setAttempt(a => a + 1)}>
+            <RotateCw className="h-4 w-4" /> Try again
+          </Button>
+          <Button href="/dashboard" variant="secondary">Back to your lessons</Button>
+        </div>
+      </Centered>
+    )
+  }
 
   if (authLoading || !progress) {
     return <Centered><Loader2 className="h-6 w-6 animate-spin mx-auto text-ink-faint" aria-label="Loading the lesson" /></Centered>

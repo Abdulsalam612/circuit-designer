@@ -3,7 +3,7 @@ import type { LessonStep } from "@/types/lesson"
 
 // The lesson's steps as nodes on a wire (the same idea as the course path on the dashboard):
 // passed steps are lit, the current one glows, upcoming ones are unlit, and the wire is
-// powered up to where the learner is. Shows what's coming (e.g. a build challenge at the end).
+// powered (success green, like the passed steps) up to where the learner is. Shows what's coming (e.g. a build challenge at the end).
 
 const KIND = {
   read: { label: "Read", icon: BookOpen },
@@ -32,7 +32,7 @@ export default function StepTrack({ steps, current }: StepTrackProps) {
         return (
           <li key={i} className="flex items-center" aria-current={isCurrent ? "step" : undefined}>
             {i > 0 && (
-              <span aria-hidden="true" className={`h-[2.5px] w-4 sm:w-7 ${i <= current ? "bg-signal" : "bg-line-strong"}`} />
+              <span aria-hidden="true" className={`h-[2.5px] w-4 sm:w-7 ${i <= current ? "bg-success" : "bg-line-strong"}`} />
             )}
             <span
               className={`flex h-7 w-7 items-center justify-center rounded-full border-2 transition-colors sm:h-8 sm:w-8 ${node}`}

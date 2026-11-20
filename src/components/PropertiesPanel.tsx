@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ArrowLeftRight, RotateCw } from "lucide-react";
+import { ArrowLeftRight, RotateCw, Trash2 } from "lucide-react";
 import type { CircuitComponent } from "@/types/circuit";
 import { COMPONENT_DEFS, formatValue, parseValue } from "@/lib/components";
 import { formatAmps, formatVolts, formatWatts, type PartReading } from "@/lib/simulation";
@@ -22,7 +22,17 @@ interface PropertiesPanelProps {
   onFlip?: () => void;
   // Live values while the simulation runs
   reading?: PartReading | null;
+  // Remove everything selected – the on-screen twin of the Delete key, so no keyboard is needed
+  onRemove?: () => void;
 }
+
+// Shows the shortcut too, so people learn it
+const RemoveButton = ({ label, onRemove }: { label: string; onRemove: () => void }) => (
+  <button onClick={onRemove} className={buttonClass("secondary", "sm", "text-danger")}>
+    <Trash2 className="h-3.5 w-3.5" /> {label}
+    <kbd className="ml-1 rounded-chip border border-line px-1.5 text-xs font-medium text-ink-muted">Delete</kbd>
+  </button>
+);
 
 // Text box for a value with units. Accepts "4.7k", "4k7", "10u", "100 mΩ"... and saves
 // on Enter or when the box loses focus; Escape puts the old value back.
@@ -70,15 +80,22 @@ const ValueInput = ({ value, unit, onCommit }: { value: number; unit: string; on
   );
 };
 
-const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionCount = 0, onChange, onRotate, onFlip, reading }) => {
+const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionCount = 0, onChange, onRotate, onFlip, reading, onRemove }) => {
   if (!component) {
     return (
       <div className="mt-6 rounded-card border border-dashed border-line-strong px-4 py-6 text-center">
         <p className="text-sm text-ink-muted">
           {selectionCount > 1
-            ? `${selectionCount} items selected. Press Delete to remove them, or drag to move them together.`
-            : "Click a part to change its value, rotate it or see its readings."}
+            ? `${selectionCount} items selected. Drag one to move them together.`
+            : selectionCount === 1
+              ? "Wire selected. Drag it to move it."
+              : "Click a part to change its value, rotate it or see its readings."}
         </p>
+        {selectionCount > 0 && onRemove && (
+          <div className="mt-4 flex justify-center">
+            <RemoveButton label={selectionCount > 1 ? `Remove ${selectionCount} items` : "Remove wire"} onRemove={onRemove} />
+          </div>
+        )}
       </div>
     );
   }
@@ -179,6 +196,12 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ component, selectionC
         <span className={LABEL}>Position</span>
         <span className="tabular text-sm text-ink-muted">x {Math.round(component.x)}, y {Math.round(component.y)}</span>
       </div>
+
+      {onRemove && (
+        <div className="border-t border-line pt-4">
+          <RemoveButton label="Remove part" onRemove={onRemove} />
+        </div>
+      )}
     </div>
   );
 };

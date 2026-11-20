@@ -32,7 +32,7 @@ const lightsOn: KidsCircuitMission = {
   goals: [
     { kind: 'lamp-lit', text: 'Both headlights are on', count: 2, minBrightness: 0.2 },
     { kind: 'lamp-lit', text: 'Both headlights shine brightly', count: 2, minBrightness: 0.8 },
-    { kind: 'no-short', text: 'No short circuit' },
+    { kind: 'no-short', text: 'No shortcuts for the electricity' },
   ],
 };
 

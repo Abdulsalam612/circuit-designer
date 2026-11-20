@@ -22,7 +22,7 @@ const CircuitSidebar = ({ types = EDITOR_TYPES }: CircuitSidebarProps) => {
   return (
     <div className={styles.sidebar}>
       <h3 className="font-display text-base font-semibold tracking-[-0.01em] text-ink">Parts</h3>
-      <p className="mt-0.5 text-xs text-ink-muted">Drag a part onto the board</p>
+      <p className="mt-0.5 text-sm text-ink-muted">Drag a part onto the board</p>
       <div className={styles.componentList}>
         {components.map((component) => (
           <div

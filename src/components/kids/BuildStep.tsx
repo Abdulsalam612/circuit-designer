@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { BatteryFull, Cog, Cpu, Lightbulb, type LucideIcon } from "lucide-react"
+import { ArrowRight, BatteryFull, Check, Cog, Cpu, Lightbulb, Plus, type LucideIcon } from "lucide-react"
 import type { KidsCodeMission } from "@/types/kids"
 import type { ComponentType } from "@/types/circuit"
 import { buildLayout } from "@/lib/kids/mission"
@@ -14,14 +14,16 @@ import { CarShape } from "./CarArt"
 
 const PART_ICON: Partial<Record<ComponentType, LucideIcon>> = { battery: BatteryFull, motor: Cog, lamp: Lightbulb, led: Lightbulb }
 
-// Where each kind of part sits on the car, as % of the stage (the car fills the stage)
+// Where each kind of part sits on the car, as % of the stage (the car fills the stage; it
+// faces right, see CarArt): the battery in the boot at the back, the motor over the back
+// wheel it drives, the light on the headlight at the front, and the hub in the middle by the door
 const SLOT_AT: Partial<Record<ComponentType, { left: number; top: number }>> = {
-  battery: { left: 6, top: 40 },
-  motor: { left: 9, top: 66 },
-  lamp: { left: 70, top: 36 },
-  led: { left: 70, top: 36 },
+  battery: { left: 6, top: 39 },
+  motor: { left: 13, top: 62 },
+  lamp: { left: 71, top: 40 },
+  led: { left: 71, top: 40 },
 }
-const HUB_AT = { left: 38, top: 20 }
+const HUB_AT = { left: 38, top: 39 }
 
 interface BuildStepProps {
   mission: KidsCodeMission
@@ -70,7 +72,7 @@ export default function BuildStep({ mission, placed, onPlace, onNext }: BuildSte
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
         <div className="relative flex min-h-[320px] flex-1 items-center justify-center overflow-hidden rounded-panel border border-line bg-surface p-4 shadow-key">
-          <Button variant="secondary" size="sm" className="absolute right-4 top-4 z-10" onClick={() => setInside(v => !v)} aria-pressed={inside}>
+          <Button variant="secondary" size="md" className="absolute right-4 top-4 z-10" onClick={() => setInside(v => !v)} aria-pressed={inside}>
             {inside ? "Show the car" : "Look inside"}
           </Button>
 
@@ -89,23 +91,34 @@ export default function BuildStep({ mission, placed, onPlace, onNext }: BuildSte
                 <line x1={2} y1={82} x2={168} y2={82} stroke="#B8C4D4" strokeWidth={1.2} strokeDasharray="5 4" />
                 <CarShape light={lightId && placed.has(lightId) ? 0.4 : 0} />
               </svg>
-              <div className="absolute flex h-[16%] w-[19%] items-center justify-center rounded-control border-2 border-glow-dark bg-glow-tint text-sm font-semibold shadow-[0_3px_0_var(--color-glow-dark)]"
+              {/* Built in, so it's a flat label, not something to press */}
+              <div className="absolute flex h-[16%] w-[19%] items-center justify-center rounded-control border-2 border-glow-dark bg-glow-tint text-sm font-semibold"
                 style={{ left: `${HUB_AT.left}%`, top: `${HUB_AT.top}%` }}>
                 Hub
               </div>
               {mission.slots.map(slot => {
                 const at = SLOT_AT[typeOf(slot.componentId)] ?? { left: 40, top: 60 }
                 const isIn = placed.has(slot.componentId)
-                return (
-                  <div
-                    key={slot.componentId}
-                    className={`absolute flex h-[16%] w-[21%] items-center justify-center rounded-control px-1 text-center text-sm font-semibold leading-tight ${
-                      isIn ? "border-2 border-success bg-surface shadow-[0_3px_0_var(--color-success)]" : "border-2 border-dashed border-ink-faint bg-surface/85 text-ink-muted"
-                    }`}
-                    style={{ left: `${at.left}%`, top: `${at.top}%` }}
-                  >
-                    {isIn ? slot.label : `${slot.label} goes here`}
+                const style = { left: `${at.left}%`, top: `${at.top}%` }
+                const box = "absolute flex overflow-hidden h-[16%] w-[21%] items-center justify-center gap-1 rounded-control border-2 px-1 text-center text-sm font-semibold leading-tight"
+                // An empty slot is a button too: tapping it fits that part, like the parts box
+                return isIn ? (
+                  <div key={slot.componentId} className={`${box} border-success bg-surface`} style={style}>
+                    <Check className="h-4 w-4 shrink-0 text-success" strokeWidth={3} aria-hidden="true" />
+                    {/* On a phone the car is small: just the tick and a plus, the parts box above has the words */}
+                    <span className="hidden sm:inline">{slot.label}</span>
                   </div>
+                ) : (
+                  <button
+                    key={slot.componentId}
+                    onClick={() => onPlace(slot.componentId)}
+                    className={`${box} border-dashed border-ink-faint bg-surface/85 text-ink-muted shadow-[0_3px_0_var(--color-line-strong)] transition-transform hover:border-signal hover:text-ink active:translate-y-[2px]`}
+                    style={style}
+                    aria-label={`${slot.label} goes here`}
+                  >
+                    <Plus className="h-5 w-5 sm:hidden" strokeWidth={3} aria-hidden="true" />
+                    <span className="hidden sm:inline">{slot.label} goes here</span>
+                  </button>
                 )
               })}
             </div>
@@ -118,7 +131,7 @@ export default function BuildStep({ mission, placed, onPlace, onNext }: BuildSte
               ? "Your car is ready. Now tell it what to do."
               : `${mission.slots.length - missing.length} of ${mission.slots.length} parts in. Still needed: ${missing.map(s => s.label.toLowerCase()).join(", ")}.`}
           </span>
-          {done && <Button onClick={onNext}>Next: code it</Button>}
+          {done && <Button variant="glow" size="lg" onClick={onNext}>Next: code it <ArrowRight className="h-5 w-5" aria-hidden="true" /></Button>}
         </div>
       </section>
     </div>

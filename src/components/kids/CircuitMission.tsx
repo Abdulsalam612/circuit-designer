@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import Link from "next/link"
-import { ArrowRight, Check, Lightbulb, Power, Repeat2, RotateCcw, RotateCw, Star, Trash2, X } from "lucide-react"
+import { ArrowRight, Check, Flag, Lightbulb, Power, Repeat2, RotateCcw, RotateCw, Star, Trash2, X } from "lucide-react"
 import { simulate } from "@/lib/simulation"
 import { boardToLayout, checkGoals, isThing, kidsFeedback, pieceLength, rotated, testedThings, THINGS } from "@/lib/kids/board"
 import { CM_PER_SECOND_AT_FULL_SPEED } from "@/lib/kids/mission"
@@ -14,6 +13,7 @@ import { CarShape } from "./CarArt"
 import FanScene from "./FanScene"
 import TorchScene from "./TorchScene"
 import Button from "@/components/ui/Button"
+import ConfirmDialog from "@/components/ConfirmDialog"
 
 // A Part 1 mission (docs/kids-mode-mvp.md): build a real circuit from snap pieces. The
 // simulator runs on every change, so the motor spins and the car drives the moment the loop
@@ -35,6 +35,7 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
   // Placing a part takes two taps; this is the first (where it starts)
   const [partStart, setPartStart] = useState<Stud | null>(null)
   const [showHint, setShowHint] = useState(false)
+  const [confirmRestart, setConfirmRestart] = useState(false)
   const [won, setWon] = useState(false)
   // "Does it conduct?": what each everyday thing did when it was tried in a working loop.
   // Kept when the board starts again – it's what the child found out.
@@ -47,6 +48,7 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
   )
   const feedback = kidsFeedback(pieces, result)
   const solved = goals.every(g => g.met)
+  const nextGoal = goals.find(g => !g.met)
   // Stars stay once won, even if the child keeps tinkering
   useEffect(() => { if (solved) setWon(true) }, [solved])
 
@@ -95,7 +97,9 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
   }
   const update = (id: string, change: Partial<Piece>) => setPieces(prev => prev.map(p => (p.id === id ? { ...p, ...change } : p)))
   const remove = (id: string) => { setPieces(prev => prev.filter(p => p.id !== id)); setSelected(null) }
-  const startAgain = () => { setPieces(mission.start); putBack(); setSelected(null) }
+  const startAgain = () => { setPieces(mission.start); putBack(); setSelected(null); setConfirmRestart(false) }
+  // Only ask when there's something to lose
+  const askStartAgain = () => (pieces === mission.start ? startAgain() : setConfirmRestart(true))
 
   // Escape puts down whatever is picked up; Delete or Backspace takes the selected piece off
   useEffect(() => {
@@ -129,43 +133,49 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
 
           {/* One card: what to do now, the board, and the parts box */}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-panel border border-line bg-surface shadow-key">
-            <div className="flex min-h-14 flex-wrap items-center gap-2 border-b border-line px-4 py-2" aria-live="polite">
+            {/* Phones and tablets: the goals panel is below the board, so the next goal sits up here */}
+            <p className={`flex items-center gap-2 border-b border-line px-4 py-2.5 font-semibold lg:hidden ${solved ? "bg-success-tint" : "bg-glow-tint"}`}>
+              {solved
+                ? <><Check className="h-5 w-5 shrink-0 text-success" strokeWidth={3} aria-hidden="true" /> All goals done!</>
+                : <><Flag className="h-5 w-5 shrink-0 text-carrot-ink" aria-hidden="true" /> <span className="min-w-0">Goal: {nextGoal?.goal.text}</span></>}
+            </p>
+            <div className="flex min-h-[68px] flex-wrap items-center gap-3 border-b border-line px-4 py-2" aria-live="polite">
               {holding ? (
                 <>
                   <span className="font-medium">{placingText(holding, partStart !== null)}</span>
-                  <Button variant="ghost" size="sm" className="ml-auto" onClick={putBack}><X className="h-4 w-4" aria-hidden="true" /> Put it back</Button>
+                  <Button variant="ghost" size="lg" className="ml-auto" onClick={putBack}><X className="h-5 w-5" aria-hidden="true" /> Put it back</Button>
                 </>
               ) : selectedPiece ? (
                 <>
                   <span className="mr-1 font-semibold">{PIECE_NAMES[selectedPiece.kind]}</span>
                   {selectedPiece.kind === "switch" && (
-                    <Button variant="glow" size="sm" onClick={() => update(selectedPiece.id, { closed: !selectedPiece.closed })}>
-                      <Power className="h-4 w-4" aria-hidden="true" /> Turn {selectedPiece.closed ? "off" : "on"}
+                    <Button variant="glow" size="lg" onClick={() => update(selectedPiece.id, { closed: !selectedPiece.closed })}>
+                      <Power className="h-5 w-5" aria-hidden="true" /> Turn {selectedPiece.closed ? "off" : "on"}
                     </Button>
                   )}
                   {pieceLength(selectedPiece.kind) === 2 && !selectedPiece.fixed && (
                     <Button
-                      variant="secondary" size="sm"
+                      variant="secondary" size="lg"
                       disabled={!rotated(pieces, selectedPiece, mission.board)}
                       onClick={() => {
                         const turned = rotated(pieces, selectedPiece, mission.board)
                         if (turned) update(selectedPiece.id, { at: turned.at, dir: turned.dir })
                       }}
                     >
-                      <RotateCw className="h-4 w-4" aria-hidden="true" /> Rotate
+                      <RotateCw className="h-5 w-5" aria-hidden="true" /> Rotate
                     </Button>
                   )}
                   {pieceLength(selectedPiece.kind) === 2 && !selectedPiece.fixed && selectedPiece.kind !== "switch" && (
-                    <Button variant="secondary" size="sm" onClick={() => update(selectedPiece.id, { flipped: !selectedPiece.flipped })}>
-                      <Repeat2 className="h-4 w-4" aria-hidden="true" /> Turn around
+                    <Button variant="secondary" size="lg" onClick={() => update(selectedPiece.id, { flipped: !selectedPiece.flipped })}>
+                      <Repeat2 className="h-5 w-5" aria-hidden="true" /> Turn around
                     </Button>
                   )}
                   {!selectedPiece.fixed && (
-                    <Button variant="secondary" size="sm" onClick={() => remove(selectedPiece.id)} aria-keyshortcuts="Delete">
-                      <Trash2 className="h-4 w-4" aria-hidden="true" /> Take it off
+                    <Button variant="secondary" size="lg" onClick={() => remove(selectedPiece.id)} aria-keyshortcuts="Delete">
+                      <Trash2 className="h-5 w-5" aria-hidden="true" /> Take it off
                     </Button>
                   )}
-                  <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelected(null)}>Done</Button>
+                  <Button variant="ghost" size="lg" className="ml-auto" onClick={() => setSelected(null)}>Done</Button>
                 </>
               ) : (
                 <span className="text-ink-muted">Pick a piece from the parts box, or tap a piece on the board to change it.</span>
@@ -173,8 +183,9 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
             </div>
 
             {/* The board fills whatever room is left (side by side) or keeps its shape (stacked);
-                it never sets the height itself, so the parts box stays on screen */}
-            <div className="relative aspect-[6/5] min-h-[220px] lg:aspect-auto lg:flex-1">
+                it never sets the height itself, so the parts box stays on screen. Stacked on a
+                tablet it stops at about half the screen, so the parts box is still in view. */}
+            <div className="relative aspect-[6/5] max-h-[55dvh] min-h-[220px] lg:aspect-auto lg:max-h-none lg:flex-1">
               <div className="absolute inset-2">
               <SnapBoard
                 board={mission.board}
@@ -203,7 +214,7 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
                     disabled={n <= 0}
                     aria-pressed={active}
                     aria-label={`${PIECE_NAMES[kind]}, ${n} left`}
-                    className={`relative flex h-[76px] min-w-[84px] flex-col px-2 items-center justify-center gap-1 rounded-card border-2 text-sm font-semibold transition-colors disabled:opacity-40 ${
+                    className={`relative flex h-[76px] min-w-[84px] flex-col px-2 items-center justify-center gap-1 rounded-card border-2 text-sm font-semibold transition-colors disabled:opacity-60 ${
                       active ? "border-glow-dark bg-glow-tint" : "border-line bg-surface shadow-key hover:border-line-strong"
                     }`}
                   >
@@ -213,8 +224,8 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
                   </button>
                 )
               })}
-              <Button variant="ghost" size="sm" className="ml-auto" onClick={startAgain}>
-                <RotateCcw className="h-4 w-4" aria-hidden="true" /> Start again
+              <Button variant="ghost" size="lg" className="ml-auto" onClick={askStartAgain}>
+                <RotateCcw className="h-5 w-5" aria-hidden="true" /> Start again
               </Button>
             </div>
           </div>
@@ -289,17 +300,23 @@ export default function CircuitMission({ mission, missionNumber, next }: Circuit
             {showHint ? (
               <p className="mt-3 border-t border-ink/10 pt-3"><strong className="font-semibold">Hint:</strong> {mission.hint}</p>
             ) : (
-              <button onClick={() => setShowHint(true)} className="mt-3 flex items-center gap-1.5 font-semibold text-signal-dark underline-offset-4 hover:underline">
-                <Lightbulb className="h-4 w-4" aria-hidden="true" /> Need a hint?
-              </button>
+              <Button variant="secondary" size="lg" className="mt-3" onClick={() => setShowHint(true)}>
+                <Lightbulb className="h-5 w-5" aria-hidden="true" /> Need a hint?
+              </Button>
             )}
           </div>
-
-          <Link href="/kids" className="text-center text-sm font-medium text-ink-muted underline-offset-4 hover:text-ink hover:underline">
-            All missions
-          </Link>
         </aside>
       </div>
+
+      <ConfirmDialog
+        open={confirmRestart}
+        title="Start again?"
+        message="Your pieces go back in the box."
+        confirmLabel="Yes, start again"
+        cancelLabel="No"
+        onConfirm={startAgain}
+        onCancel={() => setConfirmRestart(false)}
+      />
     </div>
   )
 }

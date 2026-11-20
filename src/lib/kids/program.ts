@@ -10,17 +10,26 @@ import type { Block } from '@/types/kids';
 
 // Repeat is unrolled before running; this caps runaway programs (e.g. repeat 99 inside repeat 99)
 export const MAX_STEPS = 2000;
+// Caps the unrolling itself too: empty repeats add no steps, so nested ones (repeat 99 inside
+// repeat 99 inside…) would otherwise loop for ever and freeze the tab
+export const MAX_WORK = 20000;
 export const BEEP_SECONDS = 0.5;
 
 type Step = Exclude<Block, { type: 'repeat' }>;
 
 export const flatten = (program: Block[]): Step[] => {
   const steps: Step[] = [];
+  let work = 0;
+  const full = () => steps.length >= MAX_STEPS || work >= MAX_WORK;
   const add = (blocks: Block[]) => {
     for (const b of blocks) {
-      if (steps.length >= MAX_STEPS) return;
+      if (full()) return;
+      work++;
       if (b.type === 'repeat') {
-        for (let i = 0; i < Math.max(0, Math.floor(b.times)); i++) add(b.body);
+        for (let i = 0; i < Math.max(0, Math.floor(b.times)) && !full(); i++) {
+          work++;
+          add(b.body);
+        }
       } else {
         steps.push(b);
       }

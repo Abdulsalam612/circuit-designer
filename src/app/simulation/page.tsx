@@ -1,7 +1,7 @@
 "use client"
 
 import {
-  CircuitBoard, RotateCcw, Play, Pause, Save, Upload, Download, Undo2, Redo2, FolderOpen,
+  CircuitBoard, Trash2, BookOpen, Play, Pause, Save, Upload, Download, Undo2, Redo2, FolderOpen,
   Check, Loader2, AlertCircle, CloudOff, CheckCircle2, AlertTriangle,
 } from "lucide-react"
 import Link from "next/link"
@@ -13,6 +13,7 @@ import StatusLed from "@/components/ui/StatusLed";
 import { useRequireAuth } from "@/context/AuthContext";
 import { useCircuitHistory, EMPTY_LAYOUT } from "@/hooks/useCircuitHistory";
 import { useCircuitSaving, type SaveStatus } from "@/hooks/useCircuitSaving";
+import SmallScreenNotice from "@/components/editor/SmallScreenNotice";
 import { circuitFromJson, circuitToJson, DEFAULT_CIRCUIT_NAME } from "@/lib/circuitStore";
 import { flipComponent, rotateComponent } from "@/lib/editing";
 import { simulate } from "@/lib/simulation";
@@ -31,6 +32,7 @@ const CircuitSidebar = dynamic(() => import("../../components/CircuitSidebar"), 
 
 const STATUS_TEXT: Record<SaveStatus, string> = {
   loading: "Loading…",
+  loadFailed: "Couldn't open",
   new: "Not saved yet",
   unsaved: "Unsaved changes",
   saving: "Saving…",
@@ -41,13 +43,14 @@ const STATUS_TEXT: Record<SaveStatus, string> = {
 const SaveStatusBadge = ({ status, error }: { status: SaveStatus; error: string | null }) => {
   const icon = {
     loading: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
+    loadFailed: <AlertCircle className="h-3.5 w-3.5" />,
     new: <CloudOff className="h-3.5 w-3.5" />,
     unsaved: <CloudOff className="h-3.5 w-3.5" />,
     saving: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
     saved: <Check className="h-3.5 w-3.5" />,
     error: <AlertCircle className="h-3.5 w-3.5" />,
   }[status]
-  const color = status === "error" ? "text-danger" : status === "saved" ? "text-success" : "text-ink-muted"
+  const color = status === "error" || status === "loadFailed" ? "text-danger" : status === "saved" ? "text-success" : "text-ink-muted"
   return (
     <span className={`flex items-center gap-1 text-xs ${color}`} title={error ?? undefined}>
       {icon}
@@ -56,7 +59,8 @@ const SaveStatusBadge = ({ status, error }: { status: SaveStatus; error: string 
   )
 }
 
-const toolbarButton = "flex items-center gap-2 rounded-control px-2.5 py-2 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+// At least 40 px square, so every action is easy to hit
+const toolbarButton = "flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-control px-2.5 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-40"
 const divider = <div className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
 
 export default function SimulationPage() {
@@ -100,6 +104,16 @@ export default function SimulationPage() {
     const rotated = rotateComponent(layout, selectedComponent.id)
     if (rotated) apply(rotated)
     else setNotice("No room to rotate it there.")
+  }
+
+  // The on-screen twin of the Delete key: removes every selected part and wire
+  const removeSelected = () => {
+    if (selectedIds.length === 0) return
+    const selected = new Set(selectedIds)
+    apply({
+      components: layout.components.filter(c => !selected.has(c.id)),
+      wires: layout.wires.filter(w => !selected.has(w.id)),
+    })
   }
 
   const clearCircuit = () => {
@@ -165,17 +179,24 @@ export default function SimulationPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-paper">
+    <>
+    {/* Phones get a friendly message instead of a crushed editor (CSS only, no flash) */}
+    <div className="md:hidden"><SmallScreenNotice /></div>
+    <div className="hidden h-screen flex-col bg-paper md:flex">
       {/* Toolbar: where you are, the circuit's name and save state, then the actions */}
       <header className="shrink-0 border-b border-line bg-surface">
         <div className="flex h-16 items-center justify-between gap-4 px-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-1.5">
-            <Link href="/" className="mr-1 flex items-center rounded-control bg-brand p-1.5" title="CirKit home" aria-label="CirKit home">
+            <Link href="/" className="mr-1 flex items-center rounded-control bg-brand p-2" title="CirKit home" aria-label="CirKit home">
               <CircuitBoard className="h-5 w-5 text-white" />
             </Link>
-            <Link href="/circuits" className={toolbarButton}>
+            <Link href="/dashboard" className={toolbarButton} title="Lessons" aria-label="Lessons">
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden whitespace-nowrap text-sm font-medium xl:inline" aria-hidden="true">Lessons</span>
+            </Link>
+            <Link href="/circuits" className={toolbarButton} title="My Circuits" aria-label="My Circuits">
               <FolderOpen className="h-4 w-4" />
-              <span className="hidden whitespace-nowrap text-sm font-medium md:inline">My Circuits</span>
+              <span className="hidden whitespace-nowrap text-sm font-medium xl:inline" aria-hidden="true">My Circuits</span>
             </Link>
 
             {divider}
@@ -187,25 +208,30 @@ export default function SimulationPage() {
                 onBlur={() => { if (!name.trim()) setName(DEFAULT_CIRCUIT_NAME) }}
                 onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
                 aria-label="Circuit name"
-                className="-mx-1 w-56 min-w-0 rounded-chip bg-transparent px-1 font-display text-base font-semibold tracking-[-0.01em] text-ink hover:bg-ink/5 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-signal/30"
+                className="-mx-1 w-40 min-w-0 xl:w-56 rounded-chip bg-transparent px-1 font-display text-base font-semibold tracking-[-0.01em] text-ink hover:bg-ink/5 focus:bg-surface focus:outline-none focus:ring-2 focus:ring-signal/30"
               />
               <SaveStatusBadge status={status} error={error} />
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-0.5">
+          <div className="flex shrink-0 items-center gap-1">
             <button onClick={undo} disabled={!canUndo} className={toolbarButton} title="Undo (Ctrl+Z)" aria-label="Undo">
               <Undo2 className="h-4 w-4" />
             </button>
             <button onClick={redo} disabled={!canRedo} className={toolbarButton} title="Redo (Ctrl+Y)" aria-label="Redo">
               <Redo2 className="h-4 w-4" />
             </button>
+            {/* Clear sits with Undo (it's undoable), away from Save so it isn't hit by mistake */}
+            <button onClick={clearCircuit} className={toolbarButton} title="Remove everything (undoable)" aria-label="Clear the board">
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden text-sm font-medium lg:inline" aria-hidden="true">Clear</span>
+            </button>
 
             {divider}
 
-            <button onClick={() => fileInputRef.current?.click()} className={toolbarButton} title="Open a circuit file">
+            <button onClick={() => fileInputRef.current?.click()} className={toolbarButton} title="Open a circuit file" aria-label="Import a circuit file">
               <Upload className="h-4 w-4" />
-              <span className="hidden text-sm font-medium xl:inline">Import</span>
+              <span className="hidden text-sm font-medium lg:inline">Import</span>
             </button>
             <input
               ref={fileInputRef}
@@ -218,17 +244,17 @@ export default function SimulationPage() {
                 e.target.value = ""
               }}
             />
-            <button onClick={exportCircuit} className={toolbarButton} title="Download as a file">
+            <button onClick={exportCircuit} className={toolbarButton} title="Download as a file" aria-label="Export as a file">
               <Download className="h-4 w-4" />
-              <span className="hidden text-sm font-medium xl:inline">Export</span>
+              <span className="hidden text-sm font-medium lg:inline">Export</span>
             </button>
-            <button onClick={() => save()} disabled={status === "saving"} className={toolbarButton} title="Save (Ctrl+S)">
+            <button onClick={() => save()} disabled={status === "saving" || status === "loading" || status === "loadFailed"}
+              className={toolbarButton}
+              title={status === "loadFailed" ? "Saving is off because this circuit couldn't be opened" : "Save (Ctrl+S)"}
+              aria-label="Save"
+            >
               <Save className="h-4 w-4" />
-              <span className="hidden text-sm font-medium xl:inline">Save</span>
-            </button>
-            <button onClick={clearCircuit} className={toolbarButton} title="Remove everything (undoable)">
-              <RotateCcw className="h-4 w-4" />
-              <span className="hidden text-sm font-medium xl:inline">Clear</span>
+              <span className="hidden text-sm font-medium lg:inline">Save</span>
             </button>
 
             {divider}
@@ -307,11 +333,13 @@ export default function SimulationPage() {
               onChange={(patch) => selectedComponent && updateComponent(selectedComponent.id, patch)}
               onRotate={rotateSelected}
               onFlip={() => selectedComponent && apply(flipComponent(layout, selectedComponent.id))}
+              onRemove={removeSelected}
               reading={selectedComponent ? simulation?.readings[selectedComponent.id] : null}
             />
           </div>
         </aside>
       </div>
     </div>
+    </>
   )
 }

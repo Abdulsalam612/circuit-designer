@@ -8,7 +8,8 @@ import { buttonClass } from "@/components/ui/Button"
 
 // A level's lessons drawn as a circuit: each lesson is an LED on one wire. Lessons unlock in
 // order, so the wire is a real sequence. Done = lit green, next = glowing yellow, locked =
-// unlit; the stretch of wire between finished lessons is "powered" (blue).
+// unlit; the stretch of wire between finished lessons is "powered" (success green, the
+// colour of "done" everywhere).
 
 const ACTIVITY = {
   read: { label: "Read", icon: BookOpen },
@@ -42,7 +43,7 @@ export default function LessonPath({ lessons }: LessonPathProps) {
             {next && (
               <span
                 aria-hidden="true"
-                className={`absolute left-[13px] top-[44px] -bottom-[30px] w-[2.5px] ${powered ? "bg-signal" : "bg-line-strong"}`}
+                className={`absolute left-[13px] top-[44px] -bottom-[30px] w-[2.5px] ${powered ? "bg-success" : "bg-line-strong"}`}
               />
             )}
             <LessonRow lesson={lesson} state={state} number={number} />
@@ -59,7 +60,7 @@ function LessonRow({ lesson, state, number }: { lesson: Lesson; state: LessonSta
     <>
       <div className="min-w-0 flex-1">
         <h3 className={`font-semibold ${locked ? "text-ink-muted" : "text-ink"}`}>
-          <span className="tabular mr-2 text-ink-faint">{number}</span>
+          <span className="tabular mr-2 text-ink-muted">{number}</span>
           {lesson.title}
         </h3>
         <p className="mt-1 text-sm text-ink-muted">{lesson.description}</p>
@@ -78,8 +79,9 @@ function LessonRow({ lesson, state, number }: { lesson: Lesson; state: LessonSta
         {state === "available" && <span className={buttonClass("primary", "sm")}>Start</span>}
         {state === "completed" && <span className="text-sm font-medium text-success">Review</span>}
         {locked && (
-          <span className="flex items-center gap-1.5 text-sm text-ink-muted">
-            <Lock className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Finish the one before</span>
+          // The reason shows on phones too (a lock alone doesn't say what to do)
+          <span className="flex max-w-24 items-center gap-1.5 text-sm leading-tight text-ink-muted sm:max-w-none">
+            <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> <span>Finish the one before</span>
           </span>
         )}
       </div>

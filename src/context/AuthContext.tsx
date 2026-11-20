@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { auth, firestore } from "@/firebase";
+import { loginHref } from "@/components/auth/authLinks";
 
 // The bits of users/{uid} that the whole site shows (header name + avatar). Kept live with a
 // listener, so a change on the profile page shows up everywhere straight away.
@@ -67,6 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 export const useAuth = () => useContext(AuthContext);
 
 // For protected pages: sends logged-out users to the login modal, then back here after login
+// (query string included, so /simulation?id=X reopens that circuit)
 export const useRequireAuth = () => {
   const auth = useAuth();
   const router = useRouter();
@@ -74,7 +76,8 @@ export const useRequireAuth = () => {
 
   useEffect(() => {
     if (!auth.loading && !auth.user) {
-      router.replace(`/?login=1&next=${encodeURIComponent(pathname)}`);
+      // Read here rather than with useSearchParams, which would need a Suspense boundary on every page
+      router.replace(loginHref(pathname + window.location.search));
     }
   }, [auth.loading, auth.user, router, pathname]);
 

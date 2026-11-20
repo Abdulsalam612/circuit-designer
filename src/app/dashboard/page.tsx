@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Clock, Loader2, Play, Trophy, Zap } from "lucide-react"
+import { Clock, Loader2, Play, RotateCw, Trophy, Zap } from "lucide-react"
 import { useRequireAuth } from "@/context/AuthContext"
 import { LESSONS, LEVELS } from "@/content/lessons"
 import { learningStats, lessonState, nextLesson } from "@/lib/lessons"
@@ -17,7 +17,7 @@ import LevelBadge from "@/components/ui/LevelBadge"
 import { heading, text } from "@/components/ui/typography"
 import { reportError } from "@/lib/reportError"
 
-// The learning dashboard: what to do next, how far you've got, and the course laid out as a
+// The Lessons page (/dashboard): what to do next, how far you've got, and the course laid out as a
 // circuit (see LessonPath). The old placeholder "Guides" tab and dead "Quick actions" tiles
 // were removed in the redesign; old completedGuides data is left in Firestore untouched.
 
@@ -26,6 +26,8 @@ export default function DashboardPage() {
   const [progress, setProgress] = useState<LearningProgress | null>(null)
   const [progressLoading, setProgressLoading] = useState(true)
   const [circuitCount, setCircuitCount] = useState<number | null>(null)
+  // Bumped by "Try again" to re-run the loading effect
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     if (!user) return
@@ -38,21 +40,25 @@ export default function DashboardPage() {
     listCircuits(user.uid)
       .then(circuits => setCircuitCount(circuits.length))
       .catch(() => setCircuitCount(null))
-  }, [user])
+  }, [user, attempt])
 
   if (authLoading || !user || progressLoading || !progress) {
-    const message = !authLoading && !user
-      ? "Redirecting to sign in…"
-      : !progressLoading && !progress
-        ? "Your progress couldn't be loaded. Check your connection and reload the page."
-        : "Loading your progress…"
+    const failed = !authLoading && !!user && !progressLoading && !progress
     return (
       <div className="min-h-screen bg-grid">
         <SiteHeader />
-        <p className="flex items-center justify-center gap-2 p-16 text-ink-muted" role="status">
-          {message.startsWith("Loading") && <Loader2 className="h-5 w-5 animate-spin" />}
-          {message}
-        </p>
+        {failed ? (
+          <div className="flex flex-col items-center gap-4 p-16 text-center" role="alert">
+            <p className="text-ink-muted">Your progress couldn&apos;t be loaded. Check your connection and try again.</p>
+            <Button variant="secondary" onClick={() => setAttempt(a => a + 1)}>
+              <RotateCw className="h-4 w-4" /> Try again
+            </Button>
+          </div>
+        ) : (
+          <p className="flex items-center justify-center gap-2 p-16 text-ink-muted" role="status">
+            {authLoading || user ? <><Loader2 className="h-5 w-5 animate-spin" /> Loading your progress…</> : "Redirecting to sign in…"}
+          </p>
+        )}
       </div>
     )
   }
@@ -64,10 +70,10 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-grid">
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-5 pb-20 sm:px-8">
+      <main className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
         <header className="flex flex-wrap items-end justify-between gap-4 pt-12 pb-8">
           <div>
-            <h1 className={heading.xl}>Your learning</h1>
+            <h1 className={heading.xl}>Your lessons</h1>
             <p className={`${text.lead} mt-3`}>
               {firstTime ? "Start with the first lesson. Each one takes about ten minutes." : "Pick up where you left off."}
             </p>

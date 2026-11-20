@@ -11,13 +11,19 @@
   --color-ink: #31393c;
   --color-ink-dark: #1d2326; /* lip under dark blocks */
   --color-ink-muted: #5b666b; /* secondary text, 5.5:1 on paper */
-  --color-ink-faint: #8a959a; /* placeholders, disabled – not for body text */
+  /* Placeholders, lesson numbers, hints – 4.9:1 on white, 4.6:1 on paper (was #8a959a, 3.1:1) */
+  --color-ink-faint: #67727a;
 
   /* Surfaces */
   --color-paper: #f5f8fd; /* page background (with .bg-grid) */
   --color-surface: #ffffff; /* cards, panels */
-  --color-line: #d9e1ec; /* borders and dividers */
-  --color-line-strong: #b8c4d4;
+  --color-line: #d9e1ec; /* decorative borders and dividers */
+  --color-line-strong: #b8c4d4; /* stronger dividers, key-cap lips (decorative) */
+  /* Boundaries you have to see to use the thing: input borders, answer and option cards,
+     tappable part/tray buttons. 3.4:1 on white, 3.2:1 on paper (WCAG 1.4.11 needs 3:1) */
+  --color-line-input: #7f8c9d;
+  /* Fill for disabled buttons; ink-muted text on it is 4.8:1, so the label stays readable */
+  --color-disabled: #e3e9f1;
 
   /* Action blue – a deeper Brand Blue so white text passes (5.1:1). Buttons, links */
   --color-signal: #1a66e8;
@@ -41,9 +47,10 @@
   --color-carrot-ink: #9a4d00;
   --color-carrot-tint: #fff0e0;
 
-  /* CirKit Kids "sound" blocks (white text 5.7:1) */
-  --color-sound: #7c3aed;
-  --color-sound-dark: #5b21b6;
+  /* CirKit Kids "sound" blocks: raspberry, so it can't be mistaken for the blue motor blocks
+     by colour-blind kids (white text 6.0:1) */
+  --color-sound: #be185d;
+  --color-sound-dark: #9d174d;
 
   /* States */
   --color-success: #127436; /* 5.2:1 on its tint, white text 5.9:1 */
@@ -86,6 +93,11 @@
   :focus-visible {
     outline: 3px solid var(--color-brand);
     outline-offset: 2px;
+  }
+  /* On dark surfaces the blue ring nearly vanishes (2.9:1 on ink), so it turns Sunglow there
+     (7.7:1 on ink, 3.8:1 on success, 3.7:1 on danger) */
+  :is(.bg-ink, .bg-ink-dark, .bg-success, .bg-danger) :focus-visible {
+    outline-color: var(--color-glow);
   }
 }
 

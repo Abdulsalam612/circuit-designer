@@ -146,7 +146,7 @@ function FeedbackForm() {
             <label
               key={id}
               className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-control border px-2 py-3 text-center text-sm font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-signal/40 ${
-                type === id ? "border-signal bg-signal-tint text-signal-dark shadow-[0_2px_0_var(--color-signal)]" : "border-line text-ink-muted hover:bg-paper"
+                type === id ? "border-signal bg-signal-tint text-signal-dark shadow-[0_2px_0_var(--color-signal)]" : "border-line-input text-ink-muted hover:bg-paper"
               }`}
             >
               <input type="radio" name="type" value={id} checked={type === id} onChange={() => setType(id)} className="sr-only" />
@@ -196,7 +196,7 @@ function FeedbackForm() {
             type="checkbox"
             checked={includeDetails}
             onChange={e => setIncludeDetails(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-line-strong accent-signal"
+            className="mt-0.5 h-4 w-4 rounded border-line-input accent-signal"
           />
           <span>
             Include technical details to help us fix it: your browser{fromPage ? <> and the page you were on (<code>{fromPage}</code>)</> : null}.
@@ -221,14 +221,19 @@ function FeedbackForm() {
         <p className="text-xs text-ink-muted">
           We only use this to read and reply to your message. <Link href="/privacy" className="text-signal hover:underline">Privacy Policy</Link>
         </p>
-        <button
-          type="submit"
-          disabled={!trimmed || sending}
-          className={buttonClass("primary")}
-        >
-          {sending && <Loader2 className="h-4 w-4 animate-spin" />}
-          Send
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          {/* Say why Send is greyed out */}
+          {!trimmed && <p id="feedback-send-hint" className="text-sm text-ink-muted">Write a message first</p>}
+          <button
+            type="submit"
+            disabled={!trimmed || sending}
+            aria-describedby={!trimmed ? "feedback-send-hint" : undefined}
+            className={buttonClass("primary")}
+          >
+            {sending && <Loader2 className="h-4 w-4 animate-spin" />}
+            Send
+          </button>
+        </div>
       </div>
     </form>
   )

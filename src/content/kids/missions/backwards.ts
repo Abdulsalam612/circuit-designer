@@ -23,7 +23,7 @@ const backwards: KidsCircuitMission = {
   start: FIRST_LOOP,
   goals: [
     { kind: 'motor-spins', text: 'The car drives backwards', direction: 'backwards' },
-    { kind: 'no-short', text: 'No short circuit' },
+    { kind: 'no-short', text: 'No shortcuts for the electricity' },
   ],
 };
 

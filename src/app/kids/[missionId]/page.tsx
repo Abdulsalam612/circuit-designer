@@ -44,7 +44,9 @@ function Workbench({ mission, missionNumber }: { mission: KidsCodeMission; missi
   const onProgramChange = useCallback((next: Block[]) => setProgram(next), [])
 
   return (
-    <div className="flex h-dvh flex-col bg-grid text-ink">
+    // The code step fills the screen exactly on big screens (Blockly needs a fixed height);
+    // everything else can grow, so long content scrolls the page rather than a tiny box
+    <div className={`flex min-h-dvh flex-col bg-grid text-ink ${step === "code" ? "lg:h-dvh" : ""}`}>
       <title>{`${mission.title} – CirKit Kids`}</title>
       <KidsTopBar missionNumber={missionNumber} missionTitle={mission.title} step={step} onStep={setStep} stars={stars} />
 
@@ -52,11 +54,12 @@ function Workbench({ mission, missionNumber }: { mission: KidsCodeMission; missi
 
       {step === "code" && (
         <div className="flex min-h-0 flex-1 flex-col gap-5 p-5 lg:flex-row lg:p-7">
-          <section className="min-h-[420px] min-w-0 flex-1 overflow-hidden rounded-panel border border-line bg-surface shadow-key" aria-label="Your program">
+          {/* Below lg the mission card comes first: read the goal, then code */}
+          <section className="order-2 h-[65dvh] min-h-[420px] min-w-0 overflow-hidden rounded-panel border border-line bg-surface shadow-key lg:order-1 lg:h-auto lg:flex-1" aria-label="Your program">
             {/* Opens with the current program, so switching steps never loses work */}
             <BlocklyEditor blocks={mission.blocks} initial={program} onChange={onProgramChange} />
           </section>
-          <aside className="flex shrink-0 flex-col gap-4 lg:w-72">
+          <aside className="order-1 flex shrink-0 flex-col gap-4 lg:order-2 lg:w-72">
             <div className="rounded-card bg-ink p-5 text-white shadow-[0_3px_0_var(--color-ink-dark)]">
               <p className="text-sm text-white/75">Your mission</p>
               <h2 className="mt-1.5 font-display text-xl font-semibold leading-tight tracking-[-0.015em]">{mission.title}</h2>
@@ -68,10 +71,18 @@ function Workbench({ mission, missionNumber }: { mission: KidsCodeMission; missi
             <p className="text-sm leading-relaxed text-ink-muted">
               Drag blocks from the left and snap them under <strong className="font-semibold text-ink">when Go is pressed</strong>. Blocks that aren&apos;t joined on turn grey and don&apos;t run.
             </p>
-            <Button size="lg" onClick={() => setStep("play")}>
-              <Play className="h-5 w-5" /> Try it on the track
-            </Button>
+            <div className="hidden lg:block">
+              <Button size="lg" className="w-full" onClick={() => setStep("play")}>
+                <Play className="h-5 w-5" aria-hidden="true" /> Try it on the track
+              </Button>
+            </div>
           </aside>
+          {/* Narrow screens: always in reach at the bottom, under the blocks */}
+          <div className="sticky bottom-0 z-30 order-3 -mx-5 -mb-5 border-t border-line bg-surface/95 px-5 py-3 backdrop-blur lg:hidden">
+            <Button size="lg" className="w-full" onClick={() => setStep("play")}>
+              <Play className="h-5 w-5" aria-hidden="true" /> Try it on the track
+            </Button>
+          </div>
         </div>
       )}
 

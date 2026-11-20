@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useToast } from "@/context/ToastContext"
 import { AVATARS } from "@/lib/avatars"
 import { LESSONS } from "@/content/lessons"
+import { nextLesson } from "@/lib/lessons"
 import { loadProgress, type LearningProgress } from "@/lib/progress"
 import {
   MAX_NAME_LENGTH,
@@ -26,6 +27,7 @@ import { buttonClass } from "@/components/ui/Button"
 import Badge from "@/components/ui/Badge"
 import { inputClass } from "@/components/ui/Field"
 import { heading } from "@/components/ui/typography"
+import { loginHref } from "@/components/auth/authLinks"
 
 const primaryButton = buttonClass("primary")
 const secondaryButton = buttonClass("secondary")
@@ -40,7 +42,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!loading && !user && !deletingRef.current) {
-      router.replace(`/?login=1&next=${encodeURIComponent(pathname)}`)
+      router.replace(loginHref(pathname + window.location.search))
     }
   }, [loading, user, router, pathname])
 
@@ -56,7 +58,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-grid">
       <SiteHeader />
-      <main className="mx-auto max-w-5xl px-5 pb-20 sm:px-8">
+      <main className="mx-auto max-w-6xl px-5 pb-20 sm:px-8">
         <h1 className={`${heading.xl} pt-12 pb-8`}>Profile &amp; settings</h1>
         {/* Overview stays in view on desktop while the settings scroll */}
         <div className="grid items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -100,6 +102,9 @@ function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: str
   )
 }
 
+const courseLevel = (progress: LearningProgress) =>
+  (nextLesson(new Set(progress.completedLessons)) ?? LESSONS[LESSONS.length - 1])?.level ?? 1
+
 const formatJoined = (user: User) => {
   const created = user.metadata.creationTime ? new Date(user.metadata.creationTime) : null
   return created ? created.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) : null
@@ -117,13 +122,15 @@ function Overview({ user }: { user: User }) {
   }, [user.uid])
 
   const stats = [
-    { icon: Zap, label: "Level", value: progress ? progress.level : "–" },
+    // The course level the learner is on (that of their next lesson). Called "Course level" so
+    // it matches the Level 1, Level 2… sections; the stored `level` field is never updated
+    { icon: Zap, label: "Course level", value: progress ? courseLevel(progress) : "–" },
     { icon: Award, label: "Points", value: progress ? progress.totalPoints : "–" },
     { icon: BookOpen, label: "Lessons", value: progress ? `${progress.completedLessons.length}/${LESSONS.length}` : "–" },
   ]
 
   return (
-    <section className="rounded-panel border border-line bg-surface p-6 shadow-key">
+    <section className="rounded-panel border border-line bg-surface p-6">
       <div className="flex items-center gap-4 lg:flex-col lg:items-start">
         <UserAvatar name={name} avatar={profile?.avatar} size={64} />
         <div className="min-w-0">
@@ -220,10 +227,14 @@ function ProfileSection({ user }: { user: User }) {
           </div>
         </fieldset>
 
-        <button type="submit" disabled={!changed || !!nameError || saving} className={primaryButton}>
-          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-          Save changes
-        </button>
+        {/* A greyed-out button says why it can't be pressed yet */}
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="submit" disabled={!changed || !!nameError || saving} aria-describedby={!changed && !saving ? "profile-save-hint" : undefined} className={primaryButton}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Save changes
+          </button>
+          {!changed && !saving && <p id="profile-save-hint" className="text-sm text-ink-muted">Change something to save</p>}
+        </div>
       </form>
     </Card>
   )

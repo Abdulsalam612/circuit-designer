@@ -26,13 +26,14 @@ interface ChallengeStepViewProps {
   onPassed: () => void;
 }
 
-const iconButton = "rounded-control p-2 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-40"
+// 40 px square, easy to hit
+const iconButton = "inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink disabled:pointer-events-none disabled:opacity-40"
 
 // A small version of the editor with a goal checklist. Goals are checked by the
 // simulator when the learner asks, and kept up to date after that.
 const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
   const start = step.start ?? EMPTY_LAYOUT
-  const { layout, apply, undo, redo, reset, canUndo, canRedo } = useCircuitHistory(start)
+  const { layout, apply, undo, redo, canUndo, canRedo } = useCircuitHistory(start)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [running, setRunning] = useState(false)
   const [checked, setChecked] = useState(false)
@@ -61,10 +62,21 @@ const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
     else setNotice("No room to rotate it there.")
   }
 
+  // Back to the starting circuit as one undo step, so a mis-click loses nothing
   const startOver = useCallback(() => {
-    reset(start)
+    if (layout === start) return
+    apply(start)
     setChecked(false)
-  }, [reset, start])
+    setNotice("Back to the start. Press Ctrl+Z or Undo to get your circuit back.")
+  }, [apply, layout, start])
+
+  const removeSelected = () => {
+    const ids = new Set(selectedIds)
+    apply({
+      components: layout.components.filter(c => !ids.has(c.id)),
+      wires: layout.wires.filter(w => !ids.has(w.id)),
+    })
+  }
 
   // Ctrl+Z / Ctrl+Y, as in the editor
   useEffect(() => {
@@ -100,9 +112,9 @@ const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
         <div className="flex min-w-0 flex-1 flex-col border-line lg:border-x">
           <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
             <div className="flex items-center gap-1">
-              <button onClick={undo} disabled={!canUndo} className={iconButton} title="Undo (Ctrl+Z)"><Undo2 className="h-4 w-4" /></button>
-              <button onClick={redo} disabled={!canRedo} className={iconButton} title="Redo (Ctrl+Y)"><Redo2 className="h-4 w-4" /></button>
-              <button onClick={startOver} className={iconButton} title="Start this challenge again"><RotateCcw className="h-4 w-4" /></button>
+              <button onClick={undo} disabled={!canUndo} className={iconButton} title="Undo (Ctrl+Z)" aria-label="Undo"><Undo2 className="h-4 w-4" /></button>
+              <button onClick={redo} disabled={!canRedo} className={iconButton} title="Redo (Ctrl+Y)" aria-label="Redo"><Redo2 className="h-4 w-4" /></button>
+              <button onClick={startOver} className={iconButton} title="Start this challenge again (undoable)" aria-label="Start this challenge again"><RotateCcw className="h-4 w-4" /></button>
               {notice && <span className="ml-2 text-sm text-ink-muted" role="status">{notice}</span>}
             </div>
             <div className="flex items-center gap-3">
@@ -120,7 +132,6 @@ const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
                 onLayoutChange={apply}
                 onSelectionChange={setSelectedIds}
                 simulation={simulation}
-                fitContainer
               />
             </div>
           </div>
@@ -181,6 +192,7 @@ const ChallengeStepView = ({ step, onPassed }: ChallengeStepViewProps) => {
               onChange={(patch) => selected && updateComponent(selected.id, patch)}
               onRotate={rotateSelected}
               onFlip={() => selected && apply(flipComponent(layout, selected.id))}
+              onRemove={removeSelected}
               reading={selected ? simulation?.readings[selected.id] : null}
             />
           </div>

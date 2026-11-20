@@ -44,13 +44,14 @@ const QuizStepView = ({ step, onPassed }: QuizStepViewProps) => {
           <fieldset key={q} className="rounded-panel border border-line bg-surface p-5 sm:p-6">
             <legend className="sr-only">Question {q + 1}</legend>
             <p className="mb-4 text-[17px] font-medium leading-snug text-ink">
-              <span className="tabular mr-2 text-ink-faint">{q + 1}</span>
+              <span className="tabular mr-2 text-ink-muted">{q + 1}</span>
               <RichText text={question.prompt} />
             </p>
             <div className="grid gap-2.5 sm:grid-cols-2">
               {question.options.map((option, o) => {
                 const selected = answers[q] === o
-                let style = "border-line-strong bg-surface shadow-key hover:border-signal/50 hover:bg-signal-tint"
+                // line-input: an answer's edge has to be visible to see it's a choice (3.4:1)
+                let style = "border-line-input bg-surface shadow-key hover:border-signal hover:bg-signal-tint"
                 if (selected) style = "border-signal bg-signal-tint shadow-[0_2px_0_var(--color-signal)]"
                 if (isMarked && selected) {
                   style = isRight
@@ -69,7 +70,7 @@ const QuizStepView = ({ step, onPassed }: QuizStepViewProps) => {
                     <span
                       aria-hidden="true"
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                        selected ? "border-current" : "border-line-strong"
+                        selected ? "border-current" : "border-line-input"
                       } ${isMarked && selected ? (isRight ? "text-success" : "text-danger") : "text-signal"}`}
                     >
                       {selected && <span className="h-2 w-2 rounded-full bg-current" />}

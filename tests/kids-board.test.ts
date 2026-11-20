@@ -112,6 +112,12 @@ const solution = (): Piece[] => [
   check('short: the simulator calls it a short circuit', shortResult.warnings.some(w => w.kind === 'short-circuit'));
   check('short: no-short goal fails', !checkGoals(short, [{ kind: 'no-short', text: '' }])[0].met);
   check('short: kids are warned', kidsFeedback(short, shortResult).text.startsWith('Short circuit'));
+  // "No shortcuts" isn't a free tick: it waits for a working loop
+  const noShort = (): Parameters<typeof checkGoals>[1] => [{ kind: 'no-short', text: '' }];
+  check('no-short: not ticked on an empty board', !checkGoals([], noShort())[0].met);
+  check('no-short: not ticked with just a battery', !checkGoals([piece('battery', 1, 1, 'h')], noShort())[0].met);
+  check('no-short: not ticked on a broken loop', !checkGoals(gap, noShort())[0].met);
+  check('no-short: ticked once the loop works', checkGoals(solution(), noShort())[0].met);
 
   check('empty board: asks for a battery', kidsFeedback([], simulate(boardToLayout([]))).text.includes('battery'));
 }

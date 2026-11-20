@@ -26,7 +26,9 @@ const Block = ({ block }: { block: ContentBlock }) => {
     case "callout": {
       const style = CALLOUT_STYLE[block.tone]
       return (
-        <div className={`flex max-w-[68ch] gap-3 rounded-card border px-4 py-3.5 leading-relaxed text-ink ${style.box}`}>
+        // Full width like the other boxes (formula, parts, table) and the divider below, so
+        // boxed blocks share one right edge; the text inside is short enough to read
+        <div className={`flex gap-3 rounded-card border px-4 py-3.5 leading-relaxed text-ink ${style.box}`}>
           {style.icon}
           <p>
             <span className="sr-only">{style.label}: </span>
@@ -37,7 +39,7 @@ const Block = ({ block }: { block: ContentBlock }) => {
     }
     case "formula":
       return (
-        <div className="rounded-card bg-ink px-6 py-6 text-center text-white shadow-[0_3px_0_var(--color-ink-dark)]">
+        <div className="rounded-card bg-ink px-6 py-6 text-center text-white">
           <p className="font-display text-2xl font-semibold tracking-[0.01em] sm:text-3xl">{block.text}</p>
           {block.caption && <p className="mt-2 text-sm text-white/75">{block.caption}</p>}
         </div>
@@ -46,7 +48,7 @@ const Block = ({ block }: { block: ContentBlock }) => {
       return (
         <div className="grid gap-3 sm:grid-cols-2">
           {block.parts.map(({ part, text }) => (
-            <div key={part} className="flex items-center gap-4 rounded-card border border-line bg-surface p-3.5 shadow-key">
+            <div key={part} className="flex items-center gap-4 rounded-card border border-line bg-surface p-3.5">
               <div className="relative h-9 w-24 shrink-0 rounded-control bg-paper">
                 <Image src={iconFor({ type: part })} alt={COMPONENT_DEFS[part].label} fill style={{ objectFit: "contain" }} />
               </div>

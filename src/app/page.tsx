@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { Suspense, useCallback, useEffect, useState } from "react"
 
 import { auth, firestore } from "@/firebase"
 import {
@@ -9,8 +9,9 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail,
+  type UserCredential,
 } from "firebase/auth"
-import { doc, setDoc } from "firebase/firestore"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
 
 import {
   CircuitBoard,
@@ -31,8 +32,10 @@ import Field, { inputClass } from "@/components/ui/Field"
 import { MIN_PASSWORD_LENGTH } from "@/lib/account"
 import SiteFooter from "@/components/SiteFooter"
 import { Course, FinalCallToAction, ForSchools, Hero, HowItWorks } from "@/components/landing/LandingSections"
+import AuthQueryWatcher, { type AuthRequest } from "@/components/auth/AuthQueryWatcher"
 import { useToast } from "@/context/ToastContext"
 import { friendlyAuthError } from "@/lib/authErrors"
+import { reportError } from "@/lib/reportError"
 
 export default function HomePage() {
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -45,40 +48,51 @@ export default function HomePage() {
   const [resetError, setResetError] = useState("")
   const [loginEmail, setLoginEmail] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState("")
   const [signupName, setSignupName] = useState("")
   const [signupEmail, setSignupEmail] = useState("")
   const [signupPassword, setSignupPassword] = useState("")
   const [signupLoading, setSignupLoading] = useState(false)
+  const [signupError, setSignupError] = useState("")
 
   // AuthContext for user state
   const { user, loading } = useAuth()
   const toast = useToast()
   const router = useRouter()
+  // Where to go once signed in or signed up (a "Start" button or a protected page set it)
   const [redirectAfterLogin, setRedirectAfterLogin] = useState<string | null>(null)
 
-  // Protected pages send logged-out users here as /?login=1&next=/path
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get("signup") === "1") setShowSignupModal(true)
-    if (params.get("login") !== "1") return
-    setShowLoginModal(true)
-    const next = params.get("next")
-    // Only allow same-site paths, never "//evil.com"
-    if (next && next.startsWith("/") && !next.startsWith("//")) {
-      setRedirectAfterLogin(next)
-    }
-  }, [])
+  // /?login=1&next=/path (protected pages) and /?signup=1&next=/path ("Start" buttons).
+  // The query is cleared once read, so the same link works again after closing the dialog.
+  const handleAuthRequest = ({ dialog, next }: AuthRequest) => {
+    setShowResetModal(false)
+    setShowLoginModal(dialog === "login")
+    setShowSignupModal(dialog === "signup")
+    setLoginError("")
+    setSignupError("")
+    setRedirectAfterLogin(next)
+    router.replace("/", { scroll: false })
+  }
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setLoginLoading(true)
+    setLoginError("")
     try {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword)
       setShowLoginModal(false)
+      setLoginEmail("")
+      setLoginPassword("")
+      setShowPassword(false)
       toast.success("Signed in. Welcome back!")
       if (redirectAfterLogin) router.push(redirectAfterLogin)
+      setRedirectAfterLogin(null)
     } catch (error: unknown) {
-      toast.error(friendlyAuthError(error, "Sign in failed. Please try again."))
+      // Shown in the dialog, next to what needs fixing (a wrong password isn't a bug to report)
+      setLoginError(friendlyAuthError(error, "Sign in failed. Please try again."))
     }
+    setLoginLoading(false)
   }
 
   const handlePasswordReset = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -98,75 +112,105 @@ export default function HomePage() {
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setSignupError("")
+    const name = signupName.trim()
+    if (!name || !signupEmail || !signupPassword) {
+      setSignupError("Please fill in every field.")
+      return
+    }
     setSignupLoading(true)
+    let credential: UserCredential
     try {
-      if (!auth || !firestore) {
-        throw new Error("Firebase not initialized properly.")
-      }
-      if (!signupEmail || !signupPassword || !signupName) {
-        throw new Error("Please fill all fields.")
-      }
-      const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword)
-      await updateProfile(userCredential.user, { displayName: signupName })
-      await setDoc(doc(firestore, "users", userCredential.user.uid), {
-        name: signupName,
-        email: signupEmail,
-        createdAt: new Date(),
-        level: 1,
-        xp: 1,
-        completedLessons: [],
-        completedGuides: [],
-        totalLessons: 12,
-        currentStreak: 0,
-        totalPoints: 0,
-      })
-      setSignupLoading(false)
-      setSignupName("")
-      setSignupEmail("")
-      setSignupPassword("")
-      setShowSignupModal(false)
-      toast.success(`Account created. Welcome to CirKit, ${signupName}!`)
+      credential = await createUserWithEmailAndPassword(auth, signupEmail, signupPassword)
     } catch (error: unknown) {
       setSignupLoading(false)
-      toast.error(friendlyAuthError(error, "Sign up failed. Please try again."))
+      setSignupError(friendlyAuthError(error, "Sign up failed. Please try again."))
+      return
     }
+
+    // The account exists now, so nothing below may say "sign up failed" (trying again would
+    // only hit "email already in use"). If these fail, the header falls back to the email,
+    // and the name can be set again on the profile page.
+    try {
+      await updateProfile(credential.user, { displayName: name })
+    } catch (error: unknown) {
+      reportError(error, "Sign up: set display name")
+    }
+    // Just the name and email: progress starts empty (EMPTY_PROGRESS in lib/progress.ts)
+    // and lessons add their fields as they're completed
+    try {
+      await setDoc(doc(firestore, "users", credential.user.uid), {
+        name,
+        email: signupEmail,
+        createdAt: serverTimestamp(),
+      }, { merge: true })
+    } catch (error: unknown) {
+      reportError(error, "Sign up: create profile")
+    }
+
+    setSignupLoading(false)
+    setSignupName("")
+    setSignupEmail("")
+    setSignupPassword("")
+    setShowPassword(false)
+    setShowSignupModal(false)
+    toast.success(`Account created. Welcome to CirKit, ${name}!`)
+    if (redirectAfterLogin) router.push(redirectAfterLogin)
+    setRedirectAfterLogin(null)
   }
 
-  const closeAuthDialogs = () => {
+  // X and Esc both close and start the dialogs afresh next time. The backdrop doesn't
+  // close them, so a stray click can't throw away what's been typed.
+  const closeAuthDialogs = useCallback(() => {
     setShowLoginModal(false)
     setShowSignupModal(false)
     setShowResetModal(false)
     // Passwords start hidden again next time
     setShowPassword(false)
+    setLoginEmail("")
+    setLoginPassword("")
+    setLoginError("")
+    setSignupName("")
+    setSignupEmail("")
+    setSignupPassword("")
+    setSignupError("")
     setResetEmail("")
     setResetSuccess(false)
     setResetError("")
-  }
+    // Closing means they're not heading there after all
+    setRedirectAfterLogin(null)
+  }, [])
 
   // Esc closes whichever dialog is open
   const dialogOpen = showLoginModal || showSignupModal || showResetModal
   useEffect(() => {
     if (!dialogOpen) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return
-      setShowLoginModal(false)
-      setShowSignupModal(false)
-      setShowResetModal(false)
-      setShowPassword(false)
+      if (e.key === "Escape") closeAuthDialogs()
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)
-  }, [dialogOpen])
+  }, [dialogOpen, closeAuthDialogs])
 
+  // Switching between sign in and sign up keeps the destination but not old errors
   const openLoginModal = () => {
     setShowSignupModal(false)
+    setShowResetModal(false)
+    setSignupError("")
+    setResetSuccess(false)
+    setResetError("")
     setShowLoginModal(true)
   }
 
   const openSignupModal = () => {
     setShowLoginModal(false)
+    setShowResetModal(false)
+    setLoginError("")
     setShowSignupModal(true)
   }
+
+  // A protected page (or a "Start" button) sent them here
+  const continuing = redirectAfterLogin !== null
 
   return (
     <div className="min-h-screen bg-paper">
@@ -175,15 +219,25 @@ export default function HomePage() {
           { href: "#how-it-works", label: "How it works" },
           { href: "#schools", label: "For schools" },
         ]}
-        onSignIn={() => setShowLoginModal(true)}
-        onSignUp={() => setShowSignupModal(true)}
+        onSignIn={openLoginModal}
+        onSignUp={openSignupModal}
       />
+
+      {/* useSearchParams needs a Suspense boundary for static rendering */}
+      <Suspense fallback={null}>
+        <AuthQueryWatcher onRequest={handleAuthRequest} />
+      </Suspense>
 
       {/* Sign in / create account / reset password. Only the look lives here; the handlers
           above do the work. */}
       {showLoginModal && (
-        <AuthDialog id="login" title="Welcome back" subtitle="Sign in to pick up where you left off." onClose={closeAuthDialogs}>
-          <form onSubmit={handleLogin} className="space-y-4">
+        <AuthDialog
+          id="login"
+          title={continuing ? "Sign in to continue" : "Welcome back"}
+          subtitle={continuing ? "You need an account for that page. New here? Making one is free." : "Sign in to pick up where you left off."}
+          onClose={closeAuthDialogs}
+        >
+          <form onSubmit={handleLogin} className="space-y-4" aria-busy={loginLoading}>
             <Field label="Email" htmlFor="email">
               <IconInput icon={Mail} id="email" type="email" autoComplete="email" value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
@@ -204,11 +258,14 @@ export default function HomePage() {
                 Forgot your password?
               </button>
             </div>
-            <Button type="submit" className="w-full">Sign in</Button>
+            {loginError && <FormError>{loginError}</FormError>}
+            <Button type="submit" className="w-full" disabled={loginLoading}>
+              {loginLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Signing in…</> : "Sign in"}
+            </Button>
           </form>
           <p className="mt-6 text-center text-sm text-ink-muted">
             New to CirKit?{" "}
-            <button onClick={openSignupModal} className="font-medium text-signal hover:underline">Create an account</button>
+            <button onClick={openSignupModal} className="font-medium text-signal hover:underline">Create a free account</button>
           </p>
         </AuthDialog>
       )}
@@ -238,6 +295,7 @@ export default function HomePage() {
                 <a href="/privacy" target="_blank" rel="noopener" className="font-medium text-signal hover:underline">Privacy Policy</a>
               </span>
             </label>
+            {signupError && <FormError>{signupError}</FormError>}
             <Button type="submit" className="w-full" disabled={signupLoading}>
               {signupLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating your account…</> : "Create account"}
             </Button>
@@ -262,7 +320,7 @@ export default function HomePage() {
               </p>
             )}
             {resetError && (
-              <p className="rounded-control border border-danger/30 bg-danger-tint px-3 py-2.5 text-sm text-danger" role="alert">{resetError}</p>
+              <FormError>{resetError}</FormError>
             )}
             <Button type="submit" className="w-full" disabled={resetLoading}>
               {resetLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</> : "Send reset link"}
@@ -270,10 +328,7 @@ export default function HomePage() {
             <Button
               variant="ghost"
               className="w-full"
-              onClick={() => {
-                closeAuthDialogs()
-                setShowLoginModal(true)
-              }}
+              onClick={openLoginModal}
             >
               Back to sign in
             </Button>
@@ -289,7 +344,7 @@ export default function HomePage() {
         ) : user ? (
           <>
             <WelcomeBack user={user} />
-            <Course />
+            <Course signedIn />
             <ForSchools />
           </>
         ) : (
@@ -320,13 +375,13 @@ function AuthDialog({ id, title, subtitle, onClose, children }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4" onClick={onClose}>
+    // No close on a backdrop click: one stray tap would lose a half-filled form (X or Esc close it)
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         className="relative w-full max-w-md rounded-panel border border-line bg-surface p-6 shadow-lift animate-pop-in sm:p-8"
-        onClick={e => e.stopPropagation()}
       >
         <button
           onClick={onClose}
@@ -345,6 +400,13 @@ function AuthDialog({ id, title, subtitle, onClose, children }: {
         {children}
       </div>
     </div>
+  )
+}
+
+// An error inside a dialog. role="alert" so screen readers hear it straight away.
+function FormError({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-control border border-danger/30 bg-danger-tint px-3 py-2.5 text-sm text-danger" role="alert">{children}</p>
   )
 }
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
-import { ArrowLeft, Cpu, Music, Play, TowerControl, Waves, Zap } from "lucide-react"
+import { ArrowRight, Cpu, Music, Play, TowerControl, Waves, Zap } from "lucide-react"
 import { KIDS_MISSIONS } from "@/content/kids"
 import type { KidsMission } from "@/types/kids"
 import { KidsLogo } from "@/components/kids/KidsTopBar"
@@ -51,11 +51,8 @@ const TINT: Record<string, string> = {
 export default function KidsHome() {
   return (
     <div className="min-h-dvh bg-grid text-ink">
-      <header className="flex items-center justify-between gap-4 border-b border-line bg-surface px-5 py-3 lg:px-7">
+      <header className="flex items-center gap-4 border-b border-line bg-surface px-5 py-3 lg:px-7">
         <KidsLogo />
-        <Link href="/" className="flex items-center gap-2 rounded-control px-3 py-2 font-medium text-ink-muted hover:bg-ink/5 hover:text-ink">
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to CirKit
-        </Link>
       </header>
 
       <main className="mx-auto max-w-5xl px-5 pb-16 pt-10 lg:px-8">
@@ -108,6 +105,13 @@ export default function KidsHome() {
           </section>
         ))}
       </main>
+
+      {/* The way out is for teachers and parents, so it sits quietly at the bottom */}
+      <footer className="border-t border-line px-5 py-6 text-center lg:px-7">
+        <Link href="/" className="inline-flex items-center gap-1.5 rounded-control px-3 py-2.5 text-sm font-medium text-ink-muted underline-offset-4 hover:text-ink hover:underline">
+          For grown-ups: CirKit main site <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </footer>
     </div>
   )
 }

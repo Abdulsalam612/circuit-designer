@@ -104,6 +104,11 @@ const runFor = (program: Block[], seconds: number) => {
   check('runner: repeat unrolls', steps.length === 6 && steps.filter(s => s.type === 'beep').length === 3);
   const nested = flatten([{ type: 'repeat', times: 99, body: [{ type: 'repeat', times: 99, body: [{ type: 'beep' }] }] }]);
   check('runner: runaway repeats are capped', nested.length === MAX_STEPS);
+  // Empty repeats nested deep add no steps, so only the work cap stops them (99^5 loops otherwise)
+  const empty = (depth: number): Block => ({ type: 'repeat', times: 99, body: depth > 1 ? [empty(depth - 1)] : [] });
+  const t0 = Date.now();
+  const hollow = flatten([empty(5), { type: 'beep' }]);
+  check('runner: nested empty repeats finish quickly', Date.now() - t0 < 1000 && hollow.length <= 1, `${Date.now() - t0} ms`);
   const { state } = runFor([{ type: 'repeat', times: 3, body: [{ type: 'beep' }, { type: 'wait', seconds: 1 }] }], 10);
   check('runner: three beeps', state.beeps === 3);
 }

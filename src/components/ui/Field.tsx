@@ -1,11 +1,12 @@
 import type { ReactNode } from "react"
 
 // Form fields. Use `inputClass` on <input>, <textarea> and <select> so every form matches.
+// The border is line-input (3.4:1) so the box itself is visible, as WCAG 1.4.11 asks.
 
 export const inputClass =
-  "w-full rounded-control border border-line-strong bg-surface px-3.5 py-2.5 text-ink placeholder:text-ink-faint " +
+  "w-full rounded-control border border-line-input bg-surface px-3.5 py-2.5 text-ink placeholder:text-ink-faint " +
   "transition-[border-color,box-shadow] focus:border-signal focus:outline-none focus:ring-4 focus:ring-signal/15 " +
-  "aria-invalid:border-danger aria-invalid:focus:ring-danger/15 disabled:bg-paper disabled:text-ink-faint"
+  "aria-invalid:border-danger aria-invalid:focus:ring-danger/15 disabled:bg-paper disabled:text-ink-muted"
 
 interface FieldProps {
   label: string

@@ -34,7 +34,7 @@ const faster: KidsCircuitMission = {
   goals: [
     { kind: 'motor-spins', text: 'The car goes at full speed', minSpeed: 0.9 },
     { kind: 'switch-controls', text: 'The switch starts and stops the car' },
-    { kind: 'no-short', text: 'No short circuit' },
+    { kind: 'no-short', text: 'No shortcuts for the electricity' },
   ],
 };
 

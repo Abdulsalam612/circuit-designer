@@ -7,6 +7,7 @@ import StatusLed from "@/components/ui/StatusLed"
 import { heading, text } from "@/components/ui/typography"
 import { CONTACT_EMAIL } from "@/components/SiteFooter"
 import { LESSONS, LEVELS } from "@/content/lessons"
+import { signupHref } from "@/components/auth/authLinks"
 import LiveCircuit from "./LiveCircuit"
 
 // Landing page sections. Every claim here must be true today: numbers come from the
@@ -14,6 +15,11 @@ import LiveCircuit from "./LiveCircuit"
 // user counts and features – keep it honest.)
 
 const FIRST_LESSON = LESSONS[0]
+
+// Lessons and the editor need an account, so for signed-out visitors every "start" button
+// opens sign-up and then carries on to where it was heading. scroll={false} keeps the page
+// where it is behind the dialog.
+const startProps = (path: string) => ({ href: signupHref(path), scroll: false })
 
 export function Hero() {
   return (
@@ -25,13 +31,18 @@ export function Hero() {
             CirKit is a circuit simulator and a step-by-step electronics course in your browser. Drag in parts,
             wire them up and see the current flow. No kit, and nothing to break.
           </p>
+          {/* Full width and stacked on phones, side by side from sm */}
           <div className="mt-8 flex flex-wrap gap-3">
-            <Button href={`/learn/${FIRST_LESSON.id}`} size="lg">
+            <Button {...startProps(`/learn/${FIRST_LESSON.id}`)} size="lg" className="w-full sm:w-auto">
               <Play className="h-4 w-4" /> Start the first lesson
             </Button>
-            <Button href="/simulation" variant="secondary" size="lg">Open the circuit editor</Button>
+            <Button {...startProps("/simulation")} variant="secondary" size="lg" className="max-md:hidden">
+              Open the circuit editor
+            </Button>
           </div>
-          <p className={`${text.small} mt-6`}>Free to use, with {LESSONS.length} lessons so far.</p>
+          <p className={`${text.small} mt-6`}>
+            Free to use, with {LESSONS.length} lessons so far. You&apos;ll need a free account to save your progress.
+          </p>
           <p className={`${text.small} mt-1`}>
             Younger learner?{" "}
             <Link href="/kids" className="font-medium text-carrot-ink underline underline-offset-4">
@@ -99,7 +110,8 @@ export function HowItWorks() {
   )
 }
 
-export function Course() {
+// Signed-in people see this under WelcomeBack, so "See all lessons" goes straight there
+export function Course({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <section id="course" className="scroll-mt-20 border-y border-line bg-grid">
       <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
@@ -113,7 +125,9 @@ export function Course() {
             The level markers are resistors: the coloured band is the level number in the resistor colour code. You
             learn to read them in Level 1.
           </p>
-          <Button href="/dashboard" variant="secondary" className="mt-8">See all lessons</Button>
+          <Button {...(signedIn ? { href: "/dashboard" } : startProps("/dashboard"))} variant="secondary" className="mt-8">
+            See all lessons
+          </Button>
         </div>
 
         <div className="space-y-4">
@@ -128,9 +142,12 @@ export function Course() {
                 </div>
                 <h3 className={`${heading.md} mt-2`}>{level.title}</h3>
                 <p className={`${text.small} mt-1`}>{level.description}</p>
-                <ul className="mt-4 flex flex-wrap gap-2">
+                {/* Plain text, not chips or links: a boxed title looks clickable, and most lessons
+                    are locked until the ones before are done */}
+                <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
                   {lessons.map(lesson => (
-                    <li key={lesson.id} className="rounded-chip border border-line bg-paper px-2.5 py-1 text-sm text-ink">
+                    <li key={lesson.id} className="flex items-center gap-2 text-sm text-ink">
+                      <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-ink-faint" />
                       {lesson.title}
                     </li>
                   ))}
@@ -206,7 +223,7 @@ export function FinalCallToAction() {
             </h2>
             <p className="mt-2 text-white/75">Start with &ldquo;{FIRST_LESSON.title}&rdquo; and light your first lamp.</p>
           </div>
-          <Button href={`/learn/${FIRST_LESSON.id}`} variant="glow" size="lg">
+          <Button {...startProps(`/learn/${FIRST_LESSON.id}`)} variant="glow" size="lg" className="w-full sm:w-auto">
             <Play className="h-4 w-4" /> Start the first lesson
           </Button>
         </Card>

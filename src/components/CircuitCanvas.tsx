@@ -22,6 +22,7 @@ import {
   nearestPointOnWire,
 } from "@/lib/wires"
 import { createPortal } from "react-dom"
+import { clampPan, fitView, zoomAt, type ViewPoint } from "./editor/view"
 import type { ComponentType, CircuitComponent, CircuitLayout, Wire } from "@/types/circuit"
 
 // The grid covers -GRID_EXTENT..GRID_EXTENT in both directions (canvas units)
@@ -73,14 +74,14 @@ interface CircuitCanvasProps {
   onSelectionChange?: (ids: string[]) => void;
   // Results to show while the simulation is running
   simulation?: SimulationResult | null;
-  // Size the canvas to its parent element instead of the window (for embedding it in a
-  // page, e.g. lesson challenges)
-  fitContainer?: boolean;
 }
 
-const zoomButton = "px-2.5 py-1 text-sm font-medium text-ink hover:bg-signal-tint transition-colors"
+// 36 px tall, at least as wide: easy to hit
+const zoomButton = "inline-flex h-9 min-w-9 items-center justify-center px-2.5 text-sm font-medium text-ink hover:bg-signal-tint transition-colors"
 
-const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation, fitContainer = false }) => {
+// The board always fills the element it sits in (the editor's middle column, a lesson's
+// workbench), measured with a ResizeObserver - never guessed from the window size.
+const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, onSelectionChange, simulation }) => {
   // Set initial dimensions to avoid hydration errors
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [isMounted, setIsMounted] = useState(false)
@@ -103,10 +104,31 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
   const onLayoutChangeRef = useRef(onLayoutChange)
   onLayoutChangeRef.current = onLayoutChange
 
+  // Latest view values for the wheel handler, which is bound once
+  const viewRef = useRef({ scale, stagePos, dimensions })
+  viewRef.current = { scale, stagePos, dimensions }
+
+  // Pan/zoom to a new view, never past the edge of the grid
+  const setView = (nextScale: number, pos: ViewPoint) => {
+    setScale(nextScale)
+    setStagePos(clampPan(pos, nextScale, viewRef.current.dimensions, GRID_EXTENT))
+  }
+
   // Selected component and wire ids
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const selectedIdsRef = useRef(selectedIds)
   selectedIdsRef.current = selectedIds
+
+  // Drop ids that no longer exist (removed with the Remove button, undone, cleared...), so
+  // the page never sees a selection of things that are gone
+  useEffect(() => {
+    setSelectedIds(prev => {
+      if (prev.size === 0) return prev
+      const present = new Set([...components.map(c => c.id), ...wires.map(w => w.id)])
+      const kept = [...prev].filter(id => present.has(id))
+      return kept.length === prev.size ? prev : new Set(kept)
+    })
+  }, [components, wires])
   // Wire being drawn: from a lead end / wire end to the grid point under the cursor
   const [wireDraft, setWireDraft] = useState<{ start: Point; end: Point } | null>(null)
   const [hoveredPoint, setHoveredPoint] = useState<string | null>(null)
@@ -326,82 +348,31 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
     };
   }, [isMounted]);
   
-  // Use useEffect to safely access window and update state
-  useEffect(() => {
-    const wheelContainer = containerRef.current;
-    setIsMounted(true)
-    
-    // Update dimensions based on window size (an embedded canvas is sized by the
-    // ResizeObserver below instead)
-    const updateDimensions = () => {
-      if (fitContainer) return
-      // Adjust these values based on your layout
-      setDimensions({
-        width: window.innerWidth - 360, // Adjusted to account for sidebar width
-        height: window.innerHeight - 140,
-      })
-    }
-
-    // Set initial dimensions
-    updateDimensions()
-
-    // Add event listener for window resize
-    window.addEventListener("resize", updateDimensions)
-    
-    // Add wheel event listener for zooming
-    const handleWheel = (e: Event) => {
-      // Cast to WheelEvent to access deltaY
-      const wheelEvent = e as WheelEvent
-      wheelEvent.preventDefault()
-      
-      if (stageRef.current) {
-        const stage = stageRef.current
-        const oldScale = scale
-        
-        // Get pointer position relative to stage
-        const pointer = stage.getPointerPosition()
-        
-        if (!pointer) return
-        
-        // Calculate new scale (zoom in/out)
-        const newScale = wheelEvent.deltaY < 0 
-          ? Math.min(oldScale * 1.1, 5) // Zoom in (max scale: 5)
-          : Math.max(oldScale / 1.1, 0.1) // Zoom out (min scale: 0.1)
-        
-        // Calculate new position to zoom to pointer
-        const mousePointTo = {
-          x: (pointer.x - stagePos.x) / oldScale,
-          y: (pointer.y - stagePos.y) / oldScale,
-        }
-        
-        // Update state
-        setScale(newScale)
-        setStagePos({
-          x: pointer.x - mousePointTo.x * newScale,
-          y: pointer.y - mousePointTo.y * newScale,
-        })
-      }
-    }
-    
-    // Add wheel event listener to container
-    if (wheelContainer) {
-      wheelContainer.addEventListener('wheel', handleWheel as EventListener)
-    }
-
-    // Cleanup
-    return () => {
-      window.removeEventListener("resize", updateDimensions)
-      if (wheelContainer) {
-        wheelContainer.removeEventListener('wheel', handleWheel as EventListener)
-      }
-    }
-  }, [scale, stagePos, fitContainer])
-
-  // Embedded canvas: follow the size of the element it sits in (the container only
-  // exists once mounted, before that a placeholder is shown)
+  // Scroll to zoom about the mouse. Bound once: it reads the view from a ref, so it isn't
+  // removed and added again on every pan/zoom frame.
   useEffect(() => {
     const container = containerRef.current
-    if (!fitContainer || !isMounted || !container) return
+    if (!isMounted || !container) return
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const stage = stageRef.current
+      if (!stage) return
+      stage.setPointersPositions(e)
+      const pointer = stage.getPointerPosition()
+      if (!pointer) return
+      const { scale: oldScale, stagePos: pos } = viewRef.current
+      const next = zoomAt(pos, oldScale, e.deltaY < 0 ? 1.1 : 1 / 1.1, pointer)
+      setView(next.scale, next.pos)
+    }
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
+  }, [isMounted]) // setView only reads refs and state setters
+
+  // Follow the size of the element the board sits in (the container only exists once
+  // mounted, before that a placeholder is shown)
+  useEffect(() => {
+    const container = containerRef.current
+    if (!isMounted || !container) return
     const fit = (width: number, height: number) => {
       if (width > 0 && height > 0) setDimensions({ width: Math.floor(width), height: Math.floor(height) })
     }
@@ -410,7 +381,7 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
     const observer = new ResizeObserver(([entry]) => fit(entry.contentRect.width, entry.contentRect.height))
     observer.observe(container)
     return () => observer.disconnect()
-  }, [fitContainer, isMounted])
+  }, [isMounted])
 
   // Handle mouse events for right-click panning
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -477,23 +448,9 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       const dx = pointer.x - lastPointerPosition.x;
       const dy = pointer.y - lastPointerPosition.y;
       
-      // Calculate new position
-      const newX = stagePos.x + dx;
-      const newY = stagePos.y + dy;
-      
-      // Apply panning limits to keep grid visible
-      // These values can be adjusted based on your grid size
-      const maxPanX = dimensions.width * 0.5;
-      const maxPanY = dimensions.height * 0.5;
-      
-      const limitedX = Math.max(-maxPanX, Math.min(newX, maxPanX));
-      const limitedY = Math.max(-maxPanY, Math.min(newY, maxPanY));
-      
-      setStagePos({
-        x: limitedX,
-        y: limitedY
-      });
-      
+      // Stops at the edge of the grid, so the board never slides off into blank space
+      setView(scale, { x: stagePos.x + dx, y: stagePos.y + dy });
+
       setLastPointerPosition(pointer);
     }
   };
@@ -509,11 +466,21 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
     setStagePos({ x: 0, y: 0 }) // Reset position to center
   }
   
-  // Handle fit to screen
+  // Fit: zoom and centre so every part and wire is on screen (an empty board just resets)
   const handleFitToScreen = () => {
-    // Simple implementation - you might want to calculate based on content bounds
-    setScale(0.8)
-    setStagePos({ x: dimensions.width / 10, y: dimensions.height / 10 })
+    const boxes = [
+      ...components.map(partBox),
+      ...wires.map(w => toBox({ x: w.x1, y: w.y1 }, { x: w.x2, y: w.y2 })),
+    ]
+    const view = fitView(boxes, dimensions)
+    if (view) setView(view.scale, view.pos)
+    else handleResetZoom()
+  }
+
+  // The - and + buttons zoom about the middle of the board
+  const zoomBy = (factor: number) => {
+    const next = zoomAt(stagePos, scale, factor, { x: dimensions.width / 2, y: dimensions.height / 2 })
+    setView(next.scale, next.pos)
   }
 
   // R rotates the selected component (wires follow), Delete/Backspace removes everything
@@ -524,6 +491,8 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       if (selected.size === 0) return;
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      // Leave browser and page shortcuts alone (Ctrl+R reloads, it mustn't also rotate)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       const allComponents = componentsRef.current;
       const allWires = wiresRef.current;
@@ -1054,9 +1023,9 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       {isMounted && createPortal(
         <div className="flex items-center gap-1.5" role="group" aria-label="Zoom">
           <div className="flex items-center rounded-control border border-line-strong bg-surface">
-            <button onClick={() => setScale(s => Math.max(s / 1.2, 0.1))} className={zoomButton} title="Zoom out" aria-label="Zoom out">−</button>
+            <button onClick={() => zoomBy(1 / 1.2)} className={zoomButton} title="Zoom out" aria-label="Zoom out">−</button>
             <span className="tabular w-14 border-x border-line text-center text-xs font-medium text-ink" aria-live="polite">{Math.round(scale * 100)}%</span>
-            <button onClick={() => setScale(s => Math.min(s * 1.2, 5))} className={zoomButton} title="Zoom in" aria-label="Zoom in">+</button>
+            <button onClick={() => zoomBy(1.2)} className={zoomButton} title="Zoom in" aria-label="Zoom in">+</button>
           </div>
           <button onClick={handleFitToScreen} className={`${zoomButton} rounded-control border border-line-strong bg-surface`} title="Fit the circuit on screen">Fit</button>
           <button onClick={handleResetZoom} className={`${zoomButton} rounded-control border border-line-strong bg-surface`} title="Back to 100%">Reset</button>
@@ -1066,24 +1035,24 @@ const CircuitCanvas: React.FC<CircuitCanvasProps> = ({ layout, onLayoutChange, o
       
       {/* Shortcuts: open by default, can be folded away so it doesn't cover the board */}
       {showHelp ? (
-        <div className="absolute bottom-3 left-3 max-w-xs rounded-card border border-line bg-surface/95 p-3 text-xs text-ink shadow-key backdrop-blur-sm">
+        <div className="absolute bottom-3 left-3 max-w-sm rounded-card border border-line bg-surface/95 p-3 text-sm text-ink shadow-key backdrop-blur-sm">
           <div className="mb-1.5 flex items-center justify-between gap-4">
             <span className="font-semibold">How to build</span>
-            <button onClick={() => setShowHelp(false)} className="rounded-chip px-1.5 text-ink-muted hover:bg-ink/5 hover:text-ink" aria-label="Hide the shortcuts">Hide</button>
+            <button onClick={() => setShowHelp(false)} className="rounded-chip px-2.5 py-1.5 text-sm font-medium text-ink-muted hover:bg-ink/5 hover:text-ink" aria-label="Hide the shortcuts">Hide</button>
           </div>
           <ul className="space-y-0.5 text-ink-muted">
             <li>Drag parts from the left onto the board</li>
             <li>Drag from a part&apos;s end to draw a wire</li>
             <li>Drag a wire to move it; click a wire, then drag its dot to branch</li>
             <li>Drag on empty space to select several; Shift+click to add</li>
-            <li><kbd className="font-semibold text-ink">R</kbd> rotate, <kbd className="font-semibold text-ink">Delete</kbd> remove, <kbd className="font-semibold text-ink">Esc</kbd> deselect</li>
+            <li><kbd className="font-semibold text-ink">R</kbd> rotate, <kbd className="font-semibold text-ink">Delete</kbd> remove (or the Remove button), <kbd className="font-semibold text-ink">Esc</kbd> deselect</li>
             <li>Right-click and drag to pan, scroll to zoom</li>
           </ul>
         </div>
       ) : (
         <button
           onClick={() => setShowHelp(true)}
-          className="absolute bottom-3 left-3 rounded-control border border-line bg-surface/95 px-2.5 py-1.5 text-xs font-medium text-ink-muted shadow-key hover:text-ink"
+          className="absolute bottom-3 left-3 rounded-control border border-line bg-surface/95 px-3 py-2 text-sm font-medium text-ink-muted shadow-key hover:text-ink"
         >
           How to build
         </button>

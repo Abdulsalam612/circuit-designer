@@ -1,6 +1,8 @@
 import { findAvatar } from "@/lib/avatars"
 
-// The user's chosen preset avatar, or their initials on blue if they haven't picked one
+// The user's chosen preset avatar, or their initials on blue if they haven't picked one.
+// The blue is signal (#1A66E8): white initials on it are 5.1:1 (celestial was 2.7:1).
+const DEFAULT_BACKGROUND = "#1A66E8"
 
 const initialsOf = (name: string) =>
   name
@@ -18,7 +20,7 @@ interface UserAvatarProps {
 
 export default function UserAvatar({ name, avatar, size = 36 }: UserAvatarProps) {
   const preset = findAvatar(avatar)
-  const style = { width: size, height: size, background: preset?.background ?? "#33A1FD" }
+  const style = { width: size, height: size, background: preset?.background ?? DEFAULT_BACKGROUND }
   return (
     <span
       style={style}

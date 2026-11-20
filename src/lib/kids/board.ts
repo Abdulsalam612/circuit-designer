@@ -205,8 +205,9 @@ const goalMet = (pieces: Piece[], goal: CircuitGoal, result: SimulationResult): 
     case 'things-tested':
       return false; // needs the mission's history: checkGoals handles it
     case 'no-short':
-      // Only counts once there's something that could short
-      return pieces.some(p => p.kind === 'battery') && !result.warnings.some(w => w.kind === 'short-circuit');
+      // Only ticked once the loop works without a shortcut: an empty or half-built board
+      // hasn't earned it yet, and an early tick would look like a free win
+      return isGoing(pieces, result) && !result.warnings.some(w => w.kind === 'short-circuit');
   }
 };
 

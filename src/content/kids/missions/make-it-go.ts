@@ -29,7 +29,7 @@ const makeItGo: KidsCircuitMission = {
   start: [],
   goals: [
     { kind: 'motor-spins', text: 'The motor spins' },
-    { kind: 'no-short', text: 'No short circuit' },
+    { kind: 'no-short', text: 'No shortcuts for the electricity' },
   ],
 };
 

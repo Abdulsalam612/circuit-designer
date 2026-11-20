@@ -154,7 +154,7 @@ export default function LiveCircuit() {
             type="button"
             onClick={() => setClosed(c => !c)}
             aria-pressed={closed}
-            className="inline-flex h-9 items-center gap-2 rounded-control border border-line-strong bg-surface px-3 text-sm font-medium text-ink shadow-key transition-transform active:translate-y-[2px] active:shadow-none"
+            className="inline-flex h-10 items-center gap-2 rounded-control border border-line-strong bg-surface px-3 text-sm font-medium text-ink shadow-key transition-transform active:translate-y-[2px] active:shadow-none"
           >
             <span className={`h-2 w-4 rounded-full transition-colors ${closed ? "bg-success" : "bg-ink-faint"}`} aria-hidden="true" />
             Switch {closed ? "closed" : "open"}
@@ -167,7 +167,7 @@ export default function LiveCircuit() {
               {HERO_RESISTOR_CHOICES.map(choice => (
                 <label
                   key={choice.ohms}
-                  className={`tabular cursor-pointer rounded-[8px] px-2.5 py-1 text-sm transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand ${
+                  className={`tabular cursor-pointer rounded-[8px] px-2.5 py-1.5 text-sm transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand ${
                     ohms === choice.ohms ? "bg-surface font-medium text-ink shadow-key" : "text-ink-muted hover:text-ink"
                   }`}
                 >

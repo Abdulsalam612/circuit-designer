@@ -10,8 +10,13 @@ export type ButtonSize = "sm" | "md" | "lg"
 const BASE =
   "inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap select-none " +
   "transition-[transform,box-shadow,background-color,color] duration-100 " +
-  "active:translate-y-[2px] disabled:pointer-events-none disabled:opacity-50 " +
-  "aria-disabled:pointer-events-none aria-disabled:opacity-50"
+  "active:translate-y-[2px] disabled:pointer-events-none aria-disabled:pointer-events-none"
+
+// Disabled: a flat grey fill with no lip instead of a half-transparent button, so the label
+// stays readable (ink-muted on disabled 4.8:1; 50 % opacity left white on blue at 2.2:1)
+const DISABLED =
+  "disabled:bg-disabled disabled:text-ink-muted disabled:border-transparent disabled:shadow-none " +
+  "aria-disabled:bg-disabled aria-disabled:text-ink-muted aria-disabled:border-transparent aria-disabled:shadow-none"
 
 const VARIANTS: Record<ButtonVariant, string> = {
   // White on signal: 5.1:1
@@ -19,6 +24,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   secondary: "bg-surface text-ink border border-line-strong shadow-key hover:bg-signal-tint hover:border-signal/40 active:shadow-none",
   // Ink on glow: 7.7:1 – for the one "light it up" action on a screen
   glow: "bg-glow text-ink shadow-[0_3px_0_var(--color-glow-dark)] hover:bg-glow-hover active:shadow-[0_1px_0_var(--color-glow-dark)]",
+  // No fill, so when disabled it just keeps its muted text (5.9:1 on white)
   ghost: "text-ink-muted hover:text-ink hover:bg-ink/5 active:translate-y-0",
   danger: "bg-danger text-white shadow-[0_3px_0_var(--color-danger-dark)] hover:bg-danger-hover active:shadow-[0_1px_0_var(--color-danger-dark)]",
 }
@@ -26,11 +32,11 @@ const VARIANTS: Record<ButtonVariant, string> = {
 const SIZES: Record<ButtonSize, string> = {
   sm: "h-9 px-3 text-sm rounded-control",
   md: "h-11 px-5 text-[15px] rounded-control",
-  lg: "h-13 px-7 text-base rounded-[12px]",
+  lg: "h-13 px-7 text-base rounded-control",
 }
 
 export const buttonClass = (variant: ButtonVariant = "primary", size: ButtonSize = "md", extra = "") =>
-  `${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${extra}`.trim()
+  `${BASE} ${VARIANTS[variant]} ${variant === "ghost" ? "" : DISABLED} ${SIZES[size]} ${extra}`.trim()
 
 interface CommonProps {
   variant?: ButtonVariant

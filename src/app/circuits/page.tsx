@@ -21,10 +21,12 @@ import { heading, text } from "@/components/ui/typography"
 import { useToast } from "@/context/ToastContext"
 import { reportError } from "@/lib/reportError"
 
+// The day is enough here ("12 Nov 2026"); a time like "00:00" only adds noise
 const formatDate = (date: Date | null) =>
-  date
-    ? date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
-    : "Just now"
+  date ? date.toLocaleDateString(undefined, { dateStyle: "medium" }) : "just now"
+
+// 40 px square icon buttons
+const iconButton = "inline-flex h-10 w-10 items-center justify-center rounded-control text-ink-muted transition-colors"
 
 export default function MyCircuitsPage() {
   const { user, loading } = useRequireAuth()
@@ -42,11 +44,9 @@ export default function MyCircuitsPage() {
       setError(null)
     } catch (e) {
       reportError(e, "List circuits")
-      const code = (e as { code?: string })?.code
-      setError(code === "permission-denied"
-        ? "Not allowed to read your circuits. Check the Firestore security rules (see firestore.rules)."
-        : "Couldn't load your circuits.")
-      setCircuits([])
+      setError("We couldn't load your circuits. Check your connection, or sign out and back in.")
+      // Keep what was shown before (if anything); "No circuits yet" would be misleading
+      setCircuits(prev => prev ?? [])
     }
   }, [user])
 
@@ -59,7 +59,8 @@ export default function MyCircuitsPage() {
       await action()
       await refresh()
       toast.success(done)
-    } catch {
+    } catch (e) {
+      reportError(e, "Change circuit")
       toast.error("That didn't work. Please try again.")
     } finally {
       setBusyId(null)
@@ -108,6 +109,11 @@ export default function MyCircuitsPage() {
           <p className="flex items-center justify-center gap-2 py-16 text-ink-muted" role="status">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading your circuits…
           </p>
+        ) : circuits.length === 0 && error ? (
+          // The error above says what happened; offer a way to try again
+          <div className="flex justify-center py-10">
+            <Button variant="secondary" onClick={() => refresh()}>Try again</Button>
+          </div>
         ) : circuits.length === 0 ? (
           <Card tone="panel" className="mx-auto max-w-lg p-10 text-center">
             <h2 className={heading.lg}>No circuits yet</h2>
@@ -152,10 +158,13 @@ export default function MyCircuitsPage() {
                     <p className="tabular text-sm text-ink-muted">
                       {circuit.componentCount} part{circuit.componentCount === 1 ? "" : "s"}, edited {formatDate(circuit.updatedAt)}
                     </p>
-                    <div className="mt-auto flex items-center justify-end gap-1 pt-2">
+                    <div className="mt-auto flex items-center gap-1 pt-3">
+                      <Button href={`/simulation?id=${circuit.id}`} variant="secondary" size="sm" className="mr-auto" aria-label={`Open ${circuit.name}`}>
+                        Open
+                      </Button>
                       <button
                         onClick={() => setRenaming({ id: circuit.id, name: circuit.name })}
-                        className="rounded-control p-2 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink"
+                        className={`${iconButton} hover:bg-ink/5 hover:text-ink`}
                         title="Rename"
                         aria-label={`Rename ${circuit.name}`}
                       >
@@ -163,15 +172,17 @@ export default function MyCircuitsPage() {
                       </button>
                       <button
                         onClick={() => act(circuit.id, () => duplicateCircuit(user.uid, circuit.id), `Made a copy of "${circuit.name}".`)}
-                        className="rounded-control p-2 text-ink-muted transition-colors hover:bg-ink/5 hover:text-ink"
+                        className={`${iconButton} hover:bg-ink/5 hover:text-ink`}
                         title="Duplicate"
                         aria-label={`Duplicate ${circuit.name}`}
                       >
                         <Copy className="h-4 w-4" />
                       </button>
+                      {/* Kept apart from the others so it isn't hit by mistake */}
+                      <span className="mx-1 h-6 w-px bg-line" aria-hidden="true" />
                       <button
                         onClick={() => setPendingDelete(circuit)}
-                        className="rounded-control p-2 text-ink-muted transition-colors hover:bg-danger-tint hover:text-danger"
+                        className={`${iconButton} hover:bg-danger-tint hover:text-danger`}
                         title="Delete"
                         aria-label={`Delete ${circuit.name}`}
                       >

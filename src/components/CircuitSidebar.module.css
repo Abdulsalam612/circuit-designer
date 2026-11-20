@@ -20,7 +20,8 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  min-height: 3rem; /* 48 px: easier to grab */
+  padding: 0.625rem 0.75rem;
   border-radius: var(--radius-control);
   background-color: var(--color-surface);
   border: 1px solid var(--color-line);

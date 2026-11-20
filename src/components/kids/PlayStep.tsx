@@ -126,23 +126,25 @@ export default function PlayStep({ mission, placed, program, onSuccess, onEditCo
           <path d={`M${START_X + flag * pxPerCm + 2} 98 l50 10 l-50 10 z`} fill="#F79824" stroke="#C46F0C" strokeWidth="2" strokeLinejoin="round" />
           <text x={START_X + flag * pxPerCm} y="84" textAnchor="middle" fontSize="16" fontWeight="600" fill="#5B666B">Flag: {flag} cm</text>
           <rect x={VIEW_W - END_PAD + 10} y="210" width={END_PAD - 10} height="90" fill="url(#kids-wall)" />
+          {/* The last mark sits by the wall, so its label ends just past the mark instead of running into it */}
           {Array.from({ length: Math.floor(mission.trackLength / 20) + 1 }, (_, i) => i * 20).map(mark => (
-            <text key={mark} x={START_X + mark * pxPerCm} y="292" textAnchor="middle" fontSize="15" fill="#5B666B">{mark} cm</text>
+            <text key={mark} x={START_X + mark * pxPerCm + (mark === mission.trackLength ? 8 : 0)} y="292" textAnchor={mark === mission.trackLength ? "end" : "middle"} fontSize="15" fill="#5B666B">{mark} cm</text>
           ))}
           <g transform={`translate(${front - CAR_LENGTH} 140)`}>
             <CarShape light={light} wheelTurn={distance * 12} />
           </g>
           {frame?.beeping && (
             <g transform={`translate(${front - 90} 104)`}>
-              <rect width="76" height="32" rx="14" fill="#7C3AED" />
+              <rect width="76" height="32" rx="14" fill="var(--color-sound)" />
               <text x="38" y="21" textAnchor="middle" fontSize="16" fontWeight="700" fill="#FFFFFF">Beep!</text>
             </g>
           )}
         </svg>
       </section>
 
-      <section className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_240px_minmax(0,1.2fr)]">
-        <div className="min-h-0 overflow-auto rounded-card border border-line bg-surface p-4">
+      <section className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_240px_minmax(0,1.2fr)]">
+        {/* Grows to show the whole program; only a very long one (big repeats) scrolls */}
+        <div className="max-h-[70dvh] overflow-auto rounded-card border border-line bg-surface p-4">
           <h2 className="mb-2.5 text-sm font-semibold text-ink-muted">Your program</h2>
           {steps.length === 0 ? (
             <p className="text-ink-muted">Your program is empty. Add blocks under “when Go is pressed”.</p>

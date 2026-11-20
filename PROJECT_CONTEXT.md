@@ -505,7 +505,9 @@ Part 1 / Part 2 (committed `94f9ed5`). **"Faster!"** (second battery + switch), 
 on studs, Rotate, tap-to-flick switch (committed `877aaf6`). **"Lights on"** (two bulbs: in a row
 dim, side by side bright) (committed `52ca177`). **"Backwards"** and **"Gentle breeze"** (first
 non-car mission: desk fan + resistor) (committed `02b4f62`). **"Does it conduct?"** (torch +
-six everyday things, "What you found out" panel, `testGap` marked on the board) – **not committed**.
+six everyday things, "What you found out" panel, `testGap` marked on the board), new car,
+two-tap placement, kids UI redesign (committed `1f59a7f`) and **Sentry** (`7bc43bf`) –
+**all deployed 20 Oct 2026** (master = editor-wiring = `7bc43bf`).
 Next ideas: Part 1 "Steady hand game" (buzz wire – needs a buzzer piece);
 Part 2's Build step to become the snap board with a hub port in place of the switch; save
 stars to progress; retire `/play` and `/kidscircuit`.
@@ -537,13 +539,48 @@ off immediately (so "light B on" just before the end is only a flash). Known: `/
 
 > Rule (see AGENTS.md): after every completed task, add one short entry here and update §8.
 
+- 2026-11-22 – **Review batches 1–5 applied** (docs/reviews/2026-11-20-site-review.md) by four
+  file-owning agents + coordinator. Sign-up: start buttons open sign-up with `next`
+  (`components/auth/authLinks.ts`, `AuthQueryWatcher`), redirect after sign-up, "Sign in to
+  continue", busy state + inline errors, non-fatal profile writes, lean sign-up doc. Editor:
+  `loadFailed` status + `canSave` guard (no empty-circuit save after a failed load,
+  `components/editor/saveRules.ts`), phone "bigger screen" notice (`SmallScreenNotice`), Remove
+  part button, 40 px toolbar with labels from lg + Lessons link, container-sized canvas
+  (`components/editor/view.ts`), plain-English errors; My Circuits Open button. Colours: ink-faint
+  #67727a, new `line-input` and `disabled` tokens, glow focus ring on dark, darker avatars, lips
+  only on interactive cards, sound token #be185d. Site-wide: shared `Wordmark`, aligned
+  header/footer, 44 px nav (menu button below lg), "Lessons" naming, 3 stat tiles,
+  `AccountPageLink` footer links. Kids: goal strip, lg piece buttons, ← Missions, Start-again
+  confirm (No/Yes), "No shortcuts for the electricity" goal only when the loop works, bigger tap
+  areas, code-step brief first + sticky Try, Blockly ink/pink + startScale 1.15, tappable car
+  slots, kids 404, `flatten` work cap; `/play` and `/kidscircuit` → permanent redirect to /kids.
+  New tests: auth-links (18), editor (25), contrast, kids freeze; all 9 suites pass, build passes.
+  Browser-checked at 1280/768/375 (pretend user, removed after; its editor autosave was refused by
+  the Firestore rules – nothing written). Known left for batch 6: editor still cramped at 768 px.
+- 2026-11-20 – **Five-reviewer site audit** (code, visual, ease of use, click targets, colour),
+  per ticket (12 areas), from 27 screenshots at 1280/745/375 px + source. Overall **7.1/10**;
+  worst: editor 5.3 (broken on phones, cramped on tablets, mouse-only), Kids code mission 6.4,
+  site-wide 6.6, sign-in 6.8; best: Kids map 8.2. Full scorecard and 7 batches of fixes with
+  file:line in **`docs/reviews/2026-11-20-site-review.md`**. Nothing changed in the site; the
+  screenshot-only pretend user was removed (files match the commit). Also: dev server hung because
+  drive E: (HDD) was saturated by a stray `grep` from another session; owner killed it. Sentry's
+  build plugin no longer loads for `next dev` (next.config.ts phase function) – not committed.
+- 2026-10-20 – **Committed and deployed**: `1f59a7f` (kids: Does it conduct?, new car, two-tap
+  placement, redesigned screens) and `7bc43bf` (Sentry); master = editor-wiring = `7bc43bf`,
+  Vercel "Deployment has completed". Owner set the Vercel env vars (Sentry project slug
+  `javascript-nextjs`, org token). Checked live: /kids shows 7 missions; Sentry client enabled,
+  environment production, DSN set, tunnel `/monitoring`, sendDefaultPii false, EU region (de).
+  **Confirmed end to end**: a test error from the live site → `/monitoring` 200 → issue in
+  Sentry; the owner's own test showed up too. Note: errors typed straight into the DevTools
+  console are NOT reported (Chrome doesn't pass them to the page) – test with
+  `setTimeout(() => myUndefinedFunction())`.
 - 2026-10-20 – **Sentry added** (owner: "if a user faced a bug I get it"; org slug
   `abdulsalam-fw`). See §2. Privacy page: new "If something breaks" section, Sentry in "Who
   else handles it", date 20 Oct 2026. `.env.example` gains the Sentry vars. Build passes.
   Tested with a dummy localhost DSN + local catcher (nothing left the machine): uncaught error
   → one report, no user/IP; plain visits → nothing sent (after turning off browser sessions,
-  client reports, tracing, server request sessions). Waiting on the owner: Sentry project
-  slug + DSN + auth token in Vercel. The owner's wizard "run code" was not used.
+  client reports, tracing, server request sessions). Owner then set the Vercel vars;
+  deployed the same day (see entry above). The owner's wizard "run code" was not used.
 - 2026-10-14 – **Kids UI redesign** (owner: not simple/organised enough; frontend-design skill).
   Mission map: light tiles with a picture per mission (`MissionArt`), number, title, short
   `topic` (new mission field), play disc – no story paragraphs. Mission screen: scene on top;
